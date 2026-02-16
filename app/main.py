@@ -95,7 +95,7 @@ async def validate_file(
     return report_dict
 
 @app.get("/history", response_model=List[schemas.HistorySummary])
-def get_history(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+def get_history(skip: int = 0, limit: int = 10000, db: Session = Depends(database.get_db)):
     try:
         results = db.query(history.ValidationHistory).order_by(history.ValidationHistory.timestamp.desc()).offset(skip).limit(limit).all()
         return results

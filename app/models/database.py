@@ -26,7 +26,11 @@ try:
     print("Combined with MySQL database.")
 except Exception as e:
     print(f"MySQL connection failed ({str(e)}), falling back to SQLite for local development.")
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./iso_validator.db"
+    # Use absolute path to ensure DB is always found in backend directory
+    # regardless of where the script is run from
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    db_path = os.path.join(BASE_DIR, "iso_validator.db")
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
