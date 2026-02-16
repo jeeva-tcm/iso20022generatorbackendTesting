@@ -1,0 +1,53 @@
+{
+    "app_settings": {
+        "cache_duration_seconds": 3600,
+        "max_file_size_kb": 2048,
+        "allowed_extensions": [
+            ".xml",
+            ".xsd",
+            ".txt"
+        ],
+        "encoding_check": "UTF-8",
+        "scan_limit_chars": 10000
+    },
+    "sr_versions": {
+        "pacs.008.001.08": "SR2025",
+        "pacs.009.001.08": "SR2025",
+        "camt.053.001.08": "SR2025",
+        "camt.053.001.10": "SR2025"
+    },
+    "validation_rules": {
+        "namespace_patterns": [
+            "xmlns[:\\w]*\\s*=\\s*[\"']urn:iso:std:iso:20022:tech:xsd:([^\"]+)[\"']",
+            "xmlns[:\\w]*\\s*=\\s*[\"']urn:swift:xsd:([^\"]+)[\"']"
+        ],
+        "default_header_type": "head.001.001.01",
+        "header_namespace_partial": "head.001.001",
+        "cbpr_plus_mandate_date": "2026-11-01T00:00:00"
+    },
+    "supported_families_fallback": [
+        "pacs.008",
+        "pacs.009",
+        "pacs.004",
+        "camt.053",
+        "pain.001",
+        "head.001"
+    ],
+    "fallback_message_types": [
+        "pacs.008.001.08",
+        "pacs.009.001.08",
+        "pacs.002.001.10",
+        "pacs.004.001.09",
+        "camt.053.001.08",
+        "camt.052.001.08",
+        "camt.054.001.08",
+        "camt.029.001.09",
+        "pain.001.001.09",
+        "pain.002.001.10",
+        "pain.008.001.08",
+        "acmt.001.001.07",
+        "admi.004.001.02",
+        "auth.001.001.02",
+        "head.001.001.01"
+    ]
+}
