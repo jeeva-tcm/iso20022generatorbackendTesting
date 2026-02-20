@@ -23,7 +23,23 @@
         ],
         "default_header_type": "head.001.001.01",
         "header_namespace_partial": "head.001.001",
-        "cbpr_plus_mandate_date": "2026-11-01T00:00:00"
+        "cbpr_plus_mandate_date": "2026-11-01T00:00:00",
+        "purpose_amount_limits": {
+            "SALA": {
+                "USD": 50000,
+                "EUR": 45000,
+                "JPY": 5000000,
+                "GBP": 40000
+            },
+            "RENT": {
+                "USD": 10000,
+                "EUR": 9000
+            },
+            "SUPP": {
+                "USD": 500000,
+                "EUR": 450000
+            }
+        }
     },
     "supported_families_fallback": [
         "pacs.008",

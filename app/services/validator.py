@@ -1179,21 +1179,26 @@ class ISOValidator:
                 amount = float(amount_val)
             except:
                 return True
+            
+            # 2. Identify Currency (Attribute @Ccy on the amount field)
+            ccy_key = f"{amt_key}@Ccy"
+            currency = data.get(ccy_key, "USD") # Default to USD if attribute missing
                 
             purpose = str(val).upper()
             
-            if purpose == 'SALA' and amount > 50000:
-                report.add_issue(ValidationIssue("ERROR", 3, "PURP_001", _gl(amt_key), 
-                    f"Salary (SALA) amount {amount:,} exceeds limit of 50,000.", 
-                    "Verify if this high-value payment is correct for a salary transaction."))
-                return False
-                
-            if purpose == 'RENT' and amount > 10000:
-                report.add_issue(ValidationIssue("WARNING", 3, "PURP_002", _gl(amt_key), 
-                    f"Rent (RENT) amount {amount:,} exceeds recommended limit of 10,000.", 
-                    "Ensure this high-value rent payment follows policy guidelines."))
-                return True # Warning doesn't fail the logic
-                
+            # 3. Fetch limits from config
+            limits = self.config.get("validation_rules", {}).get("purpose_amount_limits", {})
+            purpose_limits = limits.get(purpose, {})
+            limit = purpose_limits.get(currency)
+            
+            if limit is not None and amount > limit:
+                # Determine severity based on purpose or config (defaulting to ERROR for SALA, WARNING otherwise)
+                severity = "ERROR" if purpose == "SALA" else "WARNING"
+                report.add_issue(ValidationIssue(severity, 3, f"PURP_{purpose}", _gl(amt_key), 
+                    f"{purpose} amount {amount:,} {currency} exceeds limit of {limit:,} {currency}.", 
+                    f"The business policy for {purpose} in {currency} is capped at {limit:,}. Verify if this transaction is correct."))
+                return severity == "WARNING" 
+
             return True
 
         try:
