@@ -1,16 +1,7 @@
 {
-    "name": "External Purpose Codes (ISO 20022)",
+    "name": "Supported Purpose Codes",
     "codes": [
         "SALA",
-        "PENS",
-        "TAXS",
-        "VATX",
-        "INTC",
-        "CASH",
-        "DIVI",
-        "GOVT",
-        "HEDG",
-        "TREA",
         "RENT",
         "SUPP"
     ]

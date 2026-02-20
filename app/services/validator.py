@@ -1052,7 +1052,7 @@ class ISOValidator:
                         val_str = str(value)
                         actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
                         if actual_decimals > allowed_decimals:
-                             report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"Invalid decimal precision for {ccy}. Max {allowed_decimals}, found {actual_decimals}."))
+                             report.add_issue(ValidationIssue(severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key), f"Invalid decimal precision for {ccy}. Max {allowed_decimals}, found {actual_decimals}."))
 
                 elif rule_type == "regex":
                     pattern = rule.get("pattern", ".*")
@@ -1061,30 +1061,33 @@ class ISOValidator:
                 
                 elif rule_type == "expression":
                     rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
-                    if not self._evaluate_expression(rule.get("expression", "True"), data, line_map, value, key, rule_meta):
+                    if not self._evaluate_expression(rule.get("expression", "True"), data, line_map, value, key, rule_meta, codelists):
                         report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), desc))
 
         # 2. Logic Based Rules
         else:
             condition = rule.get("condition", "True")
-            if not self._evaluate_expression(condition, data, line_map):
+            if not self._evaluate_expression(condition, data, line_map, codelists=codelists):
                 return
 
             for field in rule.get("mandatory_fields", []):
-                if not self._evaluate_expression(f"exists({field})", data, line_map):
+                if not self._evaluate_expression(f"exists({field})", data, line_map, codelists=codelists):
                     report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(field), desc))
 
             expr = rule.get("expression")
             if expr:
                 rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
-                if not self._evaluate_expression(expr, data, line_map, KEY="", rule_meta=rule_meta):
+                if not self._evaluate_expression(expr, data, line_map, KEY="", rule_meta=rule_meta, codelists=codelists):
                      report.add_issue(ValidationIssue(severity, layer, rule_id, "/", desc))
 
-    def _evaluate_expression(self, expr: str, data: Dict[str, Any], line_map: Dict[str, int] = None, VALUE: Any = None, KEY: str = "", rule_meta: Dict[str, Any] = None) -> bool:
+    def _evaluate_expression(self, expr: str, data: Dict[str, Any], line_map: Dict[str, int] = None, VALUE: Any = None, KEY: str = "", rule_meta: Dict[str, Any] = None, codelists: Dict[str, Any] = None) -> bool:
         """
         Evaluates dynamic expressions against the canonical data map.
         Supports indexed paths and global VALUE keyword.
         """
+        # Ensure codelists is never None
+        if codelists is None:
+            codelists = {}
         def exists_sub(match):
             path = match.group(1).replace("[", "\\[").replace("]", "\\]")
             return "True" if any(re.match(f"^{path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
@@ -1166,7 +1169,20 @@ class ISOValidator:
             return True
 
         def check_purpose_limit(purp_key, val, data, report, rule_meta):
-            # 1. Identify amount key (sibling to Purp)
+            """
+            Strict 5-Step Business Validation: 
+            1. Purpose Code -> 2. Currency -> 3. Decimal -> 4. Limit -> 5. High-Value Flag
+            """
+            # --- 1. Validate Purpose Code ---
+            purpose = str(val).upper()
+            supported_purposes = codelists.get("purpose_code", {}).get("codes", [])
+            if purpose not in supported_purposes:
+                report.add_issue(ValidationIssue("ERROR", 3, "INVALID_PURPOSE_CODE", _gl(purp_key), 
+                    f"The purpose code '{purpose}' is not valid.", 
+                    "Use SALA, RENT, or SUPP."))
+                return False
+
+            # Identify amount key
             parent = purp_key.rsplit('.Purp.', 1)[0]
             amt_key = f"{parent}.IntrBkSttlmAmt"
             if amt_key not in data:
@@ -1180,24 +1196,47 @@ class ISOValidator:
             except:
                 return True
             
-            # 2. Identify Currency (Attribute @Ccy on the amount field)
+            # --- 2. Validate Currency Supported ---
             ccy_key = f"{amt_key}@Ccy"
-            currency = data.get(ccy_key, "USD") # Default to USD if attribute missing
-                
-            purpose = str(val).upper()
-            
-            # 3. Fetch limits from config
+            currency = data.get(ccy_key)
+            if not currency:
+                return True
+
+            curr_data = codelists.get("currency", {})
+            supported_currencies = curr_data.get("codes", [])
+            if currency not in supported_currencies:
+                 # If currency not in ISO 4217 list, we stop here
+                 return True
+
+            # --- 3. Validate Decimal Precision ---
+            allowed_decimals = curr_data.get("currencies", {}).get(currency)
+            if allowed_decimals is not None:
+                val_str = str(amount_val)
+                actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
+                if actual_decimals > allowed_decimals:
+                    report.add_issue(ValidationIssue("ERROR", 3, "INVALID_DECIMAL_PRECISION", _gl(amt_key), 
+                        f"Currency {currency} only allows {allowed_decimals} decimals.", 
+                        "Refine format."))
+                    return False
+
+            # --- 4. Validate Purpose + Currency Limit ---
             limits = self.config.get("validation_rules", {}).get("purpose_amount_limits", {})
             purpose_limits = limits.get(purpose, {})
             limit = purpose_limits.get(currency)
             
             if limit is not None and amount > limit:
-                # Determine severity based on purpose or config (defaulting to ERROR for SALA, WARNING otherwise)
-                severity = "ERROR" if purpose == "SALA" else "WARNING"
-                report.add_issue(ValidationIssue(severity, 3, f"PURP_{purpose}", _gl(amt_key), 
-                    f"{purpose} amount {amount:,} {currency} exceeds limit of {limit:,} {currency}.", 
-                    f"The business policy for {purpose} in {currency} is capped at {limit:,}. Verify if this transaction is correct."))
-                return severity == "WARNING" 
+                report.add_issue(ValidationIssue("ERROR", 3, "AMOUNT_EXCEEDS_PURPOSE_LIMIT", _gl(amt_key), 
+                    f"Amount {amount} {currency} exceeds {purpose} limit of {limit}.", 
+                    "Check business policy."))
+                return False
+
+            # --- 5. Validate High-Value Threshold ---
+            hv_thresholds = self.config.get("validation_rules", {}).get("high_value_thresholds", {})
+            hv_limit = hv_thresholds.get(currency)
+            if hv_limit is not None and amount > hv_limit:
+                 report.add_issue(ValidationIssue("WARNING", 3, "HIGH_VALUE_TRANSACTION", _gl(amt_key), 
+                    f"Flagging as HIGH_VALUE_TRANSACTION.", 
+                    "Risk monitoring active."))
 
             return True
 

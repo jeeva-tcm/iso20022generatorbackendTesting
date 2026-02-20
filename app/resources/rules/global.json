@@ -51,15 +51,6 @@
         "layer": 3
     },
     {
-        "rule_id": "L3-PURP-CD-VALID",
-        "description": "External Purpose Code Validation",
-        "type": "codelist",
-        "selector": ".*Purp\\.Cd$",
-        "list_name": "purpose_code",
-        "severity": "ERROR",
-        "layer": 3
-    },
-    {
         "rule_id": "L3-CHRGBR-VALID",
         "description": "Charge Bearer Code Validation",
         "type": "codelist",

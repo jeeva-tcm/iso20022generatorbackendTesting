@@ -24,20 +24,29 @@
         "default_header_type": "head.001.001.01",
         "header_namespace_partial": "head.001.001",
         "cbpr_plus_mandate_date": "2026-11-01T00:00:00",
+        "high_value_thresholds": {
+            "USD": 100000,
+            "EUR": 90000,
+            "INR": 10000000,
+            "GBP": 85000,
+            "JPY": 10000000
+        },
         "purpose_amount_limits": {
             "SALA": {
                 "USD": 50000,
                 "EUR": 45000,
-                "JPY": 5000000,
-                "GBP": 40000
+                "INR": 4000000,
+                "JPY": 5000000
             },
             "RENT": {
                 "USD": 10000,
-                "EUR": 9000
+                "EUR": 9000,
+                "INR": 800000
             },
             "SUPP": {
-                "USD": 500000,
-                "EUR": 450000
+                "USD": 100000,
+                "EUR": 90000,
+                "GBP": 80000
             }
         }
     },
