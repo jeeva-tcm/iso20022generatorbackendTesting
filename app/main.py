@@ -57,7 +57,7 @@ async def validate_message(
 @app.post("/validate-file", response_model=schemas.ValidationResponse)
 async def validate_file(
     file: UploadFile = File(...),
-    mode: str = Form("Full 1-5"),
+    mode: str = Form("Full 1-3"),
     message_type: str = Form("Auto-detect"),
     store_in_history: bool = Form(True),
     db: Session = Depends(database.get_db)

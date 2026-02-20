@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 
 class ValidationRequest(BaseModel):
     xml_content: str
-    mode: str = "Full 1-5"
+    mode: str = "Full 1-3"
     message_type: str = "Auto-detect"
     store_in_history: bool = True
 

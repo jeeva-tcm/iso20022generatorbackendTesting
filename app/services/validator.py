@@ -228,7 +228,7 @@ class ISOValidator:
         self._last_cache_update = now
         return self._message_type_cache
 
-    async def validate(self, xml_content: str, mode: str = "Full 1-5", message_type: str = "Auto-detect", filename: Optional[str] = None) -> ValidationReport:
+    async def validate(self, xml_content: str, mode: str = "Full 1-3", message_type: str = "Auto-detect", filename: Optional[str] = None) -> ValidationReport:
         """
         Main 10-Step Validation Flow
         """
@@ -288,7 +288,7 @@ class ISOValidator:
             try:
                 canonical_data, line_map = self._normalize_message(xml_content)
             except Exception as e:
-                report.add_issue(ValidationIssue("ERROR", 5, "FATAL_L5", "/", f"Failed to normalize message: {str(e)}"))
+                report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
 
             # STEP 6-9: Dynamic Rule Engine (Layers 3, 4, 5)
@@ -296,8 +296,8 @@ class ISOValidator:
             try:
                 all_rules = self._load_all_rules(detected_type)
                 
-                if mode == "Full 1-5":
-                    for layer_id in [3, 4, 5]:
+                if mode == "Full 1-3" or mode == "Full 1-5":
+                    for layer_id in [3]:
                         self._run_dynamic_layer(layer_id, all_rules, canonical_data, line_map, report)
                         
                         # Stop if this layer failed
@@ -961,7 +961,10 @@ class ISOValidator:
         Executes all rules assigned to a specific layer.
         """
         start = time.time()
-        layer_rules = [r for r in rules if r.get("layer") == layer_id]
+        if layer_id == 3:
+            layer_rules = [r for r in rules if r.get("layer") in [3, 4, 5]]
+        else:
+            layer_rules = [r for r in rules if r.get("layer") == layer_id]
         
         # Load code lists if needed for this layer
         codelists = {}
@@ -989,6 +992,8 @@ class ISOValidator:
         rule_type = rule.get("type", "expression")
         selector = rule.get("selector")
         layer = rule.get("layer", 3)
+        if layer in [4, 5]:
+            layer = 3
         rule_id = rule.get("rule_id", "DYNAMIC_RULE")
         severity = rule.get("severity", "ERROR")
         desc = rule.get("description", "")
@@ -1028,7 +1033,7 @@ class ISOValidator:
                     if not re.match(r'^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$', str(value)):
                         report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Invalid BIC structure: '{value}'."))
                     elif self.supported_bics and value.upper() not in self.supported_bics:
-                        report.add_issue(ValidationIssue("WARNING", 4, "BIC_NOT_FOUND", _get_line(key), f"BIC '{value}' not found in official directory.", "Verify if the BIC is correct or recently decommissioned."))
+                        report.add_issue(ValidationIssue("WARNING", layer, "BIC_NOT_FOUND", _get_line(key), f"BIC '{value}' not found in official directory.", "Verify if the BIC is correct or recently decommissioned."))
                 
                 elif rule_type == "currency_amount":
                     ccy_path = key + "@Ccy"
