@@ -1165,6 +1165,37 @@ class ISOValidator:
 
             return True
 
+        def check_purpose_limit(purp_key, val, data, report, rule_meta):
+            # 1. Identify amount key (sibling to Purp)
+            parent = purp_key.rsplit('.Purp.', 1)[0]
+            amt_key = f"{parent}.IntrBkSttlmAmt"
+            if amt_key not in data:
+                amt_key = f"{parent}.InstdAmt"
+            
+            amount_val = data.get(amt_key)
+            if amount_val is None: return True
+            
+            try:
+                amount = float(amount_val)
+            except:
+                return True
+                
+            purpose = str(val).upper()
+            
+            if purpose == 'SALA' and amount > 50000:
+                report.add_issue(ValidationIssue("ERROR", 3, "PURP_001", _gl(amt_key), 
+                    f"Salary (SALA) amount {amount:,} exceeds limit of 50,000.", 
+                    "Verify if this high-value payment is correct for a salary transaction."))
+                return False
+                
+            if purpose == 'RENT' and amount > 10000:
+                report.add_issue(ValidationIssue("WARNING", 3, "PURP_002", _gl(amt_key), 
+                    f"Rent (RENT) amount {amount:,} exceeds recommended limit of 10,000.", 
+                    "Ensure this high-value rent payment follows policy guidelines."))
+                return True # Warning doesn't fail the logic
+                
+            return True
+
         try:
             temp_expr = re.sub(r'exists\(([^)]+)\)', exists_sub, expr)
             
@@ -1184,6 +1215,7 @@ class ISOValidator:
                                                         rule_meta.get("rule_id", "E001"), 
                                                         rule_meta.get("desc", "")) if rule_meta else True,
                 "check_bic_match": check_bic_match,
+                "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
                 "is_after_2026": datetime.now() > mandate_date,
                 "exists": lambda x: any(k.startswith(x) for k in data.keys())
             }
