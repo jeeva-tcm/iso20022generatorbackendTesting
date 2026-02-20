@@ -968,7 +968,7 @@ class ISOValidator:
         
         # Load code lists if needed for this layer
         codelists = {}
-        if any(r.get("type") == "codelist" for r in layer_rules):
+        if any(r.get("type") in ["codelist", "currency_amount"] for r in layer_rules):
             codelists = self._load_codelists()
 
         for rule in layer_rules:
@@ -1199,7 +1199,8 @@ class ISOValidator:
         except Exception as e:
             return False
 
-    def _load_codelists(self) -> Dict[str, List[str]]:
+    def _load_codelists(self) -> Dict[str, Any]:
+        """Loads all JSON codelists from the resource directory fully"""
         lists = {}
         if not os.path.exists(self.codelists_path): return lists
         
@@ -1207,7 +1208,6 @@ class ISOValidator:
             if filename.endswith(".json"):
                  try:
                     with open(os.path.join(self.codelists_path, filename), "r") as f:
-                        content = json.load(f)
-                        lists[filename.replace(".json", "").lower()] = content.get("codes", [])
+                        lists[filename.replace(".json", "").lower()] = json.load(f)
                  except: pass
         return lists
