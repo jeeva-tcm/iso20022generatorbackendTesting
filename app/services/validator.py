@@ -291,12 +291,12 @@ class ISOValidator:
                 report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
 
-            # STEP 6-9: Dynamic Rule Engine (Layers 3, 4, 5)
+            # STEP 6-9: Dynamic Rule Engine (Layers 1-3)
             # Load all rules once
             try:
                 all_rules = self._load_all_rules(detected_type)
                 
-                if mode == "Full 1-3" or mode == "Full 1-5":
+                if mode == "Full 1-3":
                     for layer_id in [3]:
                         self._run_dynamic_layer(layer_id, all_rules, canonical_data, line_map, report)
                         
@@ -961,14 +961,13 @@ class ISOValidator:
         Executes all rules assigned to a specific layer.
         """
         start = time.time()
-        if layer_id == 3:
-            layer_rules = [r for r in rules if r.get("layer") in [3, 4, 5]]
-        else:
-            layer_rules = [r for r in rules if r.get("layer") == layer_id]
         
-        # Load code lists for dynamic rules (Layer 3 always needs them for business logic)
+        # Filter rules for the current layer (Rules are now strictly 1, 2, or 3)
+        layer_rules = [r for r in rules if r.get("layer") == layer_id]
+        
+        # Load code lists for dynamic rules (Layer 3 always needs them for business/reference logic)
         codelists = {}
-        if layer_id == 3 or any(r.get("type") in ["codelist", "currency_amount"] for r in layer_rules):
+        if layer_id == 3:
             codelists = self._load_codelists()
 
         for rule in layer_rules:

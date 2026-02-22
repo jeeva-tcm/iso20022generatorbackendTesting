@@ -23,6 +23,6 @@
         "condition": "exists(Document.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI) and exists(Document.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI)",
         "expression": "Document.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI != Document.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI",
         "severity": "WARNING",
-        "layer": 4
+        "layer": 3
     }
 ]

@@ -26,20 +26,20 @@
         "layer": 3
     },
     {
-        "rule_id": "L4_BIC_DIRECTORY_001",
+        "rule_id": "L3_BIC_DIRECTORY_001",
         "description": "BIC Existence in SWIFT Directory",
         "type": "bic",
         "selector": ".*BIC.*|.*AnyBIC.*",
         "severity": "WARNING",
-        "layer": 4
+        "layer": 3
     },
     {
-        "rule_id": "L5_URGENT_DATE_001",
+        "rule_id": "L3_URGENT_DATE_001",
         "description": "Urgent payments should normally be settled on the current date.",
         "type": "expression",
         "expression": "not (exists('SvcLvl.Cd') and 'URGT' in str(DATA.get('SvcLvl.Cd'))) or DATA.get('IntrBkSttlmDt') == datetime.now().strftime('%Y-%m-%d')",
         "severity": "WARNING",
-        "layer": 5
+        "layer": 3
     },
     {
         "rule_id": "L3-PURPOSE-LIMIT",
