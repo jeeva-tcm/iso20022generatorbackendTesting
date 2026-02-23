@@ -169,16 +169,18 @@ class ISOValidator:
                     print(f"Warning: Could not extract {filename}: {e}")
 
     def _load_codelists(self) -> Dict[str, Any]:
-        """Loads all JSON codelists from the resource directory"""
+        """Loads all JSON codelists from the resource directory (Lowercased keys)"""
         lists = {}
-        if os.path.exists(self.codelists_path):
-            for filename in os.listdir(self.codelists_path):
-                if filename.endswith(".json"):
-                    try:
-                        with open(os.path.join(self.codelists_path, filename), 'r') as f:
-                            lists[filename.replace(".json", "")] = json.load(f)
-                    except:
-                        continue
+        if not os.path.exists(self.codelists_path):
+            return lists
+        
+        for filename in os.listdir(self.codelists_path):
+            if filename.endswith(".json"):
+                try:
+                    with open(os.path.join(self.codelists_path, filename), 'r') as f:
+                        lists[filename.replace(".json", "").lower()] = json.load(f)
+                except:
+                    continue
         return lists
 
     def get_supported_messages(self) -> List[str]:
@@ -643,26 +645,39 @@ class ISOValidator:
                         # Extract Tag and Value from error message
                         # Msg format: "Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'..."
                         tag_match = re.search(r"Element '([^']+)'", error.message)
-                        val_match = re.search(r"value '([^']+)'|Value '([^']+)'", error.message)
+                        # Changed + to * to allow matching empty values ''
+                        val_match = re.search(r"value '([^']*)'|Value '([^']*)'", error.message)
                         
                         if tag_match:
                             tag_full = tag_match.group(1)
                             # Strip namespace {urn...} if present
                             tag_name = tag_full.split('}')[-1] if '}' in tag_full else tag_full
                             
-                            candidates = main_node.xpath(f".//*[local-name()='{tag_name}']")
+                            # Search in original document for this tag
+                            candidates = main_node.xpath(f"descendant-or-self::*[local-name()='{tag_name}']")
                             found_line = None
+                            estimate = real_line
                             
                             if val_match:
                                 # Case 1: Specific Value Error (High Precision)
-                                bad_val = val_match.group(1) or val_match.group(2)
+                                # Safely extract the matched value group
+                                bad_val = val_match.group(1) if val_match.group(1) is not None else (val_match.group(2) if val_match.group(2) is not None else "")
+                                
+                                # Find candidate with matching value closest to estimate
+                                best_match_line = None
+                                min_dist = float('inf')
                                 for c in candidates:
-                                    if c.text and c.text.strip() == bad_val:
-                                        found_line = c.sourceline
-                                        break
+                                    c_val = (c.text or "").strip()
+                                    if c_val == bad_val:
+                                        dist = abs((c.sourceline or 0) - estimate)
+                                        if dist < min_dist:
+                                            min_dist = dist
+                                            best_match_line = c.sourceline
+                                
+                                found_line = best_match_line
                                 
                                 # Ultimate Fallback: Text Search for <Tag>Value</Tag>
-                                if not found_line:
+                                if not found_line and bad_val.strip():
                                     pattern = re.compile(f"<{tag_name}[^>]*>\s*{re.escape(bad_val)}\s*</{tag_name}>")
                                     match = pattern.search(xml_content)
                                     if match:
@@ -670,10 +685,15 @@ class ISOValidator:
                                         
                             elif candidates:
                                 # Case 2: Structure/Missing Error (No bad value to match)
-                                # Just find the first instance of the problematic tag in the original tree.
-                                # This is better than a random offset.
-                                if candidates[0].sourceline:
-                                    found_line = candidates[0].sourceline
+                                # Pick candidate closest to the estimated line
+                                best_match_line = None
+                                min_dist = float('inf')
+                                for c in candidates:
+                                    dist = abs((c.sourceline or 0) - estimate)
+                                    if dist < min_dist:
+                                        min_dist = dist
+                                        best_match_line = c.sourceline
+                                found_line = best_match_line
                                     
                             if found_line:
                                 real_line = found_line
@@ -962,13 +982,11 @@ class ISOValidator:
         """
         start = time.time()
         
-        # Filter rules for the current layer (Rules are now strictly 1, 2, or 3)
+        # Filter rules for the current layer
         layer_rules = [r for r in rules if r.get("layer") == layer_id]
         
-        # Load code lists for dynamic rules (Layer 3 always needs them for business/reference logic)
-        codelists = {}
-        if layer_id == 3:
-            codelists = self._load_codelists()
+        # Use cached codelists (Layer 3 always needs them)
+        codelists = self.codelists
 
         for rule in layer_rules:
             self._execute_rule_logic(rule, data, line_map, codelists, report)
@@ -1279,22 +1297,16 @@ class ISOValidator:
             for key in sorted(data.keys(), key=len, reverse=True):
                 pattern = r'\b' + re.escape(key) + r'\b'
                 if re.search(pattern, temp_expr) and key not in reserved:
-                    val = f"'{data[key]}'" if isinstance(data[key], str) else str(data[key])
-                    temp_expr = re.sub(pattern, val, temp_expr)
+                    val = data[key]
+                    if isinstance(val, str):
+                        escaped_val = val.replace("'", "\\'")
+                        val_str = f"'{escaped_val}'"
+                    else:
+                        val_str = str(val)
+                    
+                    # Use lambda to avoid backslash issues in re.sub
+                    temp_expr = re.sub(pattern, lambda m: val_str, temp_expr)
             
             return eval(temp_expr, {"__builtins__": None}, ctx)
         except Exception as e:
             return False
-
-    def _load_codelists(self) -> Dict[str, Any]:
-        """Loads all JSON codelists from the resource directory fully"""
-        lists = {}
-        if not os.path.exists(self.codelists_path): return lists
-        
-        for filename in os.listdir(self.codelists_path):
-            if filename.endswith(".json"):
-                 try:
-                    with open(os.path.join(self.codelists_path, filename), "r") as f:
-                        lists[filename.replace(".json", "").lower()] = json.load(f)
-                 except: pass
-        return lists
