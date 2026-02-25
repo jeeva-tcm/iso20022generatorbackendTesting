@@ -437,134 +437,112 @@ class ISOValidator:
     async def _run_layer_1(self, xml_content: str, report: ValidationReport, filename: Optional[str] = None) -> bool:
         """
         LAYER 1 — Technical / Payload Validation
-        Strict alignment with user logic (Steps 1-8)
+        Comprehensive check for well-formedness, illegal characters, and standard ISO envelopes.
         """
         start = time.time()
         
-        # 1. Payload Presence
+        # 1. Payload Presence (FATAL)
         if not xml_content or not xml_content.strip():
             report.add_issue(ValidationIssue(
-                "ERROR", 1, "Empty File", "Payload Missing",
+                "ERROR", 1, "Empty File", "Line 1",
                 "The uploaded file is empty or no content was provided.",
                 "Please upload a valid XML message file or paste XML content."
             ))
             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
             return False
 
-        # 2. File Type Validation
+        # 2. File Type & Preliminary XML Structure (NON-FATAL for L1 checks)
         allowed_exts = ('.xml', '.xsd', '.txt')
-        valid_ext = filename.lower().endswith(allowed_exts) if filename else True
-        
+        if filename and not filename.lower().endswith(allowed_exts):
+             report.add_issue(ValidationIssue(
+                "ERROR", 1, "Wrong File Type", "File Extension",
+                f"The file '{filename}' is not a standard XML extension.",
+                "Please use .xml, .xsd, or .txt extension."
+            ))
+
         # Check content structure (must look like XML)
         has_xml_structure = xml_content.lstrip().startswith(('<', '<?xml'))
-        
-        if not valid_ext:
-             report.add_issue(ValidationIssue(
-                "ERROR", 1, "Wrong File Type", "Invalid Extension",
-                f"The file '{filename}' is not supported.",
-                "Please upload a file with .xml, .xsd, or .txt extension."
-            ))
-             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-             return False
-
         if not has_xml_structure:
              report.add_issue(ValidationIssue(
-                "ERROR", 1, "Invalid Content", "XML Content Required",
+                "ERROR", 1, "Invalid Content", "Line 1",
                 "The file content does not appear to be valid XML.",
-                "The file must contain XML code starting with '<' or '<?xml'."
+                "Ensure the file contains XML tags starting with '<'."
             ))
-             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-             return False
 
-        # 3. Payload Size
+        # 3. Payload Size (FATAL)
         size_kb = len(xml_content.encode('utf-8')) / 1024
-        max_size = self.config.get("app_settings", {}).get("max_file_size_kb", 2048) # Default 2MB
+        max_size = self.config.get("app_settings", {}).get("max_file_size_kb", 2048)
         if size_kb > max_size:
              report.add_issue(ValidationIssue(
-                 "ERROR", 1, "File Too Large", "Size Limit Exceeded", 
-                 f"Your message is {size_kb:.1f} KB, which exceeds the maximum allowed size of {max_size} KB.",
-                 f"Please reduce the message size. The limit is {max_size} KB."
+                 "ERROR", 1, "File Too Large", "Size Limit", 
+                 f"Your message is {size_kb:.1f} KB, exceeding the {max_size} KB limit.",
+                 f"Please reduce the message size below {max_size} KB."
              ))
              report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
              return False
 
-        # 4. UTF-8 Encoding
-        # Strictly check for the presence and value of the encoding header
+        # 4. UTF-8 Encoding & Header (NON-FATAL for L1 checks)
         header_match = re.search(r'<\?xml[^>]+encoding=["\']([^"\']+)["\']', xml_content, re.IGNORECASE)
         if not header_match:
              report.add_issue(ValidationIssue(
-                "ERROR", 1, "Missing Header", "No XML Declaration",
+                "ERROR", 1, "Missing Header", "Line 1",
                 "Your XML file is missing the required declaration header.",
-                "Add this line at the very top of your file: <?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                "Add this line at the very top: <?xml version=\"1.0\" encoding=\"UTF-8\"?>"
             ))
-             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-             return False
         else:
             encoding = header_match.group(1).upper()
             if encoding != "UTF-8":
                 report.add_issue(ValidationIssue(
-                    "ERROR", 1, "Wrong Encoding", "Invalid Character Encoding",
+                    "ERROR", 1, "Wrong Encoding", "Line 1",
                     f"Your file uses {encoding} encoding, but ISO 20022 messages must use UTF-8.",
-                    "Change the encoding in your XML header to: <?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                    "Change the encoding in your XML header to UTF-8."
                 ))
-                report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-                return False
 
-        # 5. Illegal Characters (ASCII 0-31 except tab/newline/cr)
+        # 5. Illegal Characters (NON-FATAL for L1 checks)
         illegal_chars = re.findall(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', xml_content)
         if illegal_chars:
             report.add_issue(ValidationIssue(
-                "ERROR", 1, "Invalid Characters", "Hidden Characters Found",
+                "ERROR", 1, "Invalid Characters", "Line 1",
                 "Your message contains invisible control characters that are not allowed.",
-                "These hidden characters may have come from copy-pasting. Please use a plain text editor to clean your XML."
+                "Remove hidden characters (ASCII 0-31) from your XML."
             ))
-            report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-            return False
 
-        # 6. XML Well-Formedness
+        # 6. XML Well-Formedness & Identity (FATAL if parse fails)
         try:
             xml_bytes = xml_content.encode('utf-8')
             parser = etree.XMLParser(recover=False, no_network=True, remove_blank_text=True)
             root = etree.fromstring(xml_bytes, parser)
             
             # 7. Envelope Detection (Document / BusMsg / AppHdr)
-            # Support standard Document, SWIFT-style BusMsg, and Envelopes
             iso_nodes = root.xpath("//*[local-name()='Document' or local-name()='BusMsg' or local-name()='AppHdr' or local-name()='BusMsgEnvlp']")
             if not iso_nodes and any(x in root.tag for x in ['Document', 'BusMsg', 'AppHdr', 'BusMsgEnvlp']):
                 iso_nodes = [root]
             
             if not iso_nodes:
                 report.add_issue(ValidationIssue(
-                    "ERROR", 1, "Missing Structure", "No ISO 20022 Container",
-                    "Your XML is missing the required <Document> or <BusMsg> wrapper element.",
-                    "ISO 20022 messages must have a <Document> root element. Check the message structure against standard templates."
+                    "ERROR", 1, "Missing Structure", "Root",
+                    "The XML is missing the required ISO 20022 <Document> or <BusMsg> wrapper.",
+                    "Ensure your message is wrapped in a standard ISO 20022 container."
                 ))
-                report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
-                return False
-
-            # 8. Identity Extraction
-            # Prioritize the payload node (Document/BusMsg) for the message identity
-            payload_node = root.xpath("//*[local-name()='Document' or local-name()='BusMsg']")
-            doc_node = payload_node[0] if payload_node else iso_nodes[0]
-            
-            ns = doc_node.nsmap.get(None) or ""
-            
-            # Namespace Validation
-            if not re.match(r'^urn:iso:std:iso:20022:tech:xsd:[a-z]{4}\.\d{3}\.\d{3}\.\d{2}$', ns) and "head.001" not in ns:
-                report.add_issue(ValidationIssue(
-                    "ERROR", 1, "Wrong Namespace", str(doc_node.sourceline or 1),
-                    f"The namespace '{ns}' doesn't match the ISO 20022 standard format.",
-                    "Use the correct namespace format: urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08 (example for pacs.008)."
-                ))
-
-            # Metadata for later layers
-            report.metadata = {"Namespace": ns}
+            else:
+                # 8. Namespace Validation
+                payload_node = root.xpath("//*[local-name()='Document' or local-name()='BusMsg']")
+                doc_node = payload_node[0] if payload_node else iso_nodes[0]
+                ns = doc_node.nsmap.get(None) or ""
+                
+                if not re.match(r'^urn:iso:std:iso:20022:tech:xsd:[a-z]{4}\.\d{3}\.\d{3}\.\d{2}$', ns) and "head.001" not in ns:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 1, "Wrong Namespace", str(doc_node.sourceline or 1),
+                        f"The namespace '{ns}' does not match the ISO 20022 standard format.",
+                        "Use the correct URN format (e.g. urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08)."
+                    ))
+                report.metadata = {"Namespace": ns}
 
         except etree.XMLSyntaxError as e:
             report.add_issue(ValidationIssue(
                 "ERROR", 1, "XML Syntax Error", f"Line {e.lineno}",
-                "Your XML has a syntax error - check for missing or incorrect tags.",
-                f"Error details: {str(e)}. Common issues: unclosed tags, missing brackets, or typos in element names."
+                "Your XML has a syntax error that prevents it from being read.",
+                f"Technical details: {str(e)}. Check for unclosed tags or invalid characters."
             ))
             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
             return False
@@ -964,45 +942,47 @@ class ISOValidator:
 
     def _get_xsd_path(self, message_type: str) -> Optional[str]:
         """
-        Modified: Prioritizes family-based matching (pacs.008) over strict versions.
+        Locates the XSD file for the given message type.
+        1. Exact Match (e.g. pacs.008.001.08.xsd)
+        2. Family Fallback (e.g. pacs.008.xsd)
+        3. Version Fallback (Look for highest available version e.g. .13)
         """
         if not message_type or message_type == "Unknown":
             return None
 
-        # 1. Extract Family (e.g., pacs.008 from pacs.008.001.08)
-        parts = message_type.split(".")
-        family = ".".join(parts[:2]) if len(parts) >= 2 else message_type
-        
-        # 2. Priority Search: Look for family.xsd directly (e.g., pacs.008.xsd)
-        family_xsd = f"{family}.xsd"
+        # 1. Exact Match
         exact_xsd = f"{message_type}.xsd"
-        
-        # Check directly in the extracted folder first (User's preference)
-        direct_path = os.path.join(self.xsd_path, family_xsd)
-        if os.path.exists(direct_path):
-            return direct_path
-            
-        exact_direct = os.path.join(self.xsd_path, exact_xsd)
-        if os.path.exists(exact_direct):
-            return exact_direct
+        exact_path = os.path.join(self.xsd_path, exact_xsd)
+        if os.path.exists(exact_path):
+            return exact_path
 
-        # 3. Fallback: Search recursively for ANY file starting with the family
-        for root, dirs, files in os.walk(self.xsd_path):
-            # Check for family.xsd if it exists deeper
-            if family_xsd in files:
-                return os.path.join(root, family_xsd)
-            
-            # Check for exact name if it exists deeper
-            if exact_xsd in files:
-                return os.path.join(root, exact_xsd)
-                
-            # Finally, pick the first file that feels like this family
-            for f in files:
-                if f.startswith(family) and f.endswith(".xsd"):
-                    # Avoid picking unrelated variants if possible, but user said "only pacs.008"
-                    return os.path.join(root, f)
+        # 2. Family Match (User's specific preference for short names)
+        parts = message_type.split('.')
+        family_prefix = ".".join(parts[:3]) if len(parts) >= 3 else message_type
+        family_short = parts[0] + "." + parts[1] if len(parts) >= 2 else message_type
         
+        family_xsd = f"{family_short}.xsd"
+        family_path = os.path.join(self.xsd_path, family_xsd)
+        if os.path.exists(family_path):
+            return family_path
+
+        # 3. Version-Blind Fallback (Highest available version in family)
+        try:
+            candidates = []
+            for f in os.listdir(self.xsd_path):
+                if f.startswith(family_prefix) and f.endswith(".xsd"):
+                    candidates.append(f)
+            
+            if candidates:
+                best_match = sorted(candidates, reverse=True)[0]
+                fallback_path = os.path.join(self.xsd_path, best_match)
+                print(f"XSD: Exact version '{message_type}' not found. Falling back to '{best_match}'.")
+                return fallback_path
+        except:
+            pass
+
         return None
+
 
     def _load_all_rules(self, message_type: str) -> List[Dict[str, Any]]:
         """
@@ -1149,16 +1129,30 @@ class ISOValidator:
                     ccy = data.get(ccy_path)
                     allowed_decimals = None
                     
-                    if ccy and "currency" in codelists:
-                         curr_list = codelists["currency"]
-                         if isinstance(curr_list, dict):
-                             allowed_decimals = curr_list.get("currencies", {}).get(ccy)
-                    
-                    if allowed_decimals is not None:
-                        val_str = str(value)
-                        actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
-                        if actual_decimals > allowed_decimals:
-                             report.add_issue(ValidationIssue(severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key), f"Incorrect decimal precision for {ccy} amount '{value}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.", f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'1000.00' if allowed_decimals == 2 else '1000' if allowed_decimals == 0 else '1000.000'})."))
+                    if ccy:
+                        if "currency" in codelists:
+                             curr_list = codelists["currency"]
+                             if isinstance(curr_list, dict):
+                                 currencies = curr_list.get("currencies", {})
+                                 if ccy in currencies:
+                                     allowed_decimals = currencies.get(ccy)
+                                 else:
+                                     report.add_issue(ValidationIssue(
+                                         severity, layer, "INVALID_CURRENCY_CODE", _get_line(ccy_path),
+                                         f"Unrecognised Currency Code '{ccy}'.",
+                                         f"The code '{ccy}' is not a valid ISO 4217 currency. Use standard codes like USD, EUR, GBP, JPY, etc."
+                                     ))
+                                     continue # Skip further amount checks for invalid currency
+                        
+                        if allowed_decimals is not None:
+                            val_str = str(value)
+                            actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
+                            if actual_decimals > allowed_decimals:
+                                 report.add_issue(ValidationIssue(
+                                     severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key),
+                                     f"Incorrect decimal precision for {ccy} amount '{value}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
+                                     f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'10.00' if allowed_decimals == 2 else '10' if allowed_decimals == 0 else '10.000'})."
+                                 ))
 
                 elif rule_type == "regex":
                     pattern = rule.get("pattern", ".*")
@@ -1378,6 +1372,7 @@ class ISOValidator:
                                                         rule_meta.get("desc", "")) if rule_meta else True,
                 "check_bic_match": check_bic_match,
                 "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
+                "check_iban_currency": lambda k, v: self._check_iban_currency(k, v, data, report, _gl, codelists),
                 "is_after_2026": datetime.now() > mandate_date,
                 "exists": lambda x: any(k.startswith(x) for k in data.keys())
             }
@@ -1399,3 +1394,70 @@ class ISOValidator:
             return eval(temp_expr, {"__builtins__": None}, ctx)
         except Exception as e:
             return False
+
+    def _check_iban_currency(self, iban_key, iban_val, data, report, _gl, codelists):
+        """
+        Business Rule: Validate if the transaction currency matches the local currency 
+        of the country where the Debtor's IBAN is registered.
+        """
+        # Rule is configurable via flag
+        if not self.config.get("validation_rules", {}).get("enable_iban_currency_check", True):
+            return True
+
+        # Extract currency - searching relative or anywhere
+        # User example: <InstdAmt Ccy="XXX">
+        currency = None
+        ccy_key = None
+        
+        # 1. Search for currency in common locations (InstdAmt, IntrBkSttlmAmt)
+        # We prioritize tags in the same transaction block if possible
+        tx_path = iban_key.rsplit('.DbtrAcct', 1)[0] if '.DbtrAcct' in iban_key else None
+        
+        if tx_path:
+             for tag in ["InstdAmt", "IntrBkSttlmAmt", "Amt.InstdAmt"]:
+                  k = f"{tx_path}.{tag}@Ccy"
+                  if k in data:
+                       currency = data[k]
+                       ccy_key = k
+                       break
+        
+        # Fallback: Search anywhere
+        if not currency:
+            for k, v in data.items():
+                if k.endswith("@Ccy") and ("InstdAmt" in k or "IntrBkSttlmAmt" in k):
+                    currency = v
+                    ccy_key = k
+                    break
+        
+        if not currency:
+            return True # Cannot validate if currency attribute is missing from standard tags
+
+        # IBAN basic validation (Min 15 characters as per requirement)
+        if not iban_val or not isinstance(iban_val, str) or len(iban_val) < 15:
+            report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN", _gl(iban_key), "Invalid or Missing Debtor IBAN", "Ensure the IBAN is at least 15 characters long and follows the correct structure."))
+            return True
+
+        country_code = iban_val[:2].upper()
+        if not country_code.isalpha():
+             report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN_CTRY", _gl(iban_key), "Invalid or Missing Debtor IBAN", "The first two characters of the IBAN must be a valid country code."))
+             return True
+
+        # Map country to currency
+        iban_map = codelists.get("iban_currency_map", {})
+        expected_currency = iban_map.get(country_code)
+        
+        if not expected_currency:
+            report.add_issue(ValidationIssue("ERROR", 3, "UNSUPPORTED_IBAN_CTRY", _gl(iban_key), "Unsupported IBAN Country Code", f"The country code '{country_code}' extracted from the IBAN is not supported in the currency mapping."))
+            return True
+
+        # Currency must follow ISO 4217 format (3 uppercase letters) and be case-sensitive
+        if currency != expected_currency:
+            report.add_issue(ValidationIssue(
+                "ERROR", 3, "CURR_IBAN_MISMATCH", _gl(ccy_key or iban_key),
+                f"Currency {currency} does not match expected currency {expected_currency} for IBAN country {country_code}",
+                f"Update the transaction currency to {expected_currency} for the account based in {country_code}."
+            ))
+            return True # Suppress generic error
+
+        return True
+

@@ -48,7 +48,8 @@
                 "EUR": 90000,
                 "GBP": 80000
             }
-        }
+        },
+        "enable_iban_currency_check": true
     },
     "supported_families_fallback": [
         "pacs.008",

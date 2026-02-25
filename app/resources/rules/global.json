@@ -67,5 +67,14 @@
         "expression": "check_purpose_limit(KEY, VALUE)",
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "L3_IBAN_CURR_001",
+        "description": "IBAN Based Currency Validation",
+        "type": "expression",
+        "selector": ".*DbtrAcct\\.Id\\.IBAN$",
+        "expression": "check_iban_currency(KEY, VALUE)",
+        "severity": "ERROR",
+        "layer": 3
     }
 ]
