@@ -8,6 +8,24 @@
         "layer": 3
     },
     {
+        "rule_id": "L3_COUNTRY_001",
+        "description": "Country Code Compliance (ISO 3166-1 Alpha-2)",
+        "type": "codelist",
+        "selector": ".*\\.Ctry$",
+        "list_name": "country",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_CHRGBR_001",
+        "description": "Charge Bearer Code Validation",
+        "type": "codelist",
+        "selector": ".*ChrgBr$",
+        "list_name": "charge_bearer",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
         "rule_id": "E001",
         "description": "Town name mandatory for post-Nov 2026 messages",
         "type": "expression",
@@ -43,19 +61,10 @@
     },
     {
         "rule_id": "L3-PURPOSE-LIMIT",
-        "description": "Conditional Amount Limit based on Purpose Code (SALA/RENT)",
+        "description": "Conditional Amount Limit based on Purpose Code",
         "type": "expression",
         "selector": ".*Purp\\.Cd$",
         "expression": "check_purpose_limit(KEY, VALUE)",
-        "severity": "ERROR",
-        "layer": 3
-    },
-    {
-        "rule_id": "L3-CHRGBR-VALID",
-        "description": "Charge Bearer Code Validation",
-        "type": "codelist",
-        "selector": ".*ChrgBr$",
-        "list_name": "charge_bearer",
         "severity": "ERROR",
         "layer": 3
     }

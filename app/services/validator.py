@@ -346,13 +346,15 @@ class ISOValidator:
                     canonical[path] = element.text.strip()
 
                 # 3. Children with indexing for repeats
+                # Note: skip non-element nodes (Comments, PIs) whose .tag is a function
+                element_children = [c for c in element if isinstance(c.tag, str)]
                 tag_counts = {}
-                for child in element:
+                for child in element_children:
                     tag = get_clean_tag(child.tag)
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
                 
                 current_counts = {}
-                for child in element:
+                for child in element_children:
                     tag = get_clean_tag(child.tag)
                     
                     # Construct indexed path: Tag[0], Tag[1] if multiple exist
@@ -642,50 +644,82 @@ class ISOValidator:
                     # If we can identify the specific invalid value and tag, let's find the EXACT line in the original tree.
                     # This fixes issues where re-parsing destroys line numbers.
                     try:
+                        # Debug: log raw lxml error message to help diagnose format issues
+                        print(f"[DEBUG L2 ERROR] line={error.line} msg={error.message!r}")
+
                         # Extract Tag and Value from error message
-                        # Msg format: "Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'..."
+                        # Typical lxml format:
+                        #   Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'...
+                        #   Element 'IntrBkSttlmAmt', attribute 'Ccy': [facet 'pattern'] The value 'USDDD'...
                         tag_match = re.search(r"Element '([^']+)'", error.message)
-                        # Changed + to * to allow matching empty values ''
-                        val_match = re.search(r"value '([^']*)'|Value '([^']*)'", error.message)
-                        
-                        if tag_match:
+                        # Case-insensitive, matches both "attribute '...'" and "Attribute '...'"
+                        attr_match = re.search(r"[Aa]ttribute '([^']+)'", error.message)
+                        val_match  = re.search(r"[Vv]alue '([^']*)'" , error.message)
+
+                        found_line = None
+
+                        # ── CASE A: ATTRIBUTE ERROR (e.g. Ccy="USDDD") ──
+                        # lxml: "Element 'IntrBkSttlmAmt', attribute 'Ccy': ... value 'USDDD'..."
+                        if attr_match and val_match:
+                            attr_name    = attr_match.group(1).split('}')[-1]
+                            bad_attr_val = val_match.group(1)
+
+                            if bad_attr_val.strip():
+                                # Raw-text scan: find AttrName="BadValue" in the original XML
+                                escaped_name = re.escape(attr_name)
+                                escaped_val  = re.escape(bad_attr_val)
+                                attr_pattern = re.compile(
+                                    escaped_name + r'\s*=\s*["\']' + escaped_val + r'["\']'
+                                )
+                                attr_text_match = attr_pattern.search(xml_content)
+                                if attr_text_match:
+                                    found_line = xml_content.count('\n', 0, attr_text_match.start()) + 1
+
+                            # Fallback: use sourceline of the parent element from main_node
+                            if not found_line and tag_match:
+                                parent_tag  = tag_match.group(1).split('}')[-1]
+                                parent_nodes = main_node.xpath(
+                                    f"descendant-or-self::*[local-name()='{parent_tag}']"
+                                )
+                                if parent_nodes:
+                                    found_line = parent_nodes[0].sourceline
+
+                        # ── CASE B: ELEMENT VALUE / STRUCTURE ERROR ──
+                        elif tag_match:
                             tag_full = tag_match.group(1)
-                            # Strip namespace {urn...} if present
                             tag_name = tag_full.split('}')[-1] if '}' in tag_full else tag_full
-                            
-                            # Search in original document for this tag
-                            candidates = main_node.xpath(f"descendant-or-self::*[local-name()='{tag_name}']")
-                            found_line = None
+
+                            candidates = main_node.xpath(
+                                f"descendant-or-self::*[local-name()='{tag_name}']"
+                            )
                             estimate = real_line
-                            
+
                             if val_match:
-                                # Case 1: Specific Value Error (High Precision)
-                                # Safely extract the matched value group
-                                bad_val = val_match.group(1) if val_match.group(1) is not None else (val_match.group(2) if val_match.group(2) is not None else "")
-                                
-                                # Find candidate with matching value closest to estimate
+                                # High-Precision: match element text
+                                bad_val = val_match.group(1)
                                 best_match_line = None
                                 min_dist = float('inf')
                                 for c in candidates:
-                                    c_val = (c.text or "").strip()
-                                    if c_val == bad_val:
+                                    if (c.text or "").strip() == bad_val:
                                         dist = abs((c.sourceline or 0) - estimate)
                                         if dist < min_dist:
                                             min_dist = dist
                                             best_match_line = c.sourceline
-                                
                                 found_line = best_match_line
-                                
-                                # Ultimate Fallback: Text Search for <Tag>Value</Tag>
+
+                                # Raw-text fallback: <Tag>BadVal</Tag>
                                 if not found_line and bad_val.strip():
-                                    pattern = re.compile(f"<{tag_name}[^>]*>\s*{re.escape(bad_val)}\s*</{tag_name}>")
-                                    match = pattern.search(xml_content)
-                                    if match:
-                                        found_line = xml_content.count('\n', 0, match.start()) + 1
-                                        
+                                    elem_pattern = re.compile(
+                                        '<' + tag_name + r'[^>]*>\s*' +
+                                        re.escape(bad_val) +
+                                        r'\s*</' + tag_name + '>'
+                                    )
+                                    elem_match = elem_pattern.search(xml_content)
+                                    if elem_match:
+                                        found_line = xml_content.count('\n', 0, elem_match.start()) + 1
+
                             elif candidates:
-                                # Case 2: Structure/Missing Error (No bad value to match)
-                                # Pick candidate closest to the estimated line
+                                # Structure error: pick closest candidate to estimate
                                 best_match_line = None
                                 min_dist = float('inf')
                                 for c in candidates:
@@ -694,11 +728,13 @@ class ISOValidator:
                                         min_dist = dist
                                         best_match_line = c.sourceline
                                 found_line = best_match_line
-                                    
-                            if found_line:
-                                real_line = found_line
-                    except:
-                        pass # Fallback to calculated line
+
+                        if found_line:
+                            real_line = found_line
+
+                    except Exception as _ex:
+                        print(f"[DEBUG L2 LINE-CORRECTION EXCEPTION] {_ex}")
+                        pass  # Fallback to calculated line
 
                     friendly_msg, suggestion = self._simplify_error_message(error.message)
                     issues.append(ValidationIssue("ERROR", 2, "SCHEMA_VAL", str(real_line), friendly_msg, suggestion))
@@ -754,6 +790,10 @@ class ISOValidator:
         return success
 
     def _mask_namespace(self, element, new_ns: str):
+        # Guard: lxml Comment/PI nodes have .tag = etree.Comment (a Cython function)
+        # which is NOT a string. We must copy them as-is to avoid QName crash.
+        if not isinstance(element.tag, str):
+            return element  # Return comment/PI as-is (lxml will deep-copy it safely)
         attribs = {}
         for k, v in element.attrib.items():
             attribs[k] = v
@@ -850,7 +890,41 @@ class ISOValidator:
 
             return ("The value format is incorrect.", "Check if you have used text where numbers are expected, or used invalid symbolic characters.")
 
-        # --- 7. Length & Enumerations ---
+        # --- 7. ATTRIBUTE ERRORS (must come BEFORE generic pattern/enum checks) ---
+        # lxml format: "Element 'IntrBkSttlmAmt', attribute 'Ccy': [facet 'pattern'] The value 'USDD'..."
+        # This contains BOTH "attribute" AND "pattern"/"facet" keywords, so it must be checked first.
+        if "attribute" in msg.lower():
+            # Sub-case A: Invalid attribute VALUE (e.g. Ccy="USDDD")
+            attr_name_match = re.search(r"[Aa]ttribute '([^']+)'", msg)
+            attr_val_match  = re.search(r"[Vv]alue '([^']+)'", msg)
+            if attr_name_match and attr_val_match:
+                attr_name = attr_name_match.group(1).split('}')[-1]
+                attr_val  = attr_val_match.group(1)
+                # Currency attribute specific message
+                if attr_name.lower() in ("ccy", "currency"):
+                    return (
+                        f"Invalid Currency Code '{attr_val}'.",
+                        f"The currency code '{attr_val}' is not a valid ISO 4217 3-letter currency code. "
+                        f"Use a standard 3-letter code such as 'USD', 'EUR', 'GBP', 'JPY', 'INR', etc. "
+                        f"Example: Ccy=\"USD\"."
+                    )
+                return (
+                    f"Invalid value '{attr_val}' for the '{attr_name}' attribute.",
+                    f"The value '{attr_val}' is not allowed for the attribute '{attr_name}'. "
+                    f"Please check the ISO 20022 standard for the list of permitted values."
+                )
+            # Sub-case B: Missing attribute entirely
+            if attr_name_match:
+                attr_name = attr_name_match.group(1).split('}')[-1]
+                return (
+                    f"Missing required attribute '{attr_name}'.",
+                    f"The attribute '{attr_name}' is required but not present. "
+                    f"For example, currency amount elements must include Ccy=\"USD\" (or similar)."
+                )
+            # Generic fallback for attribute errors
+            return ("Missing required detail (Attribute).", "A required attribute (like a Currency Code 'Ccy') is missing or invalid. Please check the element's attributes.")
+
+        # --- 8. Length & Enumerations (non-attribute) ---
         if "is not facet-valid" in msg or "facet 'enumeration'" in msg:
             if "length" in msg.lower():
                 return ("Field length limit exceeded.", "The text provided is either too long or too short for this specific field. Please check the character count.")
@@ -871,10 +945,7 @@ class ISOValidator:
                  return (f"Invalid value '{val}' for field '{elem}'.", 
                         f"The value '{val}' is not allowed for '{elem}'. Please use one of the standard ISO 20022 codes allowed for this field.")
 
-        # --- 8. Attributes & Nesting ---
-        if "attribute" in msg.lower():
-            return ("Missing required detail (Attribute).", "A technical requirement inside the field (like a Currency Code 'Ccy') is missing. Please add it.")
-        
+        # --- 9. Other Nesting issues ---
         if "not allowed here" in msg:
             return ("Misplaced information.", "This field is not allowed in this specific section of the message. Remove it or move it to a valid parent element.")
 
@@ -1044,11 +1115,29 @@ class ISOValidator:
                             valid_codes = []
                             
                         if value not in valid_codes:
-                            report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Value '{value}' not in list."))
+                            # Build context-aware message and fix suggestion
+                            field_name = key.split('.')[-1]
+                            if list_name == "country":
+                                msg = f"Invalid country code '{value}' in field '{field_name}'."
+                                fix = (f"'{value}' is not a valid ISO 3166-1 Alpha-2 country code. "
+                                       f"Use a 2-letter code like 'US', 'GB', 'DE', 'FR', 'IN', 'SG', etc.")
+                            elif list_name == "charge_bearer":
+                                msg = f"Invalid Charge Bearer code '{value}'."
+                                fix = (f"'{value}' is not allowed. Valid Charge Bearer codes are: "
+                                       f"SLEV (Shared, as agreed), SHAR (Shared), CRED (Borne by Creditor), DEBT (Borne by Debtor).")
+                            elif list_name == "purpose_code":
+                                msg = f"Invalid Purpose Code '{value}'."
+                                fix = (f"'{value}' is not a valid ISO 20022 Purpose Code. "
+                                       f"Use a standard code such as SALA, RENT, SUPP, CORT, PENS, BONU, TRAD, LOAN, TAXS, etc.")
+                            else:
+                                msg = f"Field '{field_name}' contains invalid code '{value}'."
+                                fix = f"Value '{value}' is not a valid code for this field. Please check the ISO 20022 standard for permitted values."
+                            
+                            report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), msg, fix))
                 
                 elif rule_type == "bic":
                     if not re.match(r'^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$', str(value)):
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Invalid BIC structure: '{value}'."))
+                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Invalid BIC structure: '{value}'.", "BIC must be 8 or 11 characters: 4-char bank code + 2-letter country + 2-char location + optional 3-char branch (e.g., BNKGB2LXXX)."))
                     elif self.supported_bics and value.upper() not in self.supported_bics:
                         report.add_issue(ValidationIssue("WARNING", layer, "BIC_NOT_FOUND", _get_line(key), f"BIC '{value}' not found in official directory.", "Verify if the BIC is correct or recently decommissioned."))
                 
@@ -1069,7 +1158,7 @@ class ISOValidator:
                         val_str = str(value)
                         actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
                         if actual_decimals > allowed_decimals:
-                             report.add_issue(ValidationIssue(severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key), f"Invalid decimal precision for {ccy}. Max {allowed_decimals}, found {actual_decimals}."))
+                             report.add_issue(ValidationIssue(severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key), f"Incorrect decimal precision for {ccy} amount '{value}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.", f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'1000.00' if allowed_decimals == 2 else '1000' if allowed_decimals == 0 else '1000.000'})."))
 
                 elif rule_type == "regex":
                     pattern = rule.get("pattern", ".*")
@@ -1198,8 +1287,8 @@ class ISOValidator:
             
             if purpose not in supported_purposes:
                 report.add_issue(ValidationIssue("ERROR", 3, "INVALID_PURPOSE_CODE", _gl(purp_key), 
-                    f"Message contains purpose code '{purpose}' which is not in the supported list (SALA, RENT, SUPP).", 
-                    "Ensure only approved business purpose codes (SALA/RENT/SUPP) are used."))
+                    f"Invalid purpose code '{purpose}'. This code is not a recognised ISO 20022 ExternalPurpose1Code value.", 
+                    f"Replace '{purpose}' with a valid ISO 20022 purpose code (e.g., SALA, CORT, PENS, BONU, TRAD, LOAN, RENT, SUPP, TAXS, etc.)."))
                 return True # Suppress generic error by returning True after adding specific error
             # Discover Amount Key (climb up from Purp)
             amt_key = None
