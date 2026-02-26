@@ -238,6 +238,30 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
 
+            # STEP 5.1: FAIL-FAST SANCTIONS SCREENING
+            sanctioned_codes = {'AF', 'BY', 'BI', 'CF', 'CU', 'CD', 'ET', 'GN', 'GW', 'HT', 'IR', 'IQ', 'LY', 'ML', 'MM', 'KP', 'RU', 'SO', 'SS', 'SD', 'SY', 'VE', 'YE', 'ZW'}
+            sanctioned_names = {'afghanistan', 'belarus', 'burundi', 'central african republic', 'cuba', 'democratic republic of the congo', 'ethiopia', 'guinea', 'guinea-bissau', 'haiti', 'iran', 'iraq', 'libya', 'mali', 'myanmar', 'burma', 'north korea', 'russia', 'somalia', 'south sudan', 'sudan', 'syria', 'venezuela', 'yemen', 'zimbabwe'}
+            
+            for path, value in canonical_data.items():
+                # Check fields associated with parties (Debtor, Creditor, Agents)
+                if any(x in path for x in ['Dbtr', 'Cdtr', 'InstgAgt', 'InstdAgt', 'InitgPty', 'Pty']):
+                    str_val = str(value).strip().lower()
+                    # Check ISO code (in Ctry tags)
+                    if 'Ctry' in path and value in sanctioned_codes:
+                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", path, f"Fail-fast: Party from sanctioned country code '{value}' detected.", "Transaction rejected due to sanctions compliance."))
+                        break
+                    # Check names in address/name fields
+                    if any(name in str_val for name in sanctioned_names):
+                        # Simple keyword hit
+                        hit = next(name for name in sanctioned_names if name in str_val)
+                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", path, f"Fail-fast: Party from sanctioned country '{hit.title()}' detected.", "Transaction rejected due to sanctions compliance."))
+                        break
+            
+            if any(i['code'] == 'SANCTIONS_BLOCKED' for i in report.issues):
+                 # Fail fast, skip further L3 rules
+                 report.layer_status['3'] = {"status": "❌", "time": round((time.time() - start_time) * 1000, 2)}
+                 return self._finalize_report(report, start_time)
+
             # STEP 6-9: Dynamic Rule Engine (Layers 1-3)
             # Load all rules once
             try:
