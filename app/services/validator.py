@@ -12,6 +12,7 @@ from .models import ValidationIssue, ValidationReport
 from .layer1_validator import Layer1Mixin
 from .layer2_validator import Layer2Mixin
 from .layer3_validator import Layer3Mixin
+from .layer3_timing import validateLayer3Timing
 
 
 class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
@@ -29,6 +30,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         # Load Configuration
         self.config_path = os.path.join(backend_root, "app", "resources", "config.json")
         self.config = self._load_config()
+        
+        self.cutoff_config_path = os.path.join(backend_root, "app", "resources", "cutoff_timings.json")
+        self.cutoff_config = {}
+        if os.path.exists(self.cutoff_config_path):
+            try:
+                with open(self.cutoff_config_path, 'r') as f:
+                    self.cutoff_config = json.load(f)
+            except Exception as e:
+                print(f"Error loading cutoff config: {e}")
         
         # Step 4 Mapping: Version to SR Version (Dynamic)
         self.sr_mapping = self.config.get("sr_versions", {
@@ -271,6 +281,72 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                     for layer_id in [3]:
                         self._run_dynamic_layer(layer_id, all_rules, canonical_data, line_map, report)
                         
+                        # --- Apply Layer 3 Timing Validation ---
+                        try:
+                            if self.cutoff_config:
+                                debtor_country = "US"
+                                creditor_country = "GB"
+                                debtor_sys = "FEDWIRE"
+                                creditor_sys = "CHAPS"
+                                
+                                for k, v in canonical_data.items():
+                                    if k.endswith('.Dbtr.PstlAdr.Ctry') or k.endswith('.InitgPty.PstlAdr.Ctry'):
+                                        debtor_country = v
+                                    if k.endswith('.Cdtr.PstlAdr.Ctry'):
+                                        creditor_country = v
+                                        
+                                d_sys_conf = self.cutoff_config.get("timings", {}).get(debtor_country, {}).get("paymentSystems", {})
+                                if d_sys_conf: debtor_sys = list(d_sys_conf.keys())[0]
+                                c_sys_conf = self.cutoff_config.get("timings", {}).get(creditor_country, {}).get("paymentSystems", {})
+                                if c_sys_conf: creditor_sys = list(c_sys_conf.keys())[0]
+
+                                ctx = {
+                                    "debtorCountry": debtor_country,
+                                    "debtorPaymentSystem": debtor_sys,
+                                    "creditorCountry": creditor_country,
+                                    "creditorPaymentSystem": creditor_sys,
+                                    "submissionTimestamp": datetime.now(timezone.utc).isoformat(),
+                                    "validationMode": "STRICT"
+                                }
+                                
+                                # Extract specific timing fields into payload
+                                t_payload = {}
+                                for k, v in canonical_data.items():
+                                    if k.endswith('.CreDtTm') or k == 'CreDtTm':
+                                        t_payload['CreDtTm'] = v
+                                    elif k.endswith('.ReqdExctnDt') or k == 'ReqdExctnDt':
+                                        t_payload['ReqdExctnDt'] = v
+                                    elif k.endswith('.IntrBkSttlmDt') or k == 'IntrBkSttlmDt':
+                                        t_payload['IntrBkSttlmDt'] = v
+                                    elif 'MsgDefIdr' in k:
+                                        t_payload['MsgDefIdr'] = v
+
+                                timing_result = validateLayer3Timing(t_payload, ctx, self.cutoff_config)
+                                for iss_dict in timing_result.get("issues", []):
+                                    f_path = iss_dict.get("field", "/")
+                                    if f_path == "CreDtTm": f_path = "AppHdr.CreDtTm"
+                                    # Try to find exactly matching paths for accurate lines
+                                    matched_path = f_path
+                                    for k in canonical_data.keys():
+                                        if k.endswith(f_path):
+                                             matched_path = k
+                                             break
+                                             
+                                    line = str(line_map.get(matched_path, "/")) if matched_path != "/" else "/"
+                                    severity = "ERROR" if iss_dict["severity"] == "FAIL" else iss_dict["severity"]
+                                    
+                                    details_str = ""
+                                    if "computed" in iss_dict.get("details", {}):
+                                         details_str = f"Recommended Value Date: {iss_dict['details']['computed'].get('recommendedValueDate', '')}"
+                                    
+                                    full_msg = f"{iss_dict['message']} {details_str}".strip()
+                                    report.add_issue(ValidationIssue(severity, 3, iss_dict["ruleId"], line, full_msg, details_str))
+                                    
+                                if timing_result.get("status") == "FAIL":
+                                    report.layer_status['3'] = {"status": "❌", "time": round((time.time() - start_time) * 1000, 2)}
+                        except Exception as e:
+                            print(f"DEBUG Timing Validation Error: {e}")
+
                         # Stop if this layer failed
                         layer_status = report.layer_status.get(str(layer_id), {}).get("status")
                         if layer_status == "❌":
