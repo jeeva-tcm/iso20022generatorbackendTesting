@@ -1,5 +1,10 @@
 import sys
+import os
 import traceback
+
+# Load environment variables from .env before importing app
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 try:
     import uvicorn

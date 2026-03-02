@@ -1,22 +1,24 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+import json
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Load .env from the backend root (two levels up from this file)
+_backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(_backend_root, ".env"))
+
 
 class FirebaseHistoryService:
     def __init__(self):
         self.db = None
         self.enabled = False
-        
-        # Look for Firebase key in resources
-        # The key should be downloaded from Firebase Console (Settings > Service Accounts)
-        key_name = "firebase-key.json"
-        key_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", key_name)
-        
+
         try:
-            if os.path.exists(key_path):
-                cred = credentials.Certificate(key_path)
+            cred = self._build_credentials()
+            if cred is not None:
                 # Avoid re-initialization if app already initialized
                 if not firebase_admin._apps:
                     firebase_admin.initialize_app(cred)
@@ -24,19 +26,80 @@ class FirebaseHistoryService:
                 self.enabled = True
                 print("Firebase Firestore initialized successfully.")
             else:
-                print(f"ALERT: Firebase key not found at {key_path}")
-                print("Please download your service-account-key.json from Firebase and rename it to firebase-key.json in the resources folder.")
+                print("ALERT: No Firebase credentials found.")
+                print("Please configure your .env file with Firebase credentials.")
+                print("See .env.example for reference.")
                 self.enabled = False
         except Exception as e:
             print(f"CRITICAL: Error initializing Firebase: {str(e)}")
             self.enabled = False
+
+    @staticmethod
+    def _build_credentials():
+        """
+        Build Firebase credentials from environment variables.
+
+        Priority:
+        1. Inline env vars (FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + ...)
+        2. FIREBASE_KEY_PATH env var pointing to a JSON key file
+        3. Legacy fallback: firebase-key.json in app/resources/
+        """
+
+        # --- Option 1: Inline credentials from env vars ---
+        project_id = os.getenv("FIREBASE_PROJECT_ID", "").strip()
+        private_key = os.getenv("FIREBASE_PRIVATE_KEY", "").strip()
+        client_email = os.getenv("FIREBASE_CLIENT_EMAIL", "").strip()
+
+        if project_id and private_key and client_email:
+            # Fix escaped newlines (common when pasting from .env files)
+            private_key = private_key.replace("\\n", "\n")
+
+            cert_dict = {
+                "type": "service_account",
+                "project_id": project_id,
+                "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID", ""),
+                "private_key": private_key,
+                "client_email": client_email,
+                "client_id": os.getenv("FIREBASE_CLIENT_ID", ""),
+                "auth_uri": os.getenv("FIREBASE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
+                "token_uri": os.getenv("FIREBASE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
+                "auth_provider_x509_cert_url": os.getenv(
+                    "FIREBASE_AUTH_PROVIDER_CERT_URL",
+                    "https://www.googleapis.com/oauth2/v1/certs"
+                ),
+                "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL", ""),
+            }
+            print("Using inline Firebase credentials from environment variables.")
+            return credentials.Certificate(cert_dict)
+
+        # --- Option 2: Key file path from env var ---
+        key_path_env = os.getenv("FIREBASE_KEY_PATH", "").strip()
+        if key_path_env:
+            # Resolve relative paths from the backend root
+            if not os.path.isabs(key_path_env):
+                key_path_env = os.path.join(_backend_root, key_path_env)
+            if os.path.exists(key_path_env):
+                print(f"Using Firebase key file from FIREBASE_KEY_PATH: {key_path_env}")
+                return credentials.Certificate(key_path_env)
+            else:
+                print(f"WARNING: FIREBASE_KEY_PATH is set but file not found: {key_path_env}")
+
+        # --- Option 3: Legacy fallback ---
+        legacy_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "resources", "firebase-key.json"
+        )
+        if os.path.exists(legacy_path):
+            print(f"Using legacy Firebase key file: {legacy_path}")
+            return credentials.Certificate(legacy_path)
+
+        return None
 
     def save_history(self, record: Dict[str, Any]) -> str:
         """Saves a validation report to Firestore"""
         if not self.enabled:
             return None
         
-        # Firestore handles dynamic schemas, but let's ensure the core fields are there
         # Convert timestamp to native Firestore timestamp if it's a datetime
         if "timestamp" not in record:
             record["timestamp"] = datetime.now(timezone.utc)
@@ -65,7 +128,6 @@ class FirebaseHistoryService:
             results = []
             for doc in docs:
                 data = doc.to_dict()
-                # Firestore returns datetime objects, but our schema expects them or strings
                 results.append(data)
             return results
         except Exception as e:
@@ -78,9 +140,6 @@ class FirebaseHistoryService:
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
             
         try:
-            # For Firestore, simple counts require a full stream if they are small, 
-            # or aggregation queries for large collections.
-            # Using stream for MVP.
             docs = self.db.collection("validation_history").stream()
             total = 0
             passed = 0
