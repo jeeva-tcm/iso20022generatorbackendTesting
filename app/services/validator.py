@@ -231,11 +231,21 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             except: 
                 pass # Non-critical failure
 
+            # STEP 4.5: DATE VALIDATION — runs on raw XML before Layer 2
+            # so past-date errors are ALWAYS reported even when XSD also fails.
+            self._validate_dates_in_xml(xml_content, report, start_time)
+
+            # STEP 4.6: ID FIELD MAX-LENGTH VALIDATION — runs on raw XML before Layer 2
+            self._validate_id_lengths_in_xml(xml_content, report)
+
+            # STEP 4.7: UETR UUID v4 FORMAT VALIDATION — runs on raw XML before Layer 2
+            self._validate_uetr_in_xml(xml_content, report)
+
             if mode != "Layer 1 only":
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                     if not layer2_success:
-                         # ⛔ Rejection: If XSD fails, stop here (Requirement Step 4)
+                         # ⛔ Rejection: If XSD fails, stop here after collecting all errors.
                          return self._finalize_report(report, start_time)
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))
@@ -247,6 +257,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             except Exception as e:
                 report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
+
+            # (Date validation already ran in Step 4.5 above, before Layer 2)
+
 
             # STEP 5.1: FAIL-FAST SANCTIONS SCREENING (Dynamic)
             sanctions_config = self.config.get("sanctions", {})
@@ -381,6 +394,194 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             import traceback; traceback.print_exc()
             
         return self._finalize_report(report, start_time)
+
+    def _validate_dates_in_xml(self, xml_content: str, report: ValidationReport, start_time: float) -> None:
+        """
+        Step 4.5 — Past Date Validation
+        Scans the raw XML string directly for ALL date and datetime values.
+        This runs BEFORE Layer 2 so past-date errors are always reported,
+        even when the XSD also finds other errors (e.g. invalid amount/IBAN).
+
+        Supported formats:
+          2026-03-02                       (XML date)
+          2026-03-02T10:35:00              (XML dateTime, no tz)
+          2026-03-02T10:35:00Z             (XML dateTime, UTC)
+          2026-03-02T10:35:00+05:30        (XML dateTime, offset)
+          2026-03-02T10:35:00.123+00:00    (XML dateTime, ms + offset)
+        """
+        today_date = datetime.now().date()
+
+        # Matches tag + value pairs: <TagName>2026-02-01T10:35:00+00:00</TagName>
+        # Captures: (1) tag name  (2) date/datetime value  (3) optional time+tz part
+        xml_date_patt = re.compile(
+            r'<([A-Za-z][A-Za-z0-9]*)>'           # opening tag
+            r'\s*'
+            r'(\d{4}-\d{2}-\d{2}'                  # date part  (group 2)
+            r'(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?)'  # optional time+tz
+            r'\s*'
+            r'</\1>'                               # matching closing tag
+        )
+
+        seen = set()  # avoid duplicate errors for the same tag+value
+        for m in xml_date_patt.finditer(xml_content):
+            tag_name  = m.group(1)
+            raw_value = m.group(2).strip()
+            key = (tag_name, raw_value)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            try:
+                date_part  = raw_value[:10]          # always YYYY-MM-DD
+                parsed_date = datetime.strptime(date_part, "%Y-%m-%d").date()
+            except ValueError:
+                continue  # not a real calendar date
+
+            if parsed_date < today_date:
+                # Find the line number in the raw XML
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = "Unknown"
+
+                report.add_issue(ValidationIssue(
+                    "ERROR",
+                    3,
+                    "PAST_DATE_ERROR",
+                    str(line_num),
+                    f"Date cannot be in the past. "
+                    f"Field <{tag_name}> contains '{raw_value}', "
+                    f"which is before today ({today_date}).",
+                    f"Update <{tag_name}> to today ({today_date}) or a future date. "
+                    f"(Line: {line_num})"
+                ))
+
+    def _validate_id_lengths_in_xml(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.6 — ID Field Maximum Length Validation
+        Scans the raw XML string for known identifier fields and checks that
+        their values do not exceed their ISO 20022-defined maximum lengths.
+
+        This runs BEFORE Layer 2 so violations are always reported alongside
+        any XSD errors (e.g. invalid amounts, IBANs, UETRs).
+
+        Field limits enforced:
+          InstrId      → max 35 chars
+          EndToEndId   → max 35 chars
+          BizMsgIdr    → max 35 chars
+          MsgId        → max 35 chars
+          TxId         → max 35 chars
+          UETR         → max 36 chars
+        """
+        # UETR is handled by the dedicated _validate_uetr_in_xml validator (Step 4.7)
+        # which checks UUID v4 format fully, so it is excluded here to avoid
+        # double-reporting.
+        ID_MAX_LENGTHS = {
+            "InstrId":    35,
+            "EndToEndId": 35,
+            "BizMsgIdr":  35,
+            "MsgId":      35,
+            "TxId":       35,
+        }
+
+        # Build one combined pattern that matches any of the tracked tags
+        tag_alternation = "|".join(re.escape(t) for t in ID_MAX_LENGTHS)
+        id_patt = re.compile(
+            r'<(' + tag_alternation + r')>'   # opening tag  (group 1)
+            r'\s*([^<]+?)\s*'                  # value        (group 2)
+            r'</\1>'                           # matching closing tag
+        )
+
+        for m in id_patt.finditer(xml_content):
+            tag_name   = m.group(1)
+            raw_value  = m.group(2).strip()
+            max_len    = ID_MAX_LENGTHS[tag_name]
+            actual_len = len(raw_value)
+
+            if actual_len > max_len:
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = "Unknown"
+
+                report.add_issue(ValidationIssue(
+                    "ERROR",
+                    3,
+                    "ID_LENGTH_ERROR",
+                    str(line_num),
+                    f"Invalid length in element <{tag_name}> at line {line_num}: "
+                    f"Length {actual_len} exceeds maximum allowed {max_len}.",
+                    f"Shorten the value of <{tag_name}> to at most {max_len} characters. "
+                    f"Current value has {actual_len} characters."
+                ))
+
+    def _validate_uetr_in_xml(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.7 — UETR UUID v4 Format Validation
+        Finds every <UETR> element in the raw XML and validates it against
+        the full UUID v4 specification:
+
+          Format : 8-4-4-4-12  (total 36 chars including hyphens)
+          Chars  : lowercase hexadecimal (0-9, a-f) and hyphens only
+          Version: third group must start with '4'  (UUID version 4)
+          Variant: fourth group must start with 8, 9, a, or b
+
+        Example valid UETR: 550e8400-e29b-41d4-a716-446655440000
+
+        This runs BEFORE Layer 2 so UETR errors are always reported even
+        when other XSD errors are present.
+        """
+        # Strict UUID v4 pattern: lowercase only, version=4, variant=[89ab]
+        UUID_V4 = re.compile(
+            r'^[0-9a-f]{8}-'      # 8 hex
+            r'[0-9a-f]{4}-'       # 4 hex
+            r'4[0-9a-f]{3}-'      # version 4 + 3 hex
+            r'[89ab][0-9a-f]{3}-' # variant + 3 hex
+            r'[0-9a-f]{12}$'      # 12 hex
+        )
+
+        # Match all <UETR>...</UETR> elements
+        uetr_patt = re.compile(
+            r'<(UETR)>'           # opening tag (group 1)
+            r'\s*([^<]+?)\s*'     # value        (group 2)
+            r'</\1>'              # matching closing tag
+        )
+
+        for m in uetr_patt.finditer(xml_content):
+            tag_name  = m.group(1)
+            raw_value = m.group(2).strip()
+
+            if not UUID_V4.match(raw_value):
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = "Unknown"
+
+                # Give a specific hint about what exactly is wrong
+                if len(raw_value) != 36:
+                    hint = f"Value has {len(raw_value)} characters; must be exactly 36."
+                elif raw_value != raw_value.lower():
+                    hint = "Value must use only lowercase characters."
+                elif not re.match(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+                                  raw_value.lower()):
+                    hint = "Value does not follow 8-4-4-4-12 hex grouping with hyphens."
+                elif raw_value[14] != '4':
+                    hint = f"Third group must start with '4' (UUID v4). Found '{raw_value[14]}'."
+                else:
+                    hint = (f"Fourth group must start with 8, 9, a, or b (UUID v4 variant). "
+                            f"Found '{raw_value[19]}'.")
+
+                report.add_issue(ValidationIssue(
+                    "ERROR",
+                    3,
+                    "UETR_FORMAT_ERROR",
+                    str(line_num),
+                    f"Invalid UETR in element <{tag_name}> at line {line_num}: "
+                    f"Must be a valid UUID v4 (36-character format). "
+                    f"Value: '{raw_value}'.",
+                    f"{hint} "
+                    f"Example of a valid UETR: 550e8400-e29b-41d4-a716-446655440000"
+                ))
 
     def _normalize_message(self, xml_content: str) -> tuple:
         """
