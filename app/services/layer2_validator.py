@@ -82,9 +82,6 @@ class Layer2Mixin:
                     # If we can identify the specific invalid value and tag, let's find the EXACT line in the original tree.
                     # This fixes issues where re-parsing destroys line numbers.
                     try:
-                        # Debug: log raw lxml error message to help diagnose format issues
-                        print(f"[DEBUG L2 ERROR] line={error.line} msg={error.message!r}")
-
                         # Extract Tag and Value from error message
                         # Typical lxml format:
                         #   Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'...
