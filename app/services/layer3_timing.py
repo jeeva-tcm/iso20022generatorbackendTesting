@@ -88,16 +88,23 @@ def to_zoned_datetime(dt_str: str, target_tz: str) -> datetime:
         dt_str = dt_str.replace("Z", "+00:00")
         dt = datetime.fromisoformat(dt_str)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+            # Use stdlib UTC (works on all platforms, no tzdata needed)
+            from datetime import timezone as dt_tz
+            dt = dt.replace(tzinfo=dt_tz.utc)
         # Use simple tz lookup with fallback
         try:
             tz = ZoneInfo(target_tz)
         except:
-            tz = ZoneInfo("UTC")
+            try:
+                tz = ZoneInfo("UTC")
+            except:
+                from datetime import timezone as dt_tz
+                tz = dt_tz.utc
         return dt.astimezone(tz)
     except Exception as e:
         # Final fallback to now in UTC
-        return datetime.now(ZoneInfo("UTC"))
+        from datetime import timezone as dt_tz
+        return datetime.now(dt_tz.utc)
 
 def is_business_day(system_config: Dict, dt: date, country: str, cutoff_config: Dict) -> bool:
     day_abbr = dt.strftime("%a").upper()
@@ -124,7 +131,8 @@ def validateLayer3Timing(payload: Dict, context: Dict, cutoffConfig: Dict) -> Di
     sub_timestamp_str = context.get("submissionTimestamp")
 
     if not sub_timestamp_str:
-        sub_timestamp_str = datetime.now(ZoneInfo("UTC")).isoformat()
+        from datetime import timezone as dt_tz
+        sub_timestamp_str = datetime.now(dt_tz.utc).isoformat()
 
     debtor_config = get_system_config(debtor_country, debtor_system_key, cutoffConfig)
     creditor_config = get_system_config(creditor_country, creditor_system_key, cutoffConfig)
