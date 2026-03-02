@@ -9,48 +9,39 @@ import os
 import csv
 import io
 
-from .models import database, history
 from .schemas import validation as schemas
 from .services.validator import ISOValidator
+from .services.firebase_service import FirebaseHistoryService
 
-# Initialize database
-database.Base.metadata.create_all(bind=database.engine)
-
-app = FastAPI(title="ISO 20022 Validation API")
-
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Content-Disposition"]
-)
-
+# Initialize services
 validator = ISOValidator()
+history_service = FirebaseHistoryService()
+
+# DEPRECATED: SQLite Initialization
+# database.Base.metadata.create_all(bind=database.engine)
+
+app = FastAPI(title="ISO 20022 Validation API (Firebase Powered)")
 
 @app.post("/validate", response_model=schemas.ValidationResponse)
 async def validate_message(
-    request: schemas.ValidationRequest,
-    db: Session = Depends(database.get_db)
+    request: schemas.ValidationRequest
 ):
     report = await validator.validate(request.xml_content, request.mode, request.message_type)
     report_dict = report.to_dict()
     
     if request.store_in_history:
-        db_history = history.ValidationHistory(
-            validation_id=report_dict["validation_id"],
-            message_type=report_dict["message"],
-            status=report_dict["status"],
-            total_errors=report_dict["errors"],
-            total_warnings=report_dict["warnings"],
-            execution_time_ms=report_dict["total_time_ms"],
-            report_json=report_dict,
-            original_message=request.xml_content
-        )
-        db.add(db_history)
-        db.commit()
+        record = {
+            "validation_id": report_dict["validation_id"],
+            "timestamp": report_dict["timestamp"], # Already in report
+            "message_type": report_dict["message"],
+            "status": report_dict["status"],
+            "total_errors": report_dict["errors"],
+            "total_warnings": report_dict["warnings"],
+            "execution_time_ms": report_dict["total_time_ms"],
+            "report_json": report_dict,
+            "original_message": request.xml_content
+        }
+        history_service.save_history(record)
     
     return report_dict
 
@@ -59,15 +50,8 @@ async def validate_file(
     file: UploadFile = File(...),
     mode: str = Form("Full 1-3"),
     message_type: str = Form("Auto-detect"),
-    store_in_history: bool = Form(True),
-    db: Session = Depends(database.get_db)
+    store_in_history: bool = Form(True)
 ):
-    # Step 2: File Type Validation
-    if not file.filename.lower().endswith('.xml'):
-        # We'll let the validator handle the error reporting in a consistent format
-        # but technically this is where we reject the file extension.
-        pass
-    
     content = await file.read()
     xml_content = content.decode("utf-8")
     
@@ -75,76 +59,34 @@ async def validate_file(
     report_dict = report.to_dict()
     
     if store_in_history:
-        try:
-            db_history = history.ValidationHistory(
-                validation_id=report_dict["validation_id"],
-                message_type=report_dict["message"],
-                status=report_dict["status"],
-                total_errors=report_dict["errors"],
-                total_warnings=report_dict["warnings"],
-                execution_time_ms=report_dict["total_time_ms"],
-                report_json=report_dict,
-                original_message=xml_content
-            )
-            db.add(db_history)
-            db.commit()
-        except Exception as db_err:
-            print(f"Warning: Failed to save history record: {db_err}")
-            db.rollback()
+        record = {
+            "validation_id": report_dict["validation_id"],
+            "timestamp": report_dict["timestamp"],
+            "message_type": report_dict["message"],
+            "status": report_dict["status"],
+            "total_errors": report_dict["errors"],
+            "total_warnings": report_dict["warnings"],
+            "execution_time_ms": report_dict["total_time_ms"],
+            "report_json": report_dict,
+            "original_message": xml_content
+        }
+        history_service.save_history(record)
     
     return report_dict
 
 @app.get("/history", response_model=List[schemas.HistorySummary])
-def get_history(skip: int = 0, limit: int = 10000, db: Session = Depends(database.get_db)):
-    try:
-        results = db.query(history.ValidationHistory).order_by(history.ValidationHistory.timestamp.desc()).offset(skip).limit(limit).all()
-        return results
-    except Exception as e:
-        print(f"Error fetching history: {e}")
-        return []
+def get_history(skip: int = 0, limit: int = 100):
+    return history_service.get_history(skip, limit)
 
 @app.get("/dashboard/stats", response_model=schemas.DashboardStats)
-def get_dashboard_stats(db: Session = Depends(database.get_db)):
-    """Get aggregated dashboard statistics"""
-    try:
-        # Get total count
-        total_audits = db.query(history.ValidationHistory).count()
-        
-        # Get passed count
-        passed_messages = db.query(history.ValidationHistory).filter(
-            history.ValidationHistory.status == 'PASS'
-        ).count()
-        
-        # Get failed count
-        failed_messages = db.query(history.ValidationHistory).filter(
-            history.ValidationHistory.status == 'FAIL'
-        ).count()
-        
-        # Calculate validation quality percentage
-        validation_quality = 0
-        if total_audits > 0:
-            validation_quality = round((passed_messages / total_audits) * 100)
-        
-        return {
-            "total_audits": total_audits,
-            "passed_messages": passed_messages,
-            "failed_messages": failed_messages,
-            "validation_quality": validation_quality
-        }
-    except Exception as e:
-        print(f"Error fetching dashboard stats: {e}")
-        # Return zeros if there's an error
-        return {
-            "total_audits": 0,
-            "passed_messages": 0,
-            "failed_messages": 0,
-            "validation_quality": 0
-        }
+def get_dashboard_stats():
+    """Get aggregated dashboard statistics from Firestore"""
+    return history_service.get_stats()
 
 @app.get("/history/export")
-def export_history(db: Session = Depends(database.get_db)):
+def export_history():
     try:
-        results = db.query(history.ValidationHistory).order_by(history.ValidationHistory.timestamp.desc()).all()
+        results = history_service.get_history(limit=50000) # Max export
         
         output = io.StringIO()
         writer = csv.writer(output)
@@ -153,15 +95,18 @@ def export_history(db: Session = Depends(database.get_db)):
         writer.writerow(["Timestamp", "Validation ID", "Message Type", "Status", "Errors", "Warnings", "Duration (ms)"])
         
         for row in results:
-            ts_str = row.timestamp.strftime("%Y-%m-%d %H:%M:%S") if row.timestamp else ""
+            ts = row.get("timestamp")
+            # Handle Firestore Timestamp or datetime
+            ts_str = ts.strftime("%Y-%m-%d %H:%M:%S") if hasattr(ts, "strftime") else str(ts)
+            
             writer.writerow([
                 f"{ts_str} (UTC)",
-                row.validation_id,
-                row.message_type,
-                row.status,
-                row.total_errors,
-                row.total_warnings,
-                row.execution_time_ms
+                row.get("validation_id"),
+                row.get("message_type"),
+                row.get("status"),
+                row.get("total_errors"),
+                row.get("total_warnings"),
+                row.get("execution_time_ms")
             ])
         
         csv_content = output.getvalue()
@@ -180,35 +125,25 @@ def export_history(db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @app.get("/history/{validation_id}")
-def get_history_detail(validation_id: str, db: Session = Depends(database.get_db)):
-    result = db.query(history.ValidationHistory).filter(history.ValidationHistory.validation_id == validation_id).first()
-    if not result:
+def get_history_detail(validation_id: str):
+    detail = history_service.get_detail(validation_id)
+    if not detail:
         raise HTTPException(status_code=404, detail="Validation not found")
     return {
-        "report": result.report_json,
-        "original_message": result.original_message
+        "report": detail.get("report_json"),
+        "original_message": detail.get("original_message")
     }
 
 @app.delete("/history")
-def delete_all_history(db: Session = Depends(database.get_db)):
-    print("DEBUG: Hit delete_all_history endpoint")
-    try:
-        num_deleted = db.query(history.ValidationHistory).delete(synchronize_session=False)
-        db.commit()
-        print(f"DEBUG: Deleted {num_deleted} records")
-        return {"message": f"Deleted {num_deleted} records successfully"}
-    except Exception as e:
-        print(f"DEBUG: Error deleting history: {e}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+def delete_all_history():
+    num_deleted = history_service.delete_all()
+    return {"message": f"Deleted {num_deleted} records successfully"}
 
 @app.delete("/history/{validation_id}")
-def delete_history_record(validation_id: str, db: Session = Depends(database.get_db)):
-    result = db.query(history.ValidationHistory).filter(history.ValidationHistory.validation_id == validation_id).first()
-    if not result:
-        raise HTTPException(status_code=404, detail="Validation not found")
-    db.delete(result)
-    db.commit()
+def delete_history_record(validation_id: str):
+    success = history_service.delete_record(validation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Validation not found or delete failed")
     return {"message": "Record deleted successfully"}
 
 @app.get("/messages", response_model=List[str])

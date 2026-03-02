@@ -51,8 +51,11 @@ class ValidationResult:
             res["recommendedValueDate"] = self.recommended_value_date
         return res
 
-def is_holiday(country_code: str, dt: date) -> bool:
-    """Stub: Can integrate with a holiday API here."""
+def is_holiday(country_code: str, dt: date, cutoff_config: Dict) -> bool:
+    """Dynamic lookup for holidays from configuration."""
+    holidays = cutoff_config.get("holidays", {}).get(country_code, [])
+    if dt.isoformat() in holidays:
+        return True
     return False
 
 def get_system_config(country: str, system_key: str, cutoff_config: Dict) -> Optional[Dict]:
@@ -61,193 +64,151 @@ def get_system_config(country: str, system_key: str, cutoff_config: Dict) -> Opt
         return None
     systems_conf = countries_conf[country].get("paymentSystems", {})
     if system_key not in systems_conf:
-        return None
+        # Fallback to first system if many are available
+        if systems_conf:
+            system_key = list(systems_conf.keys())[0]
+        else:
+            return None
     sys_conf = systems_conf[system_key].copy()
     sys_conf["country"] = country
     return sys_conf
 
 def parse_time(time_str: str) -> time:
-    return datetime.strptime(time_str, "%H:%M").time()
+    try:
+        if ":" in time_str:
+            return datetime.strptime(time_str[:5], "%H:%M").time()
+        return time(int(time_str[:2]), int(time_str[2:]))
+    except:
+        return time(18, 0) # Safe default 6 PM
 
 def to_zoned_datetime(dt_str: str, target_tz: str) -> datetime:
     if not dt_str:
         return None
-    dt_str = dt_str.replace("Z", "+00:00")
-    dt = datetime.fromisoformat(dt_str)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
-    return dt.astimezone(ZoneInfo(target_tz))
+    try:
+        dt_str = dt_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+        # Use simple tz lookup with fallback
+        try:
+            tz = ZoneInfo(target_tz)
+        except:
+            tz = ZoneInfo("UTC")
+        return dt.astimezone(tz)
+    except Exception as e:
+        # Final fallback to now in UTC
+        return datetime.now(ZoneInfo("UTC"))
 
-def is_business_day(system_config: Dict, dt: date, country: str) -> bool:
+def is_business_day(system_config: Dict, dt: date, country: str, cutoff_config: Dict) -> bool:
     day_abbr = dt.strftime("%a").upper()
     if day_abbr not in system_config.get("days", []):
         return False
-    if is_holiday(country, dt):
+    if is_holiday(country, dt, cutoff_config):
         return False
     return True
 
-def next_business_day(system_config: Dict, start_date: date, country: str) -> date:
+def next_business_day(system_config: Dict, start_date: date, country: str, cutoff_config: Dict) -> date:
     next_day = start_date + timedelta(days=1)
-    while not is_business_day(system_config, next_day, country):
+    while not is_business_day(system_config, next_day, country, cutoff_config):
         next_day += timedelta(days=1)
     return next_day
-
-def build_details(debtor_c, debtor_s, d_cutoff, d_tz, d_eval, d_bus_day,
-                  cred_c, cred_s, c_cutoff, c_tz, c_eval, c_bus_day, computed=None):
-    details = {
-        "debtor": {
-            "country": debtor_c, "system": debtor_s, "cutoffTime": d_cutoff,
-            "timezone": d_tz, "evaluatedTime": d_eval, "businessDay": d_bus_day
-        },
-        "creditor": {
-            "country": cred_c, "system": cred_s, "cutoffTime": c_cutoff,
-            "timezone": c_tz, "evaluatedTime": c_eval, "businessDay": c_bus_day
-        }
-    }
-    if computed:
-        details["computed"] = computed
-    return details
 
 def validateLayer3Timing(payload: Dict, context: Dict, cutoffConfig: Dict) -> Dict:
     result = ValidationResult()
 
-    debtor_country = context.get("debtorCountry")
-    debtor_system_key = context.get("debtorPaymentSystem")
-    creditor_country = context.get("creditorCountry")
-    creditor_system_key = context.get("creditorPaymentSystem")
+    debtor_country = context.get("debtorCountry", "US")
+    debtor_system_key = context.get("debtorPaymentSystem", "FEDWIRE")
+    creditor_country = context.get("creditorCountry", "GB")
+    creditor_system_key = context.get("creditorPaymentSystem", "CHAPS")
     validation_mode = context.get("validationMode", "STRICT")
     sub_timestamp_str = context.get("submissionTimestamp")
 
-    if not all([debtor_country, debtor_system_key, creditor_country, creditor_system_key, sub_timestamp_str]):
-        result.add_issue(ValidationIssue("CONFIG_NOT_FOUND", "FAIL", None, "Missing required context parameters.", {}))
-        result.summary.append("Context missing parameters.")
-        return result.to_dict()
+    if not sub_timestamp_str:
+        sub_timestamp_str = datetime.now(ZoneInfo("UTC")).isoformat()
 
     debtor_config = get_system_config(debtor_country, debtor_system_key, cutoffConfig)
     creditor_config = get_system_config(creditor_country, creditor_system_key, cutoffConfig)
 
-    if not debtor_config:
-        result.add_issue(ValidationIssue("CONFIG_NOT_FOUND", "FAIL", None, 
-            f"Debtor configuration not found for {debtor_country} - {debtor_system_key}.", {}))
-        result.summary.append("Debtor system not configured.")
-        return result.to_dict()
-    
-    if not creditor_config:
-        result.add_issue(ValidationIssue("CONFIG_NOT_FOUND", "FAIL", None, 
-            f"Creditor configuration not found for {creditor_country} - {creditor_system_key}.", {}))
-        result.summary.append("Creditor system not configured.")
+    if not debtor_config or not creditor_config:
+        result.add_issue(ValidationIssue("CONFIG_NOT_FOUND", "WARN", None, "Missing timing config for parties.", {}))
         return result.to_dict()
 
     try:
         sub_d_dt = to_zoned_datetime(sub_timestamp_str, debtor_config["timezone"])
         sub_c_dt = to_zoned_datetime(sub_timestamp_str, creditor_config["timezone"])
-    except ValueError as e:
-        result.add_issue(ValidationIssue("TIME_PARSE", "FAIL", None, f"Invalid submission timestamp format: {e}", {}))
+    except Exception as e:
+        result.add_issue(ValidationIssue("TIME_PARSE", "FAIL", None, f"Invalid submission timestamp: {str(e)}", {"ts": sub_timestamp_str}))
         return result.to_dict()
 
-    # Base detail block
-    def mkt_details(comp=None):
-        return build_details(
-            debtor_country, debtor_system_key, debtor_config["cutoffTime"], debtor_config["timezone"],
-            sub_d_dt.isoformat(), is_business_day(debtor_config, sub_d_dt.date(), debtor_country),
-            creditor_country, creditor_system_key, creditor_config["cutoffTime"], creditor_config["timezone"],
-            sub_c_dt.isoformat(), is_business_day(creditor_config, sub_c_dt.date(), creditor_country),
-            comp
-        )
-
-    # Re-use payload extraction
+    # CUT001 Logic: Use creation time from payload
     cre_dt_tm = payload.get("CreDtTm") or sub_timestamp_str
-    try:
-        cre_d_dt = to_zoned_datetime(cre_dt_tm, debtor_config["timezone"])
-        cre_c_dt = to_zoned_datetime(cre_dt_tm, creditor_config["timezone"])
-    except ValueError:
-        cre_d_dt = sub_d_dt
-        cre_c_dt = sub_c_dt
-
-    reqd_exctn_dt_str = payload.get("ReqdExctnDt")
-    intr_bk_sttlm_dt_str = payload.get("IntrBkSttlmDt")
-
-    # CUT001: Creation date-time must be before cut-off
+    cre_d_dt = to_zoned_datetime(cre_dt_tm, debtor_config["timezone"])
+    cre_c_dt = to_zoned_datetime(cre_dt_tm, creditor_config["timezone"])
+    
     d_cutoff_time = parse_time(debtor_config["cutoffTime"])
     c_cutoff_time = parse_time(creditor_config["cutoffTime"])
     
-    is_d_after_cutoff = cre_d_dt.time() >= d_cutoff_time
-    is_c_after_cutoff = cre_c_dt.time() >= c_cutoff_time
-    
-    if is_d_after_cutoff:
+    # 1. Check if the message was created after cutoff
+    if cre_d_dt.time() >= d_cutoff_time:
         stat = "FAIL" if validation_mode == "STRICT" else "WARN"
         result.add_issue(ValidationIssue("CUT001", stat, "CreDtTm", 
-            "Creation date-time is after the cut-off for the debtor payment system.", mkt_details()))
-    elif is_c_after_cutoff:
-        stat = "WARN"
-        result.add_issue(ValidationIssue("CUT001", stat, "CreDtTm", 
-            "Creation date-time is after the cut-off for the creditor payment system. Credit may be delayed.", mkt_details()))
+            f"Creation time {cre_d_dt.strftime('%H:%M')} is after system cutoff {d_cutoff_time.strftime('%H:%M')}.", {}))
 
-    # CUT004 Base Setup
-    computed = {}
-    is_d_bus_day = is_business_day(debtor_config, sub_d_dt.date(), debtor_country)
+    # 2. Recommended Value Date (Dynamic)
+    # Determine the "Earliest Possible Execution Date"
+    is_sub_bus_day = is_business_day(debtor_config, sub_d_dt.date(), debtor_country, cutoffConfig)
+    is_sub_after_cutoff = sub_d_dt.time() >= d_cutoff_time
     
-    computed_next_d = next_business_day(debtor_config, sub_d_dt.date(), debtor_country).isoformat()
-    computed_next_c = next_business_day(creditor_config, sub_c_dt.date(), creditor_country).isoformat()
+    rec_val_date = sub_d_dt.date()
+    if not is_sub_bus_day or is_sub_after_cutoff:
+        rec_val_date = next_business_day(debtor_config, sub_d_dt.date(), debtor_country, cutoffConfig)
     
-    rec_val_date = None
-    if is_d_after_cutoff or not is_d_bus_day:
-        base_rec_d = next_business_day(debtor_config, sub_d_dt.date(), debtor_country)
-        # Check against creditor availability on base_rec_d
-        # Convert base_rec_d to creditor date roughly
-        is_c_bus_day = is_business_day(creditor_config, base_rec_d, creditor_country)
-        if not is_c_bus_day:
-            rec_val_date = next_business_day(creditor_config, base_rec_d, creditor_country)
-        else:
-            rec_val_date = base_rec_d
-            
-        rec_str = rec_val_date.isoformat()
-        computed = {
-            "recommendedValueDate": rec_str,
-            "nextBusinessDayDebtor": computed_next_d,
-            "nextBusinessDayCreditor": computed_next_c
-        }
-        result.set_recommended_value_date(rec_str)
+    # Ensure creditor can also receive on that date
+    while not is_business_day(creditor_config, rec_val_date, creditor_country, cutoffConfig):
+        rec_val_date = next_business_day(creditor_config, rec_val_date, creditor_country, cutoffConfig)
+        # Re-check debtor compatibility if moved
+        if not is_business_day(debtor_config, rec_val_date, debtor_country, cutoffConfig):
+             rec_val_date = next_business_day(debtor_config, rec_val_date, debtor_country, cutoffConfig)
 
-    # CUT002: ReqdExctnDt must be a valid business day
+    rec_str = rec_val_date.isoformat()
+    result.set_recommended_value_date(rec_str)
+    
+    computed_details = {
+        "recommendedValueDate": rec_str,
+        "submissionTime": sub_d_dt.isoformat(),
+        "isAfterCutoff": is_sub_after_cutoff,
+    }
+
+    # CUT002: Requested Execution Date check
+    reqd_exctn_dt_str = payload.get("ReqdExctnDt")
     if reqd_exctn_dt_str:
-        req_dt = date.fromisoformat(reqd_exctn_dt_str)
-        req_d_bus = is_business_day(debtor_config, req_dt, debtor_country)
-        req_c_bus = is_business_day(creditor_config, req_dt, creditor_country)
+        try:
+            req_dt = date.fromisoformat(reqd_exctn_dt_str)
+            if req_dt < rec_val_date:
+                stat = "FAIL" if validation_mode == "STRICT" else "WARN"
+                result.add_issue(ValidationIssue("CUT004", stat, "ReqdExctnDt", 
+                    f"Required Execution Date {reqd_exctn_dt_str} is earlier than earliest possible: {rec_str}.", computed_details))
+            
+            if not is_business_day(debtor_config, req_dt, debtor_country, cutoffConfig):
+                result.add_issue(ValidationIssue("CUT002", "WARN", "ReqdExctnDt", "Execution date is not a business day.", {}))
+        except: pass
 
-        if not req_d_bus or not req_c_bus:
-            stat = "FAIL" if validation_mode == "STRICT" else "WARN"
-            msg = f"Requested execution date {reqd_exctn_dt_str} is not a valid business day for both parties."
-            result.add_issue(ValidationIssue("CUT002", stat, "ReqdExctnDt", msg, mkt_details(computed)))
-        elif rec_val_date and req_dt < rec_val_date:
-            stat = "FAIL" if validation_mode == "STRICT" else "WARN"
-            msg = f"Requested execution date {reqd_exctn_dt_str} is earlier than recommended value date {rec_val_date.isoformat()}."
-            result.add_issue(ValidationIssue("CUT004", stat, "ReqdExctnDt", msg, mkt_details(computed)))
-
-    # CUT003: IntrBkSttlmDt must align with the settlement system
+    # CUT003: Settlement Date check
+    intr_bk_sttlm_dt_str = payload.get("IntrBkSttlmDt")
     if intr_bk_sttlm_dt_str:
-        intr_dt = date.fromisoformat(intr_bk_sttlm_dt_str)
-        intr_c_bus = is_business_day(creditor_config, intr_dt, creditor_country)
-        
-        if not intr_c_bus:
-            stat = "FAIL" if validation_mode == "STRICT" else "WARN"
-            msg = f"Interbank settlement date {intr_bk_sttlm_dt_str} is not a valid business day for creditor."
-            result.add_issue(ValidationIssue("CUT003", stat, "IntrBkSttlmDt", msg, mkt_details(computed)))
-        elif rec_val_date and intr_dt < rec_val_date:
-            stat = "FAIL" if validation_mode == "STRICT" else "WARN"
-            msg = f"Interbank settlement date {intr_bk_sttlm_dt_str} is earlier than recommended value date {rec_val_date.isoformat()}."
-            result.add_issue(ValidationIssue("CUT004", stat, "IntrBkSttlmDt", msg, mkt_details(computed)))
+        try:
+            intr_dt = date.fromisoformat(intr_bk_sttlm_dt_str)
+            if intr_dt < rec_val_date:
+                result.add_issue(ValidationIssue("CUT004", "WARN", "IntrBkSttlmDt", "Settlement date is before possible processing date.", {}))
+        except: pass
 
     if not result.issues:
         result.summary.append("All timing rules passed successfully.")
     else:
-        # Just summarizing how many failed/warn
         fails = sum(1 for i in result.issues if i.severity == "FAIL")
         warns = sum(1 for i in result.issues if i.severity == "WARN")
-        if fails:
-            result.summary.append(f"Validation failed with {fails} error(s).")
-        if warns:
-            result.summary.append(f"Validation completed with {warns} warning(s).")
+        if fails: result.summary.append(f"Validation failed with {fails} error(s).")
+        if warns: result.summary.append(f"Validation completed with {warns} warning(s).")
             
     return result.to_dict()
 

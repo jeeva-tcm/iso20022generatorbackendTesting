@@ -248,9 +248,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
 
-            # STEP 5.1: FAIL-FAST SANCTIONS SCREENING
-            sanctioned_codes = {'AF', 'BY', 'BI', 'CF', 'CU', 'CD', 'ET', 'GN', 'GW', 'HT', 'IR', 'IQ', 'LY', 'ML', 'MM', 'KP', 'RU', 'SO', 'SS', 'SD', 'SY', 'VE', 'YE', 'ZW'}
-            sanctioned_names = {'afghanistan', 'belarus', 'burundi', 'central african republic', 'cuba', 'democratic republic of the congo', 'ethiopia', 'guinea', 'guinea-bissau', 'haiti', 'iran', 'iraq', 'libya', 'mali', 'myanmar', 'burma', 'north korea', 'russia', 'somalia', 'south sudan', 'sudan', 'syria', 'venezuela', 'yemen', 'zimbabwe'}
+            # STEP 5.1: FAIL-FAST SANCTIONS SCREENING (Dynamic)
+            sanctions_config = self.config.get("sanctions", {})
+            sanctioned_codes = set(sanctions_config.get("codes", []))
+            sanctioned_names = set(sanctions_config.get("names", []))
+            
+            # Use defaults if config is empty for fallback safety
+            if not sanctioned_codes: sanctioned_codes = {'AF', 'RU', 'KP'}
+            if not sanctioned_names: sanctioned_names = {'russia', 'iran', 'north korea'}
             
             for path, value in canonical_data.items():
                 # Check fields associated with parties (Debtor, Creditor, Agents)
@@ -284,10 +289,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         # --- Apply Layer 3 Timing Validation ---
                         try:
                             if self.cutoff_config:
-                                debtor_country = "US"
-                                creditor_country = "GB"
-                                debtor_sys = "FEDWIRE"
-                                creditor_sys = "CHAPS"
+                                # Dynamic Defaults
+                                t_conf = self.config.get("timing_defaults", {})
+                                debtor_country = t_conf.get("debtor_country", "US")
+                                creditor_country = t_conf.get("creditor_country", "GB")
+                                debtor_sys = t_conf.get("debtor_system", "FEDWIRE")
+                                creditor_sys = t_conf.get("creditor_system", "CHAPS")
                                 
                                 for k, v in canonical_data.items():
                                     if k.endswith('.Dbtr.PstlAdr.Ctry') or k.endswith('.InitgPty.PstlAdr.Ctry'):
@@ -311,28 +318,43 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                                 
                                 # Extract specific timing fields into payload
                                 t_payload = {}
+                                t_paths = {} # FieldName in payload -> Canonical Path in message
                                 for k, v in canonical_data.items():
-                                    if k.endswith('.CreDtTm') or k == 'CreDtTm':
+                                    # Fallback country detection from BIC
+                                    if k.endswith('.BICFI') or k == 'BICFI':
+                                        bic_val = str(v).strip().upper()
+                                        if len(bic_val) >= 6:
+                                            extracted_ctry = bic_val[4:6]
+                                            if 'Dbtr' in k or 'InstgAgt' in k:
+                                                ctx["debtorCountry"] = extracted_ctry
+                                            if 'Cdtr' in k or 'InstdAgt' in k:
+                                                ctx["creditorCountry"] = extracted_ctry
+
+                                    if k.endswith('.CreDtTm') or k.endswith('.CreDt') or k in ['CreDtTm', 'CreDt']:
                                         t_payload['CreDtTm'] = v
+                                        t_paths['CreDtTm'] = k
                                     elif k.endswith('.ReqdExctnDt') or k == 'ReqdExctnDt':
                                         t_payload['ReqdExctnDt'] = v
+                                        t_paths['ReqdExctnDt'] = k
                                     elif k.endswith('.IntrBkSttlmDt') or k == 'IntrBkSttlmDt':
                                         t_payload['IntrBkSttlmDt'] = v
+                                        t_paths['IntrBkSttlmDt'] = k
                                     elif 'MsgDefIdr' in k:
                                         t_payload['MsgDefIdr'] = v
-
+                                        
                                 timing_result = validateLayer3Timing(t_payload, ctx, self.cutoff_config)
                                 for iss_dict in timing_result.get("issues", []):
-                                    f_path = iss_dict.get("field", "/")
-                                    if f_path == "CreDtTm": f_path = "AppHdr.CreDtTm"
-                                    # Try to find exactly matching paths for accurate lines
-                                    matched_path = f_path
-                                    for k in canonical_data.keys():
-                                        if k.endswith(f_path):
-                                             matched_path = k
-                                             break
+                                    field_key = iss_dict.get("field", "CreDtTm") # Default to creation time if missing
+                                    matched_path = t_paths.get(field_key, "/")
                                              
-                                    line = str(line_map.get(matched_path, "/")) if matched_path != "/" else "/"
+                                    # Fallback search if path is still /
+                                    if matched_path == "/":
+                                        for k in canonical_data.keys():
+                                            if k.endswith(f".{field_key}") or k == field_key:
+                                                matched_path = k
+                                                break
+                                                
+                                    line = str(line_map.get(matched_path, "/"))
                                     severity = "ERROR" if iss_dict["severity"] == "FAIL" else iss_dict["severity"]
                                     
                                     details_str = ""

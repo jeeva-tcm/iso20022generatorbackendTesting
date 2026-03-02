@@ -55,8 +55,8 @@ class Layer2Mixin:
             # Build dynamic tag info for rich error messages (cached per XSD)
             tag_info = self._build_tag_info_from_xsd(xsd_full_path)
             
-            # Extract namespacing
-            xml_ns = main_cleaned.nsmap.get(None) or ""
+            # Extract namespacing carefully
+            xml_ns = etree.QName(main_cleaned).namespace or ""
             # Robust XSD Namespace Detection
             xsd_ns = xsd_doc.getroot().get("targetNamespace")
             if not xsd_ns:
@@ -200,7 +200,7 @@ class Layer2Mixin:
             app_hdr_node = full_xml_doc.find(".//{*}AppHdr")
             if app_hdr_node is not None:
                 h_line_offset = app_hdr_node.sourceline or 1
-                h_ns = app_hdr_node.nsmap.get(None) or ""
+                h_ns = etree.QName(app_hdr_node).namespace or ""
                 h_type = self.config.get("validation_rules", {}).get("default_header_type", "head.001.001.01")
                 partial_ns = self.config.get("validation_rules", {}).get("header_namespace_partial", "head.001.001")
                 
@@ -652,8 +652,9 @@ class Layer2Mixin:
                 r"Element '([^']+)': This element is not expected\. Expected is(?: one of)? \(([^)]+)\)\.", msg
             )
             if m:
-                found_elem   = m.group(1)          # what lxml found in the XML
-                expected_str = m.group(2)          # what lxml wanted to find
+                found_elem_full = m.group(1)
+                found_elem = found_elem_full.split('}')[-1] if '}' in found_elem_full else found_elem_full
+                expected_str = m.group(2)
 
                 # --- Duplicate: the found element IS in the expected list ---
                 if found_elem in expected_str:

@@ -30,7 +30,6 @@ class ValidationResponse(BaseModel):
     details: List[IssueSchema]
 
 class HistorySummary(BaseModel):
-    id: int
     validation_id: str
     timestamp: Any  # Keep as Any to handle the manual conversion
     message_type: str

@@ -1,523 +1,521 @@
 {
-    "cutoffTimings": {
-        "version": "1.0",
-        "description": "Payment cut-off timings by country for ISO 20022 validation",
-        "timings": {
-            "US": {
-                "country": "United States",
-                "currency": "USD",
-                "timezone": "America/New_York",
-                "paymentSystems": {
-                    "FEDWIRE": {
-                        "cutoffTime": "18:00",
-                        "timezone": "America/New_York",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Fedwire Funds Service"
-                    },
-                    "CHIPS": {
-                        "cutoffTime": "17:00",
-                        "timezone": "America/New_York",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Clearing House Interbank Payments System"
-                    },
-                    "ACH": {
-                        "cutoffTime": "14:45",
-                        "timezone": "America/New_York",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "ACH Next Day"
-                    }
-                }
-            },
-            "GB": {
-                "country": "United Kingdom",
-                "currency": "GBP",
-                "timezone": "Europe/London",
-                "paymentSystems": {
-                    "CHAPS": {
-                        "cutoffTime": "16:00",
-                        "timezone": "Europe/London",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Clearing House Automated Payment System"
-                    },
-                    "FASTER_PAYMENTS": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Europe/London",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Faster Payments Service - near 24/7"
-                    },
-                    "BACS": {
-                        "cutoffTime": "22:30",
-                        "timezone": "Europe/London",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "BACS Direct Credit"
-                    }
-                }
-            },
-            "DE": {
-                "country": "Germany",
-                "currency": "EUR",
-                "timezone": "Europe/Berlin",
-                "paymentSystems": {
-                    "TARGET2": {
-                        "cutoffTime": "17:00",
-                        "timezone": "Europe/Berlin",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "TARGET2 - ECB interbank settlement"
-                    },
-                    "SEPA_CT": {
-                        "cutoffTime": "16:00",
-                        "timezone": "Europe/Berlin",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "SEPA Credit Transfer"
-                    },
-                    "SEPA_INST": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Europe/Berlin",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "SEPA Instant Credit Transfer"
-                    }
-                }
-            },
-            "FR": {
-                "country": "France",
-                "currency": "EUR",
-                "timezone": "Europe/Paris",
-                "paymentSystems": {
-                    "TARGET2": {
-                        "cutoffTime": "17:00",
-                        "timezone": "Europe/Paris",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "TARGET2 - ECB interbank settlement"
-                    },
-                    "SEPA_CT": {
-                        "cutoffTime": "15:30",
-                        "timezone": "Europe/Paris",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "SEPA Credit Transfer"
-                    },
-                    "SEPA_INST": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Europe/Paris",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "SEPA Instant Credit Transfer"
-                    }
-                }
-            },
-            "JP": {
-                "country": "Japan",
-                "currency": "JPY",
-                "timezone": "Asia/Tokyo",
-                "paymentSystems": {
-                    "ZENGIN": {
-                        "cutoffTime": "15:30",
-                        "timezone": "Asia/Tokyo",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Zengin System - domestic interbank"
-                    },
-                    "BOJ_NET": {
-                        "cutoffTime": "17:00",
-                        "timezone": "Asia/Tokyo",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "BOJ-NET Funds Transfer System"
-                    }
-                }
-            },
-            "SG": {
-                "country": "Singapore",
-                "currency": "SGD",
-                "timezone": "Asia/Singapore",
-                "paymentSystems": {
-                    "MEPS_PLUS": {
-                        "cutoffTime": "18:00",
-                        "timezone": "Asia/Singapore",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "MAS Electronic Payment System"
-                    },
-                    "FAST": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Asia/ सिंगापुर",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Fast And Secure Transfers"
-                    },
-                    "GIRO": {
-                        "cutoffTime": "23:00",
-                        "timezone": "Asia/Singapore",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Interbank GIRO"
-                    }
-                }
-            },
-            "AU": {
-                "country": "Australia",
-                "currency": "AUD",
-                "timezone": "Australia/Sydney",
-                "paymentSystems": {
-                    "RITS": {
-                        "cutoffTime": "16:30",
-                        "timezone": "Australia/Sydney",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Reserve Bank Information and Transfer System"
-                    },
-                    "NPP": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Australia/Sydney",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "New Payments Platform"
-                    },
-                    "BECS": {
-                        "cutoffTime": "22:00",
-                        "timezone": "Australia/Sydney",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Bulk Electronic Clearing System"
-                    }
-                }
-            },
-            "HK": {
-                "country": "Hong Kong",
-                "currency": "HKD",
-                "timezone": "Asia/Hong_Kong",
-                "paymentSystems": {
-                    "CHATS": {
-                        "cutoffTime": "17:30",
-                        "timezone": "Asia/Hong_Kong",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Clearing House Automated Transfer System"
-                    },
-                    "FPS": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Asia/Hong_Kong",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Faster Payment System"
-                    }
-                }
-            },
-            "IN": {
-                "country": "India",
-                "currency": "INR",
-                "timezone": "Asia/Kolkata",
-                "paymentSystems": {
-                    "RTGS": {
-                        "cutoffTime": "17:45",
-                        "timezone": "Asia/Kolkata",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT"
-                        ],
-                        "description": "Real Time Gross Settlement"
-                    },
-                    "NEFT": {
-                        "cutoffTime": "18:30",
-                        "timezone": "Asia/Kolkata",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT"
-                        ],
-                        "description": "National Electronic Funds Transfer"
-                    },
-                    "UPI": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Asia/Kolkata",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Unified Payments Interface"
-                    }
-                }
-            },
-            "CA": {
-                "country": "Canada",
-                "currency": "CAD",
-                "timezone": "America/Toronto",
-                "paymentSystems": {
-                    "LVTS": {
-                        "cutoffTime": "18:00",
-                        "timezone": "America/Toronto",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Large Value Transfer System"
-                    },
-                    "AFT": {
-                        "cutoffTime": "23:30",
-                        "timezone": "America/Toronto",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Automated Funds Transfer"
-                    },
-                    "RTR": {
-                        "cutoffTime": "23:59",
-                        "timezone": "America/Toronto",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Real-Time Rail"
-                    }
-                }
-            },
-            "CH": {
-                "country": "Switzerland",
-                "currency": "CHF",
-                "timezone": "Europe/Zurich",
-                "paymentSystems": {
-                    "SIC": {
-                        "cutoffTime": "16:15",
-                        "timezone": "Europe/Zurich",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Swiss Interbank Clearing"
-                    },
-                    "EUROSIA": {
-                        "cutoffTime": "16:00",
-                        "timezone": "Europe/Zurich",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI"
-                        ],
-                        "description": "Euro-SIC"
-                    }
-                }
-            },
-            "AE": {
-                "country": "United Arab Emirates",
-                "currency": "AED",
-                "timezone": "Asia/Dubai",
-                "paymentSystems": {
-                    "UAEFTS": {
-                        "cutoffTime": "16:30",
-                        "timezone": "Asia/Dubai",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU"
-                        ],
-                        "description": "UAE Funds Transfer System"
-                    },
-                    "IPP": {
-                        "cutoffTime": "23:59",
-                        "timezone": "Asia/Dubai",
-                        "days": [
-                            "MON",
-                            "TUE",
-                            "WED",
-                            "THU",
-                            "FRI",
-                            "SAT",
-                            "SUN"
-                        ],
-                        "description": "Instant Payment Platform"
-                    }
+    "version": "1.0",
+    "description": "Payment cut-off timings by country for ISO 20022 validation",
+    "timings": {
+        "US": {
+            "country": "United States",
+            "currency": "USD",
+            "timezone": "America/New_York",
+            "paymentSystems": {
+                "FEDWIRE": {
+                    "cutoffTime": "18:00",
+                    "timezone": "America/New_York",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Fedwire Funds Service"
+                },
+                "CHIPS": {
+                    "cutoffTime": "17:00",
+                    "timezone": "America/New_York",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Clearing House Interbank Payments System"
+                },
+                "ACH": {
+                    "cutoffTime": "14:45",
+                    "timezone": "America/New_York",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "ACH Next Day"
                 }
             }
         },
-        "holidays": {
-            "description": "Public holidays override cut-off timings - no processing on these dates",
-            "note": "Integrate with a holiday calendar API (e.g., Calendarific) for real-time holiday data"
-        },
-        "validation_rules": {
-            "description": "Rules to apply during ISO 20022 message validation",
-            "rules": [
-                {
-                    "ruleId": "CUT001",
-                    "field": "CreDtTm",
-                    "description": "Creation date-time must be before cut-off for the target country and payment system"
+        "GB": {
+            "country": "United Kingdom",
+            "currency": "GBP",
+            "timezone": "Europe/London",
+            "paymentSystems": {
+                "CHAPS": {
+                    "cutoffTime": "16:00",
+                    "timezone": "Europe/London",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Clearing House Automated Payment System"
                 },
-                {
-                    "ruleId": "CUT002",
-                    "field": "ReqdExctnDt",
-                    "description": "Requested execution date must be a valid business day (not weekend or holiday)"
+                "FASTER_PAYMENTS": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Europe/London",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Faster Payments Service - near 24/7"
                 },
-                {
-                    "ruleId": "CUT003",
-                    "field": "IntrBkSttlmDt",
-                    "description": "Interbank settlement date must align with cut-off timing of the settlement system"
-                },
-                {
-                    "ruleId": "CUT004",
-                    "description": "If submission time is after cut-off, value date must be next business day"
+                "BACS": {
+                    "cutoffTime": "22:30",
+                    "timezone": "Europe/London",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "BACS Direct Credit"
                 }
-            ]
+            }
+        },
+        "DE": {
+            "country": "Germany",
+            "currency": "EUR",
+            "timezone": "Europe/Berlin",
+            "paymentSystems": {
+                "TARGET2": {
+                    "cutoffTime": "17:00",
+                    "timezone": "Europe/Berlin",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "TARGET2 - ECB interbank settlement"
+                },
+                "SEPA_CT": {
+                    "cutoffTime": "16:00",
+                    "timezone": "Europe/Berlin",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "SEPA Credit Transfer"
+                },
+                "SEPA_INST": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Europe/Berlin",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "SEPA Instant Credit Transfer"
+                }
+            }
+        },
+        "FR": {
+            "country": "France",
+            "currency": "EUR",
+            "timezone": "Europe/Paris",
+            "paymentSystems": {
+                "TARGET2": {
+                    "cutoffTime": "17:00",
+                    "timezone": "Europe/Paris",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "TARGET2 - ECB interbank settlement"
+                },
+                "SEPA_CT": {
+                    "cutoffTime": "15:30",
+                    "timezone": "Europe/Paris",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "SEPA Credit Transfer"
+                },
+                "SEPA_INST": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Europe/Paris",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "SEPA Instant Credit Transfer"
+                }
+            }
+        },
+        "JP": {
+            "country": "Japan",
+            "currency": "JPY",
+            "timezone": "Asia/Tokyo",
+            "paymentSystems": {
+                "ZENGIN": {
+                    "cutoffTime": "15:30",
+                    "timezone": "Asia/Tokyo",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Zengin System - domestic interbank"
+                },
+                "BOJ_NET": {
+                    "cutoffTime": "17:00",
+                    "timezone": "Asia/Tokyo",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "BOJ-NET Funds Transfer System"
+                }
+            }
+        },
+        "SG": {
+            "country": "Singapore",
+            "currency": "SGD",
+            "timezone": "Asia/Singapore",
+            "paymentSystems": {
+                "MEPS_PLUS": {
+                    "cutoffTime": "18:00",
+                    "timezone": "Asia/Singapore",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "MAS Electronic Payment System"
+                },
+                "FAST": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Asia/Singapore",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Fast And Secure Transfers"
+                },
+                "GIRO": {
+                    "cutoffTime": "23:00",
+                    "timezone": "Asia/Singapore",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Interbank GIRO"
+                }
+            }
+        },
+        "AU": {
+            "country": "Australia",
+            "currency": "AUD",
+            "timezone": "Australia/Sydney",
+            "paymentSystems": {
+                "RITS": {
+                    "cutoffTime": "16:30",
+                    "timezone": "Australia/Sydney",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Reserve Bank Information and Transfer System"
+                },
+                "NPP": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Australia/Sydney",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "New Payments Platform"
+                },
+                "BECS": {
+                    "cutoffTime": "22:00",
+                    "timezone": "Australia/Sydney",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Bulk Electronic Clearing System"
+                }
+            }
+        },
+        "HK": {
+            "country": "Hong Kong",
+            "currency": "HKD",
+            "timezone": "Asia/Hong_Kong",
+            "paymentSystems": {
+                "CHATS": {
+                    "cutoffTime": "17:30",
+                    "timezone": "Asia/Hong_Kong",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Clearing House Automated Transfer System"
+                },
+                "FPS": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Asia/Hong_Kong",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Faster Payment System"
+                }
+            }
+        },
+        "IN": {
+            "country": "India",
+            "currency": "INR",
+            "timezone": "Asia/Kolkata",
+            "paymentSystems": {
+                "RTGS": {
+                    "cutoffTime": "17:45",
+                    "timezone": "Asia/Kolkata",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT"
+                    ],
+                    "description": "Real Time Gross Settlement"
+                },
+                "NEFT": {
+                    "cutoffTime": "18:30",
+                    "timezone": "Asia/Kolkata",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT"
+                    ],
+                    "description": "National Electronic Funds Transfer"
+                },
+                "UPI": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Asia/Kolkata",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Unified Payments Interface"
+                }
+            }
+        },
+        "CA": {
+            "country": "Canada",
+            "currency": "CAD",
+            "timezone": "America/Toronto",
+            "paymentSystems": {
+                "LVTS": {
+                    "cutoffTime": "18:00",
+                    "timezone": "America/Toronto",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Large Value Transfer System"
+                },
+                "AFT": {
+                    "cutoffTime": "23:30",
+                    "timezone": "America/Toronto",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Automated Funds Transfer"
+                },
+                "RTR": {
+                    "cutoffTime": "23:59",
+                    "timezone": "America/Toronto",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Real-Time Rail"
+                }
+            }
+        },
+        "CH": {
+            "country": "Switzerland",
+            "currency": "CHF",
+            "timezone": "Europe/Zurich",
+            "paymentSystems": {
+                "SIC": {
+                    "cutoffTime": "16:15",
+                    "timezone": "Europe/Zurich",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Swiss Interbank Clearing"
+                },
+                "EUROSIA": {
+                    "cutoffTime": "16:00",
+                    "timezone": "Europe/Zurich",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI"
+                    ],
+                    "description": "Euro-SIC"
+                }
+            }
+        },
+        "AE": {
+            "country": "United Arab Emirates",
+            "currency": "AED",
+            "timezone": "Asia/Dubai",
+            "paymentSystems": {
+                "UAEFTS": {
+                    "cutoffTime": "16:30",
+                    "timezone": "Asia/Dubai",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU"
+                    ],
+                    "description": "UAE Funds Transfer System"
+                },
+                "IPP": {
+                    "cutoffTime": "23:59",
+                    "timezone": "Asia/Dubai",
+                    "days": [
+                        "MON",
+                        "TUE",
+                        "WED",
+                        "THU",
+                        "FRI",
+                        "SAT",
+                        "SUN"
+                    ],
+                    "description": "Instant Payment Platform"
+                }
+            }
         }
+    },
+    "holidays": {
+        "description": "Public holidays override cut-off timings - no processing on these dates",
+        "note": "Integrate with a holiday calendar API (e.g., Calendarific) for real-time holiday data"
+    },
+    "validation_rules": {
+        "description": "Rules to apply during ISO 20022 message validation",
+        "rules": [
+            {
+                "ruleId": "CUT001",
+                "field": "CreDtTm",
+                "description": "Creation date-time must be before cut-off for the target country and payment system"
+            },
+            {
+                "ruleId": "CUT002",
+                "field": "ReqdExctnDt",
+                "description": "Requested execution date must be a valid business day (not weekend or holiday)"
+            },
+            {
+                "ruleId": "CUT003",
+                "field": "IntrBkSttlmDt",
+                "description": "Interbank settlement date must align with cut-off timing of the settlement system"
+            },
+            {
+                "ruleId": "CUT004",
+                "description": "If submission time is after cut-off, value date must be next business day"
+            }
+        ]
     }
 }
