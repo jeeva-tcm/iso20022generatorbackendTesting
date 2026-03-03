@@ -144,7 +144,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         Caches results for performance.
         """
         now = time.time()
-        if self._message_type_cache and (now - self._last_cache_update < self._cache_duration):
+        # Reduce cache duration for more frequent updates during dev
+        if self._message_type_cache and (now - self._last_cache_update < 60):
             return self._message_type_cache
 
         messages = set()
@@ -154,33 +155,35 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             for root, dirs, files in os.walk(self.xsd_path):
                 for file in files:
                     if file.endswith(".xsd"):
-                        messages.add(file.replace(".xsd", ""))
+                        # Ensure we handle various nesting if needed
+                        msg_id = file.rsplit('.', 1)[0]
+                        messages.add(msg_id)
         
-        # 2. Scan ZIP files efficiently (just names)
+        # 2. Scan ZIP files in the xsds root
         source_dir = os.path.dirname(self.xsd_path)
         if os.path.exists(source_dir):
-            import zipfile
             for filename in os.listdir(source_dir):
                 if filename.endswith(".zip"):
                     zip_path = os.path.join(source_dir, filename)
                     try:
                         with zipfile.ZipFile(zip_path, 'r') as zf:
                             for name in zf.namelist():
-                                if name.endswith(".xsd"):
-                                    base = os.path.basename(name).replace(".xsd", "")
+                                if name.lower().endswith(".xsd"):
+                                    base = os.path.basename(name).rsplit('.', 1)[0]
                                     if base:
                                         messages.add(base)
                     except:
                         pass
         
         if not messages:
-            # Enhanced fallback list from Config
             fallback = self.config.get("fallback_message_types", [
                 "pacs.008.001.08", "pacs.009.001.08", "pacs.002.001.10"
             ])
             self._message_type_cache = sorted(fallback)
+            print(f"XSD Discovery: No files found. Using {len(fallback)} fallbacks.")
         else:
             self._message_type_cache = sorted(list(messages))
+            print(f"XSD Discovery: Successfully indexed {len(self._message_type_cache)} message types.")
             
         self._last_cache_update = now
         return self._message_type_cache

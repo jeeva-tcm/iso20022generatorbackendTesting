@@ -12,6 +12,7 @@ import io
 from .schemas import validation as schemas
 from .services.validator import ISOValidator
 from .services.firebase_service import FirebaseHistoryService
+from .services.schema_generator import SchemaGenerator
 
 # Initialize services
 validator = ISOValidator()
@@ -161,6 +162,19 @@ def delete_history_record(validation_id: str):
 @app.get("/messages", response_model=List[str])
 def get_messages():
     return validator.get_supported_messages()
+
+@app.get("/messages/{message_type}/schema")
+def get_message_schema(message_type: str):
+    """Dynamically extract the schema tree for a specific MX message type"""
+    xsd_path = validator._get_xsd_path(message_type)
+    if not xsd_path or not os.path.exists(xsd_path):
+        raise HTTPException(status_code=404, detail=f"Schema not found for {message_type}")
+    
+    schema_tree = SchemaGenerator.get_schema_tree(xsd_path)
+    if not schema_tree:
+        raise HTTPException(status_code=500, detail=f"Failed to generate schema tree for {message_type}")
+    
+    return schema_tree
 
 # --- GLOBALLY READY: Serve Frontend ---
 # This allows the backend to serve the frontend UI in a production environment
