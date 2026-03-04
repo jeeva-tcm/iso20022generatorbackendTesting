@@ -110,7 +110,7 @@ xml_empty_id = """<root>
 </root>"""
 check("Neither IBAN nor Othr", _run(xml_empty_id), ["ACCT_MISSING_ID"])
 
-# ─── BBAN Tests ───────────────────────────────────────────────────────────────
+# ─── BBAN Tests ────────────────────────────────────────────────────────────── 
 
 # 11. Valid BBAN
 xml_valid_bban = """<root>
