@@ -75,5 +75,66 @@
         "admi.004.001.02",
         "auth.001.001.02",
         "head.001.001.01"
-    ]
+    ],
+    "sanctions": {
+        "codes": [
+            "AF",
+            "BY",
+            "BI",
+            "CF",
+            "CU",
+            "CD",
+            "ET",
+            "GN",
+            "GW",
+            "HT",
+            "IR",
+            "IQ",
+            "LY",
+            "ML",
+            "MM",
+            "KP",
+            "RU",
+            "SO",
+            "SS",
+            "SD",
+            "SY",
+            "VE",
+            "YE",
+            "ZW"
+        ],
+        "names": [
+            "afghanistan",
+            "belarus",
+            "burundi",
+            "central african republic",
+            "cuba",
+            "democratic republic of the congo",
+            "ethiopia",
+            "guinea",
+            "guinea-bissau",
+            "haiti",
+            "iran",
+            "iraq",
+            "libya",
+            "mali",
+            "myanmar",
+            "burma",
+            "north korea",
+            "russia",
+            "somalia",
+            "south sudan",
+            "sudan",
+            "syria",
+            "venezuela",
+            "yemen",
+            "zimbabwe"
+        ]
+    },
+    "timing_defaults": {
+        "debtor_country": "US",
+        "creditor_country": "GB",
+        "debtor_system": "FEDWIRE",
+        "creditor_system": "CHAPS"
+    }
 }

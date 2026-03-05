@@ -1,0 +1,31 @@
+{
+    "source_mt": "299",
+    "target_mx": "pacs.002.001.10",
+    "xml_namespaces": {
+        "xmlns": "urn:iso:std:iso:20022:tech:xsd:pacs.002.001.10"
+    },
+    "root_element": "Document",
+    "mappings": [
+        {
+            "mt_tag": "20",
+            "name": "Message Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtStsRpt/GrpHdr/MsgId"
+        },
+        {
+            "mt_tag": "_timestamp",
+            "name": "Creation Date Time",
+            "mandatory": false,
+            "type": "timestamp",
+            "mx_path": "FIToFIPmtStsRpt/GrpHdr/CreDtTm"
+        },
+        {
+            "mt_tag": "21",
+            "name": "Related Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlInstrId"
+        }
+    ]
+}

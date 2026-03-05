@@ -49,6 +49,10 @@ iso_validator.db
 .env
 .env.local
 
+# Firebase service account key (NEVER commit this)
+firebase-key.json
+**/firebase-key.json
+
 # Logs
 *.log
 *.txt

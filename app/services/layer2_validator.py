@@ -6,6 +6,9 @@ from typing import Optional
 from .models import ValidationIssue, ValidationReport
 
 class Layer2Mixin:
+    # Cache: xsd_path → {tag_name: {label, mandatory, repeatable}}
+    _xsd_tag_cache: dict = {}
+
     async def _run_layer_2(self, xml_content: str, report: ValidationReport, message_type: str) -> bool:
         """
         LAYER 2 — ISO Structure Validation (XSD)
@@ -48,9 +51,12 @@ class Layer2Mixin:
 
             xsd_doc = etree.parse(xsd_full_path)
             schema = etree.XMLSchema(xsd_doc)
+
+            # Build dynamic tag info for rich error messages (cached per XSD)
+            tag_info = self._build_tag_info_from_xsd(xsd_full_path)
             
-            # Extract namespacing
-            xml_ns = main_cleaned.nsmap.get(None) or ""
+            # Extract namespacing carefully
+            xml_ns = etree.QName(main_cleaned).namespace or ""
             # Robust XSD Namespace Detection
             xsd_ns = xsd_doc.getroot().get("targetNamespace")
             if not xsd_ns:
@@ -76,9 +82,6 @@ class Layer2Mixin:
                     # If we can identify the specific invalid value and tag, let's find the EXACT line in the original tree.
                     # This fixes issues where re-parsing destroys line numbers.
                     try:
-                        # Debug: log raw lxml error message to help diagnose format issues
-                        print(f"[DEBUG L2 ERROR] line={error.line} msg={error.message!r}")
-
                         # Extract Tag and Value from error message
                         # Typical lxml format:
                         #   Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'...
@@ -187,14 +190,14 @@ class Layer2Mixin:
                         pass
                     # ─────────────────────────────────────────────────────────
 
-                    friendly_msg, suggestion = self._simplify_error_message(error.message)
+                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info)
                     issues.append(ValidationIssue("ERROR", 2, "SCHEMA_VAL", str(real_line), friendly_msg, suggestion))
 
             # Step 11 — Mandatory Header Logic (head.001)
             app_hdr_node = full_xml_doc.find(".//{*}AppHdr")
             if app_hdr_node is not None:
                 h_line_offset = app_hdr_node.sourceline or 1
-                h_ns = app_hdr_node.nsmap.get(None) or ""
+                h_ns = etree.QName(app_hdr_node).namespace or ""
                 h_type = self.config.get("validation_rules", {}).get("default_header_type", "head.001.001.01")
                 partial_ns = self.config.get("validation_rules", {}).get("header_namespace_partial", "head.001.001")
                 
@@ -211,6 +214,10 @@ class Layer2Mixin:
                         h_xsd_raw = etree.parse(h_path)
                         h_schema = etree.XMLSchema(h_xsd_raw)
                         h_xsd_ns = h_xsd_raw.getroot().get("targetNamespace")
+
+                        # ✅ Build tag_info from the HEAD.001 XSD (NOT payload XSD)
+                        # This ensures CharSet is seen as optional and Fr as mandatory
+                        h_tag_info = self._build_tag_info_from_xsd(h_path)
                         
                         h_val_doc = h_clean
                         if h_xsd_ns and h_ns != h_xsd_ns:
@@ -222,7 +229,8 @@ class Layer2Mixin:
                         for error in deh.error_log:
                             # Map relative line back to absolute line
                             h_real_line = h_line_offset + error.line - 1
-                            friendly_msg, suggestion = self._simplify_error_message(error.message)
+                            # Use h_tag_info (head.001) — NOT payload tag_info
+                            friendly_msg, suggestion = self._simplify_error_message(error.message, h_tag_info)
                             issues.append(ValidationIssue("ERROR", 2, "HEADER_VAL", str(h_real_line), friendly_msg, suggestion))
                     except Exception as eh:
                          issues.append(ValidationIssue("WARNING", 2, "HEADER_ERR", "/", f"AppHdr Warning: {str(eh)}"))
@@ -240,6 +248,68 @@ class Layer2Mixin:
         report.layer_status["2"] = {"status": "✅" if success else "❌", "time": round((time.time() - start) * 1000, 2)}
         return success
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # DYNAMIC XSD TAG ANALYSER
+    # Reads any ISO 20022 XSD at runtime and builds a rich tag dictionary.
+    # Result is cached so each XSD is only parsed once per server session.
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _camel_to_words(self, name: str) -> str:
+        """Convert ISO 20022 CamelCase names to readable English words."""
+        # Strip trailing version digits (e.g. GroupHeader131 → GroupHeader)
+        name = re.sub(r'\d+$', '', name)
+        # Split: uppercase letters that start a new word
+        words = re.findall(r'[A-Z][a-z]+|[A-Z]+(?=[A-Z][a-z]|$)|[a-z]+|[A-Z]', name)
+        return ' '.join(words) if words else name
+
+    def _build_tag_info_from_xsd(self, xsd_path: str) -> dict:
+        """
+        Dynamically parse an XSD file and return a dict:
+          { element_name: { 'label': str, 'mandatory': bool, 'repeatable': bool } }
+        Cached per xsd_path so it runs only once per XSD file.
+        """
+        if xsd_path in Layer2Mixin._xsd_tag_cache:
+            return Layer2Mixin._xsd_tag_cache[xsd_path]
+
+        tag_info: dict = {}
+        XS = 'http://www.w3.org/2001/XMLSchema'
+
+        try:
+            tree  = etree.parse(xsd_path)
+            root  = tree.getroot()
+
+            for elem in root.iter(f'{{{XS}}}element'):
+                name = elem.get('name')
+                if not name:
+                    continue
+
+                min_occ = elem.get('minOccurs', '1')  # default is '1' = mandatory
+                max_occ = elem.get('maxOccurs', '1')
+                type_nm = elem.get('type', name)       # fallback to element name
+
+                is_mandatory  = min_occ != '0'
+                is_repeatable = (max_occ == 'unbounded' or
+                                 (max_occ.isdigit() and int(max_occ) > 1))
+
+                # Generate plain-English label from the xs:complexType or xs:simpleType
+                # that is referenced by this element — more descriptive than the tag alone
+                label = self._camel_to_words(type_nm) if type_nm else self._camel_to_words(name)
+
+                if name not in tag_info:  # keep first (most specific) definition
+                    tag_info[name] = {
+                        'label':      label,
+                        'mandatory':  is_mandatory,
+                        'repeatable': is_repeatable,
+                        'min':        min_occ,
+                        'max':        max_occ,
+                    }
+
+        except Exception as ex:
+            print(f'[DEBUG] XSD tag parse failed: {ex}')
+
+        Layer2Mixin._xsd_tag_cache[xsd_path] = tag_info
+        return tag_info
+
     def _mask_namespace(self, element, new_ns: str):
         # Guard: lxml Comment/PI nodes have .tag = etree.Comment (a Cython function)
         # which is NOT a string. We must copy them as-is to avoid QName crash.
@@ -256,13 +326,223 @@ class Layer2Mixin:
         new_elem.tail = element.tail
         return new_elem
 
-    def _simplify_error_message(self, message: str) -> tuple:
+    def _simplify_error_message(self, message: str, tag_info: dict = None) -> tuple:
         """
-        Premium Translation Engine: Converts technical XSD/lxml jargon into
+        Dynamic Translation Engine: Converts technical XSD/lxml jargon into
         clear, human-readable, actionable English for end users.
+        Uses tag_info (built from the actual XSD) for context-aware messages.
+        Works for ALL ISO 20022 MX message types dynamically.
         """
         # Strip namespace URIs like {urn:iso:...:xsd:...} from message
         msg = re.sub(r'\{[^}]+\}', '', message)
+        if tag_info is None:
+            tag_info = {}
+
+        # ── Static Tag Name Dictionary (Cross-Family coverage) ────────────
+        # Priority 3 fallback after: 1. live XSD label, 2. this dict, 3. CamelCase split
+        # Covers all major ISO 20022 MX message families dynamically.
+        _STATIC_TAG_NAMES = {
+            # ── COMMON ACROSS ALL FAMILIES ──────────────────────────────────
+            "GrpHdr":       "Group Header",
+            "MsgId":        "Message ID",
+            "CreDtTm":      "Creation Date & Time",
+            "CreDt":        "Creation Date",
+            "NbOfTxs":      "Number of Transactions",
+            "CtrlSum":      "Control Sum",
+            "Id":           "Identification",
+            "Nm":           "Name",
+            "Cd":           "Code",
+            "Prtry":        "Proprietary",
+            "Issr":         "Issuer",
+            "Ref":          "Reference",
+            "Dt":           "Date",
+            "Amt":          "Amount",
+            "Ccy":          "Currency",
+            "Ctry":         "Country",
+            "Tp":           "Type",
+            "Sts":          "Status",
+            "Rsn":          "Reason",
+            "Inf":          "Information",
+            "AddtlInf":     "Additional Information",
+            "Fr":           "From",
+            "To":           "To",
+            "OrgnlMsgId":   "Original Message ID",
+            # ── PARTIES ─────────────────────────────────────────────────────
+            "Dbtr":         "Debtor",
+            "Cdtr":         "Creditor",
+            "UltmtDbtr":    "Ultimate Debtor",
+            "UltmtCdtr":    "Ultimate Creditor",
+            "InitgPty":     "Initiating Party",
+            "CdtrAgt":      "Creditor Agent",
+            "DbtrAgt":      "Debtor Agent",
+            "InstgAgt":     "Instructing Agent",
+            "InstdAgt":     "Instructed Agent",
+            "IntrmyAgt1":   "Intermediary Agent 1",
+            "IntrmyAgt2":   "Intermediary Agent 2",
+            "IntrmyAgt3":   "Intermediary Agent 3",
+            "PrvsInstgAgt1":"Previous Instructing Agent 1",
+            "FwdgAgt":      "Forwarding Agent",
+            "Agt":          "Agent",
+            "Pty":          "Party",
+            # ── FINANCIAL INSTITUTION ───────────────────────────────────────
+            "FinInstnId":   "Financial Institution Identification",
+            "BICFI":        "BIC (Financial Institution)",
+            "ClrSysMmbId":  "Clearing System Member ID",
+            "FIId":         "Financial Institution ID",
+            "BrnchId":      "Branch ID",
+            "LEI":          "Legal Entity Identifier",
+            # ── IDENTIFICATION ───────────────────────────────────────────────
+            "OrgId":        "Organisation ID",
+            "PrvtId":       "Private ID",
+            "BirthDt":      "Date of Birth",
+            "CityOfBirth":  "City of Birth",
+            "CtryOfBirth":  "Country of Birth",
+            "TaxId":        "Tax ID",
+            "AnyBIC":       "Any BIC",
+            # ── ACCOUNTS ────────────────────────────────────────────────────
+            "DbtrAcct":     "Debtor Account",
+            "CdtrAcct":     "Creditor Account",
+            "DbtrAgtAcct":  "Debtor Agent Account",
+            "CdtrAgtAcct":  "Creditor Agent Account",
+            "Acct":         "Account",
+            "IBAN":         "IBAN",
+            "AcctId":       "Account ID",
+            "AcctOwnr":     "Account Owner",
+            "AcctSvcr":     "Account Servicer",
+            # ── ADDRESS ─────────────────────────────────────────────────────
+            "PstlAdr":      "Postal Address",
+            "AdrLine":      "Address Line",
+            "StrtNm":       "Street Name",
+            "BldgNb":       "Building Number",
+            "PstCd":        "Post Code",
+            "TwnNm":        "Town Name",
+            "CtrySubDvsn":  "Country Sub-Division",
+            # ── PAYMENT ─────────────────────────────────────────────────────
+            "PmtId":        "Payment Identification",
+            "InstrId":      "Instruction ID",
+            "EndToEndId":   "End-to-End ID",
+            "TxId":         "Transaction ID",
+            "UETR":         "Unique End-to-End Transaction Reference",
+            "PmtTpInf":     "Payment Type Information",
+            "SvcLvl":       "Service Level",
+            "LclInstrm":    "Local Instrument",
+            "CtgyPurp":     "Category Purpose",
+            "Purp":         "Purpose",
+            "InstrPrty":    "Instruction Priority",
+            "CdtTrfTxInf":  "Credit Transfer Transaction",
+            "DrctDbtTxInf": "Direct Debit Transaction",
+            "TxInf":        "Transaction Information",
+            "IntrBkSttlmAmt": "Interbank Settlement Amount",
+            "IntrBkSttlmDt":  "Interbank Settlement Date",
+            "InstdAmt":     "Instructed Amount",
+            "TtlIntrBkSttlmAmt": "Total Interbank Settlement Amount",
+            "XchgRate":     "Exchange Rate",
+            "ChrgBr":       "Charge Bearer",
+            "ChrgsInf":     "Charges Information",
+            # ── SETTLEMENT ──────────────────────────────────────────────────
+            "SttlmInf":     "Settlement Information",
+            "SttlmMtd":     "Settlement Method",
+            "SttlmAcct":    "Settlement Account",
+            "SttlmPrty":    "Settlement Priority",
+            "SttlmTmIndctn":"Settlement Time Indication",
+            "SttlmTmReq":   "Settlement Time Request",
+            "ClrSys":       "Clearing System",
+            # ── REMITTANCE ──────────────────────────────────────────────────
+            "RmtInf":       "Remittance Information",
+            "Ustrd":        "Unstructured Remittance",
+            "Strd":         "Structured Remittance",
+            "CdtrRefInf":   "Creditor Reference Information",
+            # ── CAMT (Cash Management) ──────────────────────────────────────
+            "Stmt":         "Statement",
+            "Ntry":         "Entry",
+            "NtryDtls":     "Entry Details",
+            "TxDtls":       "Transaction Details",
+            "Bal":          "Balance",
+            "Acct":         "Account",
+            "AcctRpt":      "Account Report",
+            "Rpt":          "Report",
+            "FlrLmt":       "Floor Limit",
+            "LqdtyMgmt":    "Liquidity Management",
+            "Lmt":          "Limit",
+            "ReqdAmt":      "Requested Amount",
+            "ReqdLqdtyTfr": "Requested Liquidity Transfer",
+            # ── PAIN (Payment Initiation) ────────────────────────────────────
+            "PmtInf":       "Payment Information",
+            "PmtMtd":       "Payment Method",
+            "NbOfTxs":      "Number of Transactions",
+            "ReqdExctnDt":  "Requested Execution Date",
+            "ReqdColltnDt": "Requested Collection Date",
+            "CdtTrfTxInf":  "Credit Transfer Transaction",
+            "DrctDbtTxInf": "Direct Debit Transaction",
+            "DrctDbtTx":    "Direct Debit Transaction",
+            "MndtRltdInf":  "Mandate Related Information",
+            "MndtId":       "Mandate ID",
+            # ── PACS (Payment Clearing & Settlement) ────────────────────────
+            "OrgnlGrpInfAndSts": "Original Group Information & Status",
+            "OrgnlMsgNmId": "Original Message Name ID",
+            "OrgnlCreDtTm": "Original Creation Date & Time",
+            "TxInfAndSts":  "Transaction Information & Status",
+            "OrgnlEndToEndId": "Original End-to-End ID",
+            "OrgnlTxId":    "Original Transaction ID",
+            "TxSts":        "Transaction Status",
+            "StsRsnInf":    "Status Reason Information",
+            "AddtlTxInf":   "Additional Transaction Information",
+            # ── SESE (Securities Settlement) ────────────────────────────────
+            "TradDtls":     "Trade Details",
+            "FinInstrmId":  "Financial Instrument ID",
+            "ISIN":         "ISIN",
+            "PlcOfTrad":    "Place of Trade",
+            "SttlmParams":  "Settlement Parameters",
+            "DlvrgSttlmPties": "Delivering Settlement Parties",
+            "RcvgSttlmPties":  "Receiving Settlement Parties",
+            "SfkpgAcct":    "Safekeeping Account",
+            # ── REGULATORY ──────────────────────────────────────────────────
+            "RgltryRptg":   "Regulatory Reporting",
+            "Tax":          "Tax",
+            "TaxRcrd":      "Tax Record",
+            "TaxAmt":       "Tax Amount",
+            # ── head.001 APPLICATION HEADER ─────────────────────────────────
+            "BizMsgIdr":    "Business Message Identifier",
+            "MsgDefIdr":    "Message Definition Identifier",
+            "BizSvc":       "Business Service",
+            "CharSet":      "Character Set",
+            "Sgntr":        "Signature",
+            "DplctRef":     "Duplicate Reference",
+            "Prty":         "Priority",
+        }
+
+        def tag_label(tag: str) -> str:
+            """Returns 'TagName (Full English Name)' using 3-tier lookup:
+            1. Live XSD-derived label  2. Static dict  3. CamelCase split"""
+            # 1. Live XSD info (most accurate — derived from the actual validated XSD)
+            if tag in tag_info:
+                lbl = tag_info[tag]['label']
+                # Only use it if it adds value (not just the tag name itself)
+                if lbl and lbl.strip().lower() != tag.strip().lower():
+                    return f"{tag} ({lbl})"
+
+            # 2. Static fallback table (covers common abbreviations across all families)
+            full = _STATIC_TAG_NAMES.get(tag)
+            if full:
+                return f"{tag} ({full})"
+
+            # 3. CamelCase split — skip if tag is too short to be meaningful
+            if len(tag) > 2:
+                words = self._camel_to_words(tag)
+                if words and words.lower() != tag.lower():
+                    return f"{tag} ({words})"
+
+            return tag  # Return as-is for very short tags like 'Fr', 'To', 'Id'
+
+        def tag_mandatory(tag: str) -> bool:
+            """Returns True if the XSD says this tag is mandatory."""
+            return tag_info.get(tag, {}).get('mandatory', True)  # default: assume mandatory
+
+        def tag_repeatable(tag: str) -> bool:
+
+            """Returns True if the XSD allows this tag to repeat."""
+            return tag_info.get(tag, {}).get('repeatable', False)
+
 
         # ── Helper: extract element name ──────────────────────────────────
         def elem_name(default="A field"):
@@ -360,46 +640,94 @@ class Layer2Mixin:
                 f"Remove the extra copy and keep only one."
             )
 
-        # ── 6. WRONG ORDER / UNEXPECTED ELEMENT ───────────────────────────
+        # ── 6. MISSING TAG or WRONG ORDER ─────────────────────────────────
+        # lxml says "Element 'X' is not expected. Expected is (Y)." in two cases:
+        #   a) Y ≠ X  →  Y is MISSING — X appeared in its place (most common)
+        #   b) Y = X  →  X is a DUPLICATE
         if "is not expected" in msg:
             m = re.search(
                 r"Element '([^']+)': This element is not expected\. Expected is(?: one of)? \(([^)]+)\)\.", msg
             )
             if m:
-                name, expected = m.group(1), m.group(2)
-                if name in expected:
+                found_elem_full = m.group(1)
+                found_elem = found_elem_full.split('}')[-1] if '}' in found_elem_full else found_elem_full
+                expected_str = m.group(2)
+
+                # --- Duplicate: the found element IS in the expected list ---
+                if found_elem in expected_str:
+                    label = tag_label(found_elem)
                     return (
-                        f"❌ Field '{name}' is duplicated.",
-                        f"'{name}' has been entered twice in this section. Remove the duplicate."
+                        f"❌ Tag <{found_elem}> is duplicated.",
+                        f"The tag <{label}> appears more than once in this section. "
+                        f"Remove the extra copy and keep only one."
                     )
+
+                # --- Missing: a completely different element was expected ---
+                # lxml reports the FIRST tag in the sequence as expected — but it may be
+                # OPTIONAL (e.g. CharSet in head.001). Walk through all expected candidates
+                # to find the first MANDATORY one from the XSD.
+                all_expected = [t.strip().strip('()') for t in expected_str.split(',')]
+
+                # Find the first truly mandatory expected tag
+                mandatory_missing = None
+                for candidate in all_expected:
+                    if tag_mandatory(candidate):   # uses live XSD info
+                        mandatory_missing = candidate
+                        break
+
+                # If all candidates are optional (unlikely but possible), fall back to first
+                first_expected = mandatory_missing or all_expected[0]
+                missing_label  = tag_label(first_expected)
+                found_label    = tag_label(found_elem)
+
+                # If the reported-expected tag was optional but we found a mandatory one, note it
+                originally_reported = all_expected[0]
+                if mandatory_missing and mandatory_missing != originally_reported:
+                    optional_note = (
+                        f"Note: <{tag_label(originally_reported)}> is optional and was skipped; "
+                        f"the required element is <{missing_label}>. "
+                    )
+                else:
+                    optional_note = ""
+
                 return (
-                    f"❌ Field '{name}' is in the wrong position.",
-                    f"ISO 20022 messages require a strict field order. "
-                    f"Move '{name}' so it appears after: {expected}."
+                    f"❌ Missing mandatory tag <{first_expected}>.",
+                    f"The tag <{missing_label}> is required here but was not found in the XML. "
+                    f"Instead, <{found_label}> was encountered at this position. "
+                    f"{optional_note}"
+                    f"Add <{first_expected}>...</{first_expected}> before <{found_elem}> to fix this error."
                 )
-            name = elem_name("A field")
+
+            # No match for the structured pattern — generic fallback
+            name = elem_name("field")
             return (
-                f"❌ Unexpected field '{name}'.",
-                "This field is not expected at this position in the message. "
+                f"❌ Tag <{name}> is not expected at this position.",
+                f"<{name}> cannot appear at this location in the message. "
                 "Check the ISO 20022 schema for the correct field sequence."
             )
 
-        # ── 7. MISSING MANDATORY FIELD ────────────────────────────────────
+        # ── 7. MISSING MANDATORY CHILD FIELD ─────────────────────────────
+        # lxml: "Element 'GrpHdr': Missing child element(s). Expected is (NbOfTxs)."
         if any(x in msg for x in ["Missing child element", "content is incomplete", "fails to occur"]):
             m = re.search(r"Element '([^']+)':.*Expected is(?: one of)? \(([^)]+)\)\.", msg)
             if not m:
                 m = re.search(r"Element '([^']+)':.*'([^']+)' fails to occur", msg)
             if m:
-                parent, missing = m.group(1), m.group(2)
+                parent        = m.group(1)
+                missing_all   = m.group(2)
+                first_missing = missing_all.split(',')[0].strip().strip('()')
+                parent_label  = tag_label(parent)
+                missing_label = tag_label(first_missing)
                 return (
-                    f"❌ Mandatory field missing inside '{parent}'.",
-                    f"The required field(s) '{missing}' were not found inside '{parent}'. "
-                    f"Add the missing field(s) to make this message comply with the ISO 20022 standard."
+                    f"❌ Mandatory tag <{first_missing}> is missing inside <{parent}>.",
+                    f"The required tag <{missing_label}> was not found inside <{parent_label}>. "
+                    f"Add <{first_missing}>...</{first_missing}> to complete this section. "
+                    f"All expected tags in this section: {missing_all}."
                 )
             return (
-                "❌ A required field is missing.",
-                "One or more mandatory fields are absent from this section. "
-                "Check the schema to identify which fields are required."
+                "❌ A required tag is missing from this section.",
+                "One or more mandatory tags are absent. "
+                "Check the ISO 20022 schema to identify which tags must be present."
             )
 
         # ── 8. DATE FORMAT ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ pymysql
 pydantic
 pydantic-settings
 lxml
+firebase-admin
 python-multipart
 python-dotenv
 cryptography
