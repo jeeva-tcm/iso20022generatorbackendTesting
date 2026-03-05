@@ -45,6 +45,7 @@ async def validate_message(
     if request.store_in_history:
         record = {
             "validation_id": report_dict["validation_id"],
+            "batch_id": request.batch_id or report_dict["validation_id"],
             "timestamp": report_dict["timestamp"], # Already in report
             "message_type": report_dict["message"],
             "status": report_dict["status"],
@@ -63,7 +64,8 @@ async def validate_file(
     file: UploadFile = File(...),
     mode: str = Form("Full 1-3"),
     message_type: str = Form("Auto-detect"),
-    store_in_history: bool = Form(True)
+    store_in_history: bool = Form(True),
+    batch_id: Optional[str] = Form(None)
 ):
     content = await file.read()
     xml_content = content.decode("utf-8")
@@ -74,6 +76,7 @@ async def validate_file(
     if store_in_history:
         record = {
             "validation_id": report_dict["validation_id"],
+            "batch_id": batch_id or report_dict["validation_id"],
             "timestamp": report_dict["timestamp"],
             "message_type": report_dict["message"],
             "status": report_dict["status"],

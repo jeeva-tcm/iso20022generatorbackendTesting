@@ -165,10 +165,20 @@ class FirebaseHistoryService:
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
 
     def delete_record(self, validation_id: str) -> bool:
-        """Deletes a single record"""
+        """Deletes a single record or a batch depending on the provided ID"""
         if not self.enabled:
             return False
         try:
+            # First, try deleting by batch_id
+            docs = list(self.db.collection("validation_history").where("batch_id", "==", validation_id).stream())
+            if docs:
+                batch = self.db.batch()
+                for doc in docs:
+                    batch.delete(doc.reference)
+                batch.commit()
+                return True
+                
+            # Fallback to deleting by document ID (validation_id)
             self.db.collection("validation_history").document(validation_id).delete()
             return True
         except:

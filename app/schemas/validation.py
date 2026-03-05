@@ -7,6 +7,7 @@ class ValidationRequest(BaseModel):
     mode: str = "Full 1-3"
     message_type: str = "Auto-detect"
     store_in_history: bool = True
+    batch_id: Optional[str] = None
 
 class IssueSchema(BaseModel):
     severity: str
@@ -31,6 +32,7 @@ class ValidationResponse(BaseModel):
 
 class HistorySummary(BaseModel):
     validation_id: str
+    batch_id: Optional[str] = None
     timestamp: Any  # Keep as Any to handle the manual conversion
     message_type: str
     status: str
