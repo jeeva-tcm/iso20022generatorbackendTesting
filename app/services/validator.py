@@ -1,5 +1,6 @@
 import time
 import uuid
+import threading
 import re
 import os
 import json
@@ -16,6 +17,10 @@ from .layer3_timing import validateLayer3Timing
 
 
 class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
+
+    _id_lock = threading.Lock()
+    _daily_counter = 0
+    _counter_date = ""
 
     def __init__(self):
         # Path configuration
@@ -60,6 +65,22 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         print(f" - XSD Path: {self.xsd_path}")
         print(f" - Config Loaded: {bool(self.config)}")
         print(f" - BICs Loaded: {len(self.supported_bics)}")
+
+    def generate_next_id(self) -> str:
+        """Generates the next sequential validation ID in format VAL{DDMMYY}{00001}"""
+        today = time.strftime('%d%m%y')
+        with ISOValidator._id_lock:
+            if ISOValidator._counter_date != today:
+                ISOValidator._counter_date = today
+                ISOValidator._daily_counter = 0
+            ISOValidator._daily_counter += 1
+            seq = ISOValidator._daily_counter
+        return f"VAL{today}{seq:05d}"
+
+    def reset_counter(self):
+        """Resets the daily counter back to 0"""
+        with ISOValidator._id_lock:
+            ISOValidator._daily_counter = 0
 
     def _load_config(self) -> Dict[str, Any]:
         """Loads the dynamic configuration file"""
@@ -203,7 +224,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         # Keep full version in report for UI display
         # The _get_xsd_path function will handle version-blind matching internally
 
-        validation_id = f"VAL-{time.strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+        validation_id = self.generate_next_id()
         report = ValidationReport(validation_id, detected_type, mode)
 
         try:
@@ -246,6 +267,24 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
             # STEP 4.8: IBAN / BBAN ACCOUNT IDENTIFIER VALIDATION
             self._validate_account_identifiers_in_xml(xml_content, report)
+
+            # STEP 4.9: NbOfTxs COUNT VALIDATION
+            self._validate_nboftxs(xml_content, report)
+
+            # STEP 4.10: SWIFT CHARACTER SET VALIDATION (Remittance)
+            self._validate_swift_charset(xml_content, report)
+
+            # STEP 4.11: CHARGES CURRENCY MATCH VALIDATION
+            self._validate_charges_currency(xml_content, report)
+
+            # STEP 4.12: PARTY IDENTIFICATION VALIDATION
+            self._validate_party_rules(xml_content, report)
+
+            # STEP 4.13: ADDRESS CBPR+ RULES VALIDATION
+            self._validate_address_cbpr_rules(xml_content, report)
+
+            # STEP 4.14: REMITTANCE INFORMATION RULES
+            self._validate_remittance_rules(xml_content, report)
 
             if mode != "Layer 1 only":
                 try:
@@ -1237,6 +1276,467 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         report.add_issue(ValidationIssue(
                             "ERROR", 3, "NON_POSITIVE_AMOUNT", str(line_num), msg, fix
                         ))
+
+    def _validate_nboftxs(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.9 — NbOfTxs Count Validation
+        Verifies that the <NbOfTxs> value matches the actual number of
+        transaction elements in the message.
+        """
+        # Extract NbOfTxs value
+        nb_match = re.search(r'<NbOfTxs>\s*(\d+)\s*</NbOfTxs>', xml_content)
+        if not nb_match:
+            return  # NbOfTxs not present, XSD will catch if mandatory
+
+        declared_count = int(nb_match.group(1))
+
+        # Count transaction elements — covers pacs.008, pacs.009, pacs.002, pain, camt
+        tx_tags = ['CdtTrfTxInf', 'DrctDbtTxInf', 'TxInfAndSts', 'PmtInf']
+        actual_count = 0
+        for tag in tx_tags:
+            count = len(re.findall(rf'<{tag}[\s>]', xml_content))
+            if count > 0:
+                actual_count = count
+                break
+
+        if actual_count > 0 and declared_count != actual_count:
+            try:
+                line_num = xml_content.count('\n', 0, nb_match.start()) + 1
+            except Exception:
+                line_num = "Unknown"
+
+            report.add_issue(ValidationIssue(
+                "ERROR", 3, "NBOFTXS_MISMATCH", str(line_num),
+                f"NbOfTxs declares {declared_count} transaction(s) but the message "
+                f"actually contains {actual_count}.",
+                f"Update <NbOfTxs> to {actual_count} to match the actual number of transactions."
+            ))
+
+    def _validate_swift_charset(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.10 — SWIFT Character Set Validation
+        Checks <Ustrd> (unstructured remittance) content for characters
+        outside the SWIFT FIN character set.
+
+        SWIFT allowed: a-z A-Z 0-9 / - ? : ( ) . , ' + space CR LF
+        """
+        SWIFT_CHARSET = re.compile(r"^[a-zA-Z0-9 /\-?:().,'+\r\n]*$")
+
+        ustrd_patt = re.compile(r'<Ustrd>\s*([^<]+?)\s*</Ustrd>')
+
+        for m in ustrd_patt.finditer(xml_content):
+            value = m.group(1).strip()
+            if not value:
+                continue
+
+            if not SWIFT_CHARSET.match(value):
+                # Find the offending characters
+                bad_chars = set(re.findall(r"[^a-zA-Z0-9 /\-?:().,'+\r\n]", value))
+                bad_str = ', '.join(f"'{c}'" for c in sorted(bad_chars)[:5])
+
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = "Unknown"
+
+                report.add_issue(ValidationIssue(
+                    "WARNING", 3, "SWIFT_CHARSET_WARN", str(line_num),
+                    f"Unstructured remittance at line {line_num} contains characters "
+                    f"outside the SWIFT character set: {bad_str}.",
+                    "SWIFT FIN only allows: a-z A-Z 0-9 / - ? : ( ) . , ' + and space. "
+                    "Remove or replace any special characters like #, @, &, !, etc."
+                ))
+
+    def _validate_charges_currency(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.11 — Charges Currency Match Validation
+        Verifies that <ChrgsInf><Amt Ccy="X"> uses the same currency
+        as the transaction amount (<IntrBkSttlmAmt Ccy="Y">).
+        """
+        # Extract transaction currency
+        tx_ccy_match = re.search(r'<IntrBkSttlmAmt\s+Ccy="([A-Z]{3})"', xml_content)
+        if not tx_ccy_match:
+            return  # No interbank settlement amount, nothing to compare
+
+        tx_ccy = tx_ccy_match.group(1)
+
+        # Find all charges amounts
+        chrg_patt = re.compile(r'<Amt\s+Ccy="([A-Z]{3})"[^>]*>([^<]+)</Amt>')
+
+        # Only check within <ChrgsInf> blocks
+        chrg_blocks = re.finditer(r'<ChrgsInf>(.*?)</ChrgsInf>', xml_content, re.DOTALL)
+
+        for block in chrg_blocks:
+            block_content = block.group(1)
+            for amt_match in chrg_patt.finditer(block_content):
+                chrg_ccy = amt_match.group(1)
+                if chrg_ccy != tx_ccy:
+                    try:
+                        line_num = xml_content.count('\n', 0, block.start() + amt_match.start()) + 1
+                    except Exception:
+                        line_num = "Unknown"
+
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, "CHRG_CCY_MISMATCH", str(line_num),
+                        f"Charges currency '{chrg_ccy}' does not match the transaction "
+                        f"currency '{tx_ccy}'.",
+                        f"Update the charges amount currency from '{chrg_ccy}' to '{tx_ccy}' "
+                        f"to match the Interbank Settlement Amount currency."
+                    ))
+
+    # SWIFT FIN character set regex (reusable)
+    _SWIFT_CHARSET_RE = re.compile(r"^[a-zA-Z0-9 /\-?:().,'+\r\n]*$")
+    _CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
+    _XML_RESERVED_RE = re.compile(r'[<>&"]')
+
+    def _validate_party_rules(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.12 — Party Identification Validation
+        Validates all party blocks (Dbtr, Cdtr, UltmtDbtr, UltmtCdtr, InitgPty)
+        for:
+          1. Name presence and format (SWIFT charset, no control/HTML/newline chars)
+          2. OrgId / PrvtId mutual exclusivity
+          3. LEI format (20 alphanumeric)
+          4. Party must have either Identification or Postal Address
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        party_tags = ['Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty']
+        local = lambda tag: f"*[local-name()='{tag}']"
+
+        for ptag in party_tags:
+            for party in root.iter():
+                if not isinstance(party.tag, str):
+                    continue
+                tag_local = party.tag.split('}')[-1] if '}' in party.tag else party.tag
+                if tag_local != ptag:
+                    continue
+
+                line = party.sourceline or 1
+
+                # --- Name validation ---
+                nm_el = party.find(local('Nm'), party.nsmap)
+                if nm_el is None:
+                    # Try without namespace
+                    for child in party:
+                        if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Nm':
+                            nm_el = child
+                            break
+
+                if nm_el is not None and nm_el.text is not None:
+                    name_val = nm_el.text
+                    nm_line = nm_el.sourceline or line
+
+                    # Empty or spaces only
+                    if not name_val.strip():
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "PARTY_NAME_EMPTY", str(nm_line),
+                            f"{ptag} name is empty or contains only spaces.",
+                            f"Provide a valid name for the {ptag} party (max 140 chars)."
+                        ))
+                        continue
+
+                    # Max length 140
+                    if len(name_val) > 140:
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "PARTY_NAME_LENGTH", str(nm_line),
+                            f"{ptag} name exceeds 140 characters ({len(name_val)} chars).",
+                            "Shorten the party name to 140 characters or less."
+                        ))
+
+                    # Control characters
+                    if self._CONTROL_CHAR_RE.search(name_val):
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "PARTY_NAME_CTRL_CHAR", str(nm_line),
+                            f"{ptag} name contains invalid control characters.",
+                            "Remove invisible control characters (ASCII 0-31) from the party name."
+                        ))
+
+                    # Newline characters
+                    if '\n' in name_val or '\r' in name_val:
+                        report.add_issue(ValidationIssue(
+                            "WARNING", 3, "PARTY_NAME_NEWLINE", str(nm_line),
+                            f"{ptag} name contains newline characters.",
+                            "Remove line breaks from the party name. Use a single-line value."
+                        ))
+
+                    # XML/HTML reserved characters (unescaped)
+                    if self._XML_RESERVED_RE.search(name_val):
+                        report.add_issue(ValidationIssue(
+                            "WARNING", 3, "PARTY_NAME_XML_CHARS", str(nm_line),
+                            f"{ptag} name contains XML-reserved characters (< > & \").",
+                            "Escape or remove XML-reserved characters from the party name."
+                        ))
+
+                    # SWIFT character set
+                    if not self._SWIFT_CHARSET_RE.match(name_val.replace('\n', '').replace('\r', '')):
+                        bad_chars = set(re.findall(r"[^a-zA-Z0-9 /\-?:().,'+\r\n]", name_val))
+                        bad_str = ', '.join(f"'{c}'" for c in sorted(bad_chars)[:5])
+                        report.add_issue(ValidationIssue(
+                            "WARNING", 3, "PARTY_NAME_SWIFT_CHARSET", str(nm_line),
+                            f"{ptag} name contains characters outside SWIFT character set: {bad_str}.",
+                            "SWIFT FIN only allows: a-z A-Z 0-9 / - ? : ( ) . , ' + and space."
+                        ))
+
+                # --- OrgId / PrvtId mutual exclusivity ---
+                def find_child(parent, tag_name):
+                    for c in parent.iter():
+                        if isinstance(c.tag, str) and c.tag.split('}')[-1] == tag_name:
+                            return c
+                    return None
+
+                id_el = find_child(party, 'Id')
+                if id_el is not None:
+                    org_id = find_child(id_el, 'OrgId')
+                    prvt_id = find_child(id_el, 'PrvtId')
+
+                    if org_id is not None and prvt_id is not None:
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "PARTY_ID_DUAL", str(id_el.sourceline or line),
+                            f"{ptag} identification contains both OrgId and PrvtId.",
+                            "A party must have either Organisation Identification OR Private Identification, not both."
+                        ))
+
+                    # LEI format check (20 alphanumeric)
+                    lei_el = find_child(id_el, 'LEI') or find_child(party, 'LEI')
+                    if lei_el is not None and lei_el.text:
+                        lei_val = lei_el.text.strip()
+                        if not re.match(r'^[A-Z0-9]{20}$', lei_val):
+                            report.add_issue(ValidationIssue(
+                                "ERROR", 3, "LEI_FORMAT", str(lei_el.sourceline or line),
+                                f"Invalid LEI '{lei_val}' in {ptag}. LEI must be exactly 20 alphanumeric characters.",
+                                "Correct the LEI to be exactly 20 uppercase alphanumeric characters (e.g., 7ZW8QJWVPR4P1J1KQY45)."
+                            ))
+
+                # --- Party must have either Id or PstlAdr ---
+                has_id = find_child(party, 'Id') is not None
+                has_addr = find_child(party, 'PstlAdr') is not None
+                # Only enforce for Dbtr/Cdtr (main parties), not agents
+                if ptag in ['Dbtr', 'Cdtr'] and not has_id and not has_addr:
+                    report.add_issue(ValidationIssue(
+                        "WARNING", 3, "PARTY_NO_ID_OR_ADDR", str(line),
+                        f"{ptag} does not contain either an Identification or Postal Address.",
+                        f"Add at least one of <Id> (with OrgId/PrvtId) or <PstlAdr> to the {ptag} block for better STP."
+                    ))
+
+    def _validate_address_cbpr_rules(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.13 — Address CBPR+ Rules Validation
+        Validates all <PstlAdr> blocks for:
+          1. Max 2 AdrLine elements (CBPR+ rule)
+          2. AdrLine SWIFT character set
+          3. Address fields not spaces-only
+          4. No control/XML characters in address fields
+          5. Structured address preferred over unstructured
+          6. Field length limits (StrtNm=70, BldgNb=16, PstCd=16, TwnNm=35, CtrySubDvsn=35)
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        FIELD_MAX_LENGTHS = {
+            'StrtNm': 70, 'BldgNb': 16, 'BldgNm': 70, 'PstCd': 16,
+            'TwnNm': 35, 'CtrySubDvsn': 35, 'Dept': 70, 'SubDept': 70,
+            'Flr': 70, 'PstBx': 16, 'Room': 70
+        }
+
+        for addr in root.iter():
+            if not isinstance(addr.tag, str):
+                continue
+            addr_local = addr.tag.split('}')[-1] if '}' in addr.tag else addr.tag
+            if addr_local != 'PstlAdr':
+                continue
+
+            line = addr.sourceline or 1
+            # Find the parent party name for context
+            parent = addr.getparent()
+            parent_name = ''
+            if parent is not None and isinstance(parent.tag, str):
+                parent_name = parent.tag.split('}')[-1] if '}' in parent.tag else parent.tag
+
+            # Count AdrLine elements
+            adr_lines = []
+            for child in addr:
+                if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'AdrLine':
+                    adr_lines.append(child)
+
+            # CBPR+ max 2 AdrLine
+            if len(adr_lines) > 2:
+                report.add_issue(ValidationIssue(
+                    "WARNING", 3, "ADDR_ADRLINE_LIMIT", str(line),
+                    f"Address in {parent_name} has {len(adr_lines)} AdrLine elements. CBPR+ recommends maximum 2.",
+                    "Reduce to 2 AdrLine elements or switch to structured address format."
+                ))
+
+            # Check each AdrLine
+            for adr_el in adr_lines:
+                if adr_el.text:
+                    val = adr_el.text
+                    adr_line_num = adr_el.sourceline or line
+
+                    # AdrLine max 70
+                    if len(val) > 70:
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_ADRLINE_LENGTH", str(adr_line_num),
+                            f"AdrLine in {parent_name} exceeds 70 characters ({len(val)} chars).",
+                            "Shorten the address line to 70 characters or less."
+                        ))
+
+                    # Spaces only
+                    if not val.strip():
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_ADRLINE_EMPTY", str(adr_line_num),
+                            f"AdrLine in {parent_name} is empty or contains only spaces.",
+                            "Provide a valid address line value or remove the empty element."
+                        ))
+                        continue
+
+                    # SWIFT charset
+                    if not self._SWIFT_CHARSET_RE.match(val):
+                        bad_chars = set(re.findall(r"[^a-zA-Z0-9 /\-?:().,'+\r\n]", val))
+                        bad_str = ', '.join(f"'{c}'" for c in sorted(bad_chars)[:5])
+                        report.add_issue(ValidationIssue(
+                            "WARNING", 3, "ADDR_ADRLINE_CHARSET", str(adr_line_num),
+                            f"AdrLine in {parent_name} contains non-SWIFT characters: {bad_str}.",
+                            "Use only SWIFT allowed characters: a-z A-Z 0-9 / - ? : ( ) . , ' + and space."
+                        ))
+
+                    # Control characters
+                    if self._CONTROL_CHAR_RE.search(val):
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_CTRL_CHAR", str(adr_line_num),
+                            f"AdrLine in {parent_name} contains invalid control characters.",
+                            "Remove invisible control characters from the address."
+                        ))
+
+            # Check structured fields for length and content
+            has_structured = False
+            for child in addr:
+                if not isinstance(child.tag, str):
+                    continue
+                child_local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+
+                if child_local in FIELD_MAX_LENGTHS and child.text:
+                    has_structured = True
+                    val = child.text
+                    max_len = FIELD_MAX_LENGTHS[child_local]
+                    child_line = child.sourceline or line
+
+                    # Length check
+                    if len(val) > max_len:
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_FIELD_LENGTH", str(child_line),
+                            f"{child_local} in {parent_name} address exceeds {max_len} characters ({len(val)} chars).",
+                            f"Shorten {child_local} to {max_len} characters or less."
+                        ))
+
+                    # Spaces only
+                    if not val.strip():
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_FIELD_EMPTY", str(child_line),
+                            f"{child_local} in {parent_name} address is empty or contains only spaces.",
+                            f"Provide a valid {child_local} value or remove the empty element."
+                        ))
+
+                    # Control characters
+                    if self._CONTROL_CHAR_RE.search(val):
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_FIELD_CTRL", str(child_line),
+                            f"{child_local} in {parent_name} contains control characters.",
+                            f"Remove hidden control characters from {child_local}."
+                        ))
+
+            # Structured preferred over unstructured (advisory)
+            if len(adr_lines) > 0 and not has_structured:
+                report.add_issue(ValidationIssue(
+                    "WARNING", 3, "ADDR_PREFER_STRUCTURED", str(line),
+                    f"Address in {parent_name} uses only AdrLine (unstructured). Structured address is preferred for CBPR+.",
+                    "Consider using structured fields (StrtNm, TwnNm, Ctry, PstCd) instead of AdrLine for better STP."
+                ))
+
+    def _validate_remittance_rules(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.14 — Remittance Information Validation
+        Validates:
+          1. Ustrd max length 140
+          2. Ustrd no control characters
+          3. Ustrd no XML reserved characters
+          4. Structured remittance must contain reference
+          5. Reference max length 35
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        for elem in root.iter():
+            if not isinstance(elem.tag, str):
+                continue
+            tag_local = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+
+            # --- Unstructured remittance ---
+            if tag_local == 'Ustrd' and elem.text:
+                val = elem.text
+                ln = elem.sourceline or 1
+
+                # Max 140
+                if len(val) > 140:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, "RMTINF_USTRD_LENGTH", str(ln),
+                        f"Unstructured remittance exceeds 140 characters ({len(val)} chars).",
+                        "Shorten the unstructured remittance text to 140 characters or less."
+                    ))
+
+                # Control characters
+                if self._CONTROL_CHAR_RE.search(val):
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, "RMTINF_USTRD_CTRL", str(ln),
+                        "Unstructured remittance contains invalid control characters.",
+                        "Remove invisible control characters (ASCII 0-31) from the remittance text."
+                    ))
+
+                # XML reserved characters (unescaped in parsed text means they were in source)
+                if self._XML_RESERVED_RE.search(val):
+                    report.add_issue(ValidationIssue(
+                        "WARNING", 3, "RMTINF_USTRD_XML", str(ln),
+                        "Unstructured remittance contains XML-reserved characters (< > & \").",
+                        "Escape or remove XML-reserved characters from the remittance text."
+                    ))
+
+            # --- Structured remittance: check reference ---
+            if tag_local == 'Strd':
+                strd_line = elem.sourceline or 1
+
+                # Must contain CdtrRefInf or Ref
+                has_ref = False
+                for child in elem.iter():
+                    if not isinstance(child.tag, str):
+                        continue
+                    cl = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                    if cl in ['CdtrRefInf', 'Ref', 'RfrdDocInf']:
+                        has_ref = True
+                        # Check reference max length
+                        if cl == 'Ref' and child.text and len(child.text) > 35:
+                            report.add_issue(ValidationIssue(
+                                "ERROR", 3, "RMTINF_REF_LENGTH", str(child.sourceline or strd_line),
+                                f"Structured remittance reference exceeds 35 characters ({len(child.text)} chars).",
+                                "Shorten the remittance reference to 35 characters or less."
+                            ))
+                        break
+
+                if not has_ref:
+                    report.add_issue(ValidationIssue(
+                        "WARNING", 3, "RMTINF_STRD_NO_REF", str(strd_line),
+                        "Structured remittance does not contain a reference (CdtrRefInf/Ref).",
+                        "Add a <CdtrRefInf> with a <Ref> element to provide the creditor reference."
+                    ))
 
     def _normalize_message(self, xml_content: str) -> tuple:
         """
