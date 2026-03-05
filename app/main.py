@@ -153,6 +153,7 @@ def get_history_detail(validation_id: str):
 @app.delete("/history")
 def delete_all_history():
     num_deleted = history_service.delete_all()
+    validator.reset_counter()
     return {"message": f"Deleted {num_deleted} records successfully"}
 
 @app.delete("/history/{validation_id}")
@@ -161,6 +162,11 @@ def delete_history_record(validation_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Validation not found or delete failed")
     return {"message": "Record deleted successfully"}
+
+@app.get("/generate-id")
+def generate_id():
+    """Generate the next sequential validation ID for batch use"""
+    return {"id": validator.generate_next_id()}
 
 @app.get("/messages", response_model=List[str])
 def get_messages():

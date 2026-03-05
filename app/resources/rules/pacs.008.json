@@ -24,5 +24,35 @@
         "expression": "Document.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI != Document.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI",
         "severity": "WARNING",
         "layer": 3
+    },
+    {
+        "rule_id": "CBPR_004",
+        "description": "CBPR+: Debtor Agent must contain BICFI.",
+        "condition": "exists(Document.CdtTrfTxInf.DbtrAgt)",
+        "mandatory_fields": [
+            "Document.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "CBPR_005",
+        "description": "CBPR+: Creditor Agent must contain BICFI.",
+        "condition": "exists(Document.CdtTrfTxInf.CdtrAgt)",
+        "mandatory_fields": [
+            "Document.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "CBPR_006",
+        "description": "Interbank Settlement Amount is mandatory for pacs.008.",
+        "condition": "exists(Document.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.CdtTrfTxInf.IntrBkSttlmAmt"
+        ],
+        "severity": "ERROR",
+        "layer": 3
     }
 ]

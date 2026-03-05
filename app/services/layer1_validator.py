@@ -78,10 +78,30 @@ class Layer1Mixin:
                 "Remove hidden characters (ASCII 0-31) from your XML."
             ))
 
+        # 5.1 DTD Declaration Rejection (Security — FATAL)
+        if re.search(r'<!DOCTYPE', xml_content, re.IGNORECASE):
+            report.add_issue(ValidationIssue(
+                "ERROR", 1, "DTD_FORBIDDEN", "Line 1",
+                "DTD declarations (<!DOCTYPE>) are not allowed in ISO 20022 messages.",
+                "Remove any <!DOCTYPE ...> declaration from your XML. ISO 20022 uses XSD validation only."
+            ))
+            report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
+            return False
+
+        # 5.2 Entity Expansion Rejection (Security)
+        if re.search(r'<!ENTITY', xml_content, re.IGNORECASE):
+            report.add_issue(ValidationIssue(
+                "ERROR", 1, "ENTITY_FORBIDDEN", "Line 1",
+                "XML entity declarations (<!ENTITY>) are not allowed in ISO 20022 messages.",
+                "Remove all <!ENTITY ...> declarations. Inline all values directly."
+            ))
+            report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
+            return False
+
         # 6. XML Well-Formedness & Identity (FATAL if parse fails)
         try:
             xml_bytes = xml_content.encode('utf-8')
-            parser = etree.XMLParser(recover=False, no_network=True, remove_blank_text=True)
+            parser = etree.XMLParser(recover=False, no_network=True, remove_blank_text=True, resolve_entities=False)
             root = etree.fromstring(xml_bytes, parser)
             
             # 7. Envelope Detection (Document / BusMsg / AppHdr)
@@ -108,6 +128,19 @@ class Layer1Mixin:
                         "Use the correct URN format (e.g. urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08)."
                     ))
                 report.metadata = {"Namespace": ns}
+
+            # 9. XML Depth Limit Check
+            max_depth = self.config.get("app_settings", {}).get("max_xml_depth", 50)
+            def _get_depth(elem, depth=1):
+                child_depths = [_get_depth(c, depth + 1) for c in elem]
+                return max(child_depths) if child_depths else depth
+            actual_depth = _get_depth(root)
+            if actual_depth > max_depth:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 1, "XML_DEPTH_EXCEEDED", "Root",
+                    f"XML nesting depth is {actual_depth}, which exceeds the maximum of {max_depth} levels.",
+                    f"Reduce the nesting depth of your XML to {max_depth} levels or fewer."
+                ))
 
         except etree.XMLSyntaxError as e:
             report.add_issue(ValidationIssue(

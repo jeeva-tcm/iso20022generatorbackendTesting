@@ -76,5 +76,38 @@
         "expression": "check_iban_currency(KEY, VALUE)",
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "L3_LEI_NOT_BIC",
+        "description": "LEI cannot replace BIC for financial institution agents. CBPR+ requires BICFI.",
+        "layer": 3,
+        "severity": "ERROR",
+        "type": "expression",
+        "selector": ".*FinInstnId\\.LEI$",
+        "expression": "exists(KEY.rsplit('.LEI', 1)[0] + '.BICFI') if '.' in KEY else True"
+    },
+    {
+        "rule_id": "L3_INTRMY_ORDER_1",
+        "description": "IntrmyAgt2 cannot exist without IntrmyAgt1.",
+        "layer": 3,
+        "severity": "ERROR",
+        "condition": "exists('Document') or exists('BusMsg')",
+        "expression": "not any(k.endswith('IntrmyAgt2.FinInstnId.BICFI') for k in DATA.keys()) or any(k.endswith('IntrmyAgt1.FinInstnId.BICFI') for k in DATA.keys())"
+    },
+    {
+        "rule_id": "L3_INTRMY_ORDER_2",
+        "description": "IntrmyAgt3 cannot exist without IntrmyAgt2.",
+        "layer": 3,
+        "severity": "ERROR",
+        "condition": "exists('Document') or exists('BusMsg')",
+        "expression": "not any(k.endswith('IntrmyAgt3.FinInstnId.BICFI') for k in DATA.keys()) or any(k.endswith('IntrmyAgt2.FinInstnId.BICFI') for k in DATA.keys())"
+    },
+    {
+        "rule_id": "L3_STTLM_CLRG_001",
+        "description": "If Settlement Method is CLRG (Clearing System), Clearing System (ClrSys) identity must be present.",
+        "condition": "Document..GrpHdr.SttlmInf.SttlmMtd == 'CLRG'",
+        "expression": "exists(Document..GrpHdr.SttlmInf.ClrSys) or exists(Document..CdtTrfTxInf.SttlmInf.ClrSys)",
+        "severity": "ERROR",
+        "layer": 3
     }
 ]
