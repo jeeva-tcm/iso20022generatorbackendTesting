@@ -26,7 +26,7 @@ mt_mx_converter = MT2MXConverter()
 app = FastAPI(title="ISO 20022 Validation API (Firebase Powered)")
 
 # Configure CORS
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200")
+origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,https://iso20022generatorfrontend.vercel.app")
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
