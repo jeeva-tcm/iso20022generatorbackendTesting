@@ -251,7 +251,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                     if not layer2_success:
-                         # ⛔ Rejection: If XSD fails, stop here after collecting all errors.
+                         # Rejection: If XSD fails, stop here after collecting all errors.
                          return self._finalize_report(report, start_time)
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))

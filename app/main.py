@@ -13,10 +13,12 @@ from .schemas import validation as schemas
 from .services.validator import ISOValidator
 from .services.firebase_service import FirebaseHistoryService
 from .services.schema_generator import SchemaGenerator
+from .services.mt_mx_converter import MT2MXConverter
 
 # Initialize services
 validator = ISOValidator()
 history_service = FirebaseHistoryService()
+mt_mx_converter = MT2MXConverter()
 
 # DEPRECATED: SQLite Initialization
 # database.Base.metadata.create_all(bind=database.engine)
@@ -89,6 +91,13 @@ async def validate_file(
         history_service.save_history(record)
     
     return report_dict
+
+@app.post("/convert-mt-to-mx")
+async def convert_mt_to_mx(request: schemas.MTConversionRequest):
+    result = mt_mx_converter.validate_and_convert(request.mt_message, forced_mt_type=request.target_mt_type)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail={"errors": result.get("errors")})
+    return result
 
 @app.get("/history", response_model=List[schemas.HistorySummary])
 def get_history(skip: int = 0, limit: int = 100):

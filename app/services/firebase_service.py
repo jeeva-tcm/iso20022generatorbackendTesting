@@ -109,6 +109,9 @@ class FirebaseHistoryService:
                 record["timestamp"] = datetime.fromisoformat(record["timestamp"].replace("Z", "+00:00"))
             except:
                 record["timestamp"] = datetime.now(timezone.utc)
+        
+        if "deleted" not in record:
+            record["deleted"] = False
             
         doc_ref = self.db.collection("validation_history").document(record["validation_id"])
         doc_ref.set(record)
@@ -120,15 +123,21 @@ class FirebaseHistoryService:
             return []
             
         try:
+            # We filter for deleted=False in Python to avoid requiring a composite index in Firestore.
             query = self.db.collection("validation_history") \
-                          .order_by("timestamp", direction=firestore.Query.DESCENDING) \
-                          .offset(skip).limit(limit)
+                          .order_by("timestamp", direction=firestore.Query.DESCENDING)
             
             docs = query.stream()
             results = []
+            count = 0
             for doc in docs:
                 data = doc.to_dict()
-                results.append(data)
+                if not data.get("deleted", False):
+                    if count >= skip:
+                        results.append(data)
+                    count += 1
+                    if len(results) >= limit:
+                        break
             return results
         except Exception as e:
             print(f"Error fetching Firestore history: {e}")
@@ -146,8 +155,11 @@ class FirebaseHistoryService:
             failed = 0
             
             for doc in docs:
-                total += 1
                 data = doc.to_dict()
+                if data.get("deleted", False):
+                    continue
+                    
+                total += 1
                 if data.get("status") == "PASS":
                     passed += 1
                 elif data.get("status") == "FAIL":
@@ -174,12 +186,12 @@ class FirebaseHistoryService:
             if docs:
                 batch = self.db.batch()
                 for doc in docs:
-                    batch.delete(doc.reference)
+                    batch.update(doc.reference, {"deleted": True})
                 batch.commit()
                 return True
                 
-            # Fallback to deleting by document ID (validation_id)
-            self.db.collection("validation_history").document(validation_id).delete()
+            # Fallback to soft deleting by document ID (validation_id)
+            self.db.collection("validation_history").document(validation_id).update({"deleted": True})
             return True
         except:
             return False
@@ -190,16 +202,17 @@ class FirebaseHistoryService:
             return 0
         
         try:
-            # Firestore batch delete (up to 500 at a time)
+            # Firestore batch update (up to 500 at a time)
             batch = self.db.batch()
             docs = list(self.db.collection("validation_history").stream())
             count = 0
             for doc in docs:
-                batch.delete(doc.reference)
-                count += 1
-                if count % 500 == 0:
-                    batch.commit()
-                    batch = self.db.batch()
+                if not doc.to_dict().get("deleted", False):
+                    batch.update(doc.reference, {"deleted": True})
+                    count += 1
+                    if count % 500 == 0:
+                        batch.commit()
+                        batch = self.db.batch()
             
             if count % 500 != 0:
                 batch.commit()
@@ -216,7 +229,9 @@ class FirebaseHistoryService:
         try:
             doc = self.db.collection("validation_history").document(validation_id).get()
             if doc.exists:
-                return doc.to_dict()
+                data = doc.to_dict()
+                if not data.get("deleted", False):
+                    return data
             return None
         except Exception as e:
             print(f"Error fetching detail: {e}")

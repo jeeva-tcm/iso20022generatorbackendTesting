@@ -1,0 +1,117 @@
+{
+    "source_mt": "202COV",
+    "target_mx": "pacs.009.001.08",
+    "biz_svc": "swift.cbprplus.cov.04",
+    "xml_namespaces": {
+        "xmlns": "urn:iso:std:iso:20022:tech:xsd:pacs.009.001.08"
+    },
+    "root_element": "Document",
+    "mappings": [
+        {
+            "mt_tag": "20",
+            "name": "Message Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FICdtTrf/GrpHdr/MsgId"
+        },
+        {
+            "mt_tag": "_timestamp",
+            "name": "Creation Date Time",
+            "mandatory": false,
+            "type": "timestamp",
+            "mx_path": "FICdtTrf/GrpHdr/CreDtTm"
+        },
+        {
+            "mt_tag": "_static_1",
+            "name": "Number of Transactions",
+            "mandatory": false,
+            "type": "static",
+            "value": "1",
+            "mx_path": "FICdtTrf/GrpHdr/NbOfTxs"
+        },
+        {
+            "mt_tag": "_static_IND",
+            "name": "Settlement Method",
+            "mandatory": false,
+            "type": "static",
+            "value": "INDA",
+            "mx_path": "FICdtTrf/GrpHdr/SttlmInf/SttlmMtd"
+        },
+        {
+            "mt_tag": "_senderBic",
+            "name": "Instructing Agent (GrpHdr)",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Instructed Agent (GrpHdr)",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "21",
+            "name": "Related Reference (EndToEndId)",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
+        },
+        {
+            "mt_tag": "32A",
+            "name": "Value Date, Currency Code, Amount",
+            "mandatory": true,
+            "type": "date_currency_amount",
+            "mx_path_amount": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
+            "mx_path_date": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
+            "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "52A",
+            "name": "Ordering Institution (Dbtr)",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_senderBic",
+            "name": "Debtor Agent Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Creditor Agent Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "58A",
+            "name": "Beneficiary Institution (Cdtr)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "50K",
+            "name": "Ordering Customer (Undrlyg Dbtr)",
+            "mandatory": false,
+            "type": "account_name_address",
+            "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/Nm",
+            "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/PstlAdr/AdrLine",
+            "mx_path_account": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct/Id/Othr/Id"
+        },
+        {
+            "mt_tag": "59",
+            "name": "Beneficiary Customer (Undrlyg Cdtr)",
+            "mandatory": false,
+            "type": "account_name_address",
+            "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/Nm",
+            "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/PstlAdr/AdrLine",
+            "mx_path_account": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/Othr/Id"
+        }
+    ]
+}

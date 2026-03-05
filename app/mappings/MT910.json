@@ -1,0 +1,47 @@
+{
+    "source_mt": "910",
+    "target_mx": "camt.054.001.08",
+    "xml_namespaces": {
+        "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.054.001.08"
+    },
+    "root_element": "Document",
+    "mappings": [
+        {
+            "mt_tag": "20",
+            "name": "Message Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/GrpHdr/MsgId"
+        },
+        {
+            "mt_tag": "_timestamp",
+            "name": "Creation Date Time",
+            "mandatory": false,
+            "type": "timestamp",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/GrpHdr/CreDtTm"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Notification Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Id"
+        },
+        {
+            "mt_tag": "25",
+            "name": "Account Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/Othr/Id"
+        },
+        {
+            "mt_tag": "32A",
+            "name": "Value Date, Currency, Amount",
+            "mandatory": true,
+            "type": "date_currency_amount",
+            "mx_path_amount": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Amt",
+            "mx_path_date": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/ValDt/Dt",
+            "currency_attribute": "Ccy"
+        }
+    ]
+}

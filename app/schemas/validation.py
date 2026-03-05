@@ -9,6 +9,10 @@ class ValidationRequest(BaseModel):
     store_in_history: bool = True
     batch_id: Optional[str] = None
 
+class MTConversionRequest(BaseModel):
+    mt_message: str
+    target_mt_type: Optional[str] = None
+
 class IssueSchema(BaseModel):
     severity: str
     layer: int
