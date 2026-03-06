@@ -372,15 +372,22 @@ class MT2MXConverter:
         # so L2 validation always finds the tags in the correct namespace.
         
         # Inject xmlns to AppHdr if missing
-        if 'AppHdr' in xml_string and 'xmlns=' not in re.search(r'<AppHdr[^>]*>', xml_string).group(0):
-            xml_string = xml_string.replace('<AppHdr', f'<AppHdr xmlns="{head_ns}"')
+        if 'AppHdr' in xml_string:
+            match = re.search(r'<(?:\w+:)?AppHdr[^>]*>', xml_string)
+            if match and 'xmlns=' not in match.group(0):
+                tag_str = match.group(0)
+                new_tag = tag_str[:-1] + f' xmlns="{head_ns}">'
+                xml_string = xml_string.replace(tag_str, new_tag)
             
         # Inject xmlns to the Document root (e.g. pacs.008)
         root_tag = mapping["root_element"]
         if root_tag in xml_string:
             doc_ns = mapping["xml_namespaces"].get("xmlns", "")
-            if 'xmlns=' not in re.search(f'<{root_tag}[^>]*>', xml_string).group(0):
-                xml_string = xml_string.replace(f'<{root_tag}', f'<{root_tag} xmlns="{doc_ns}"')
+            match = re.search(r'<(?:\w+:)?' + root_tag + r'[^>]*>', xml_string)
+            if match and 'xmlns=' not in match.group(0):
+                tag_str = match.group(0)
+                new_tag = tag_str[:-1] + f' xmlns="{doc_ns}">'
+                xml_string = xml_string.replace(tag_str, new_tag)
 
         # FINAL: Remove any remaining ET suffixes (ns0:, ns1:) safely
         xml_string = re.sub(r'<(/?)\w+:', r'<\1', xml_string)

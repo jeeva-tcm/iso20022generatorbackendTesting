@@ -1406,7 +1406,6 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             return
 
         party_tags = ['Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty']
-        local = lambda tag: f"*[local-name()='{tag}']"
 
         for ptag in party_tags:
             for party in root.iter():
@@ -1419,13 +1418,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 line = party.sourceline or 1
 
                 # --- Name validation ---
-                nm_el = party.find(local('Nm'), party.nsmap)
-                if nm_el is None:
-                    # Try without namespace
-                    for child in party:
-                        if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Nm':
-                            nm_el = child
-                            break
+                nm_el = None
+                for child in party:
+                    if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Nm':
+                        nm_el = child
+                        break
 
                 if nm_el is not None and nm_el.text is not None:
                     name_val = nm_el.text
