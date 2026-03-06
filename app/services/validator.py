@@ -252,7 +252,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         # Keep full version for display
                         report.message_type = extracted
                         detected_type = extracted
-            except: 
+            except:
                 pass # Non-critical failure
 
             # STEP 4.5: DATE VALIDATION — runs on raw XML before Layer 2
@@ -1406,15 +1406,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             return
 
         party_tags = ['Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty']
-<<<<<<< HEAD
-=======
 
         def find_child(parent, tag_name):
             for c in parent.iter():
                 if isinstance(c.tag, str) and c.tag.split('}')[-1] == tag_name:
                     return c
             return None
->>>>>>> 96741fe0d295ef0ab1d8e27573fb6b0661647cef
 
         for ptag in party_tags:
             for party in root.iter():
@@ -1427,15 +1424,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 line = party.sourceline or 1
 
                 # --- Name validation ---
-<<<<<<< HEAD
                 nm_el = None
                 for child in party:
                     if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Nm':
                         nm_el = child
                         break
-=======
                 nm_el = find_child(party, 'Nm')
->>>>>>> 96741fe0d295ef0ab1d8e27573fb6b0661647cef
 
                 if nm_el is not None and nm_el.text is not None:
                     name_val = nm_el.text
