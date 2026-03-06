@@ -26,7 +26,7 @@ mt_mx_converter = MT2MXConverter()
 app = FastAPI(title="ISO 20022 Validation API (Firebase Powered)")
 
 # Configure CORS
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200")
+origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,https://iso20022generatorfrontend.vercel.app")
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
@@ -193,6 +193,16 @@ def get_message_schema(message_type: str):
         raise HTTPException(status_code=500, detail=f"Failed to generate schema tree for {message_type}")
     
     return schema_tree
+
+@app.get("/codelists/{list_name}")
+def get_codelist(list_name: str):
+    """Serve JSON codelists (like country.json, currency.json) to the frontend"""
+    codelist_dir = os.path.join(os.path.dirname(__file__), "resources", "codelists")
+    file_path = os.path.join(codelist_dir, f"{list_name}.json")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Codelist not found")
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 # --- GLOBALLY READY: Serve Frontend ---
 # This allows the backend to serve the frontend UI in a production environment

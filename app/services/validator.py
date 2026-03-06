@@ -413,7 +413,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                                                 break
                                                 
                                     line = str(line_map.get(matched_path, "/"))
-                                    severity = "ERROR" if iss_dict["severity"] == "FAIL" else iss_dict["severity"]
+                                    severity = "ERROR" if iss_dict["severity"] == "FAIL" else ("WARNING" if iss_dict["severity"] == "WARN" else iss_dict["severity"])
                                     
                                     details_str = ""
                                     if "computed" in iss_dict.get("details", {}):
@@ -1406,6 +1406,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             return
 
         party_tags = ['Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty']
+<<<<<<< HEAD
+=======
+
+        def find_child(parent, tag_name):
+            for c in parent.iter():
+                if isinstance(c.tag, str) and c.tag.split('}')[-1] == tag_name:
+                    return c
+            return None
+>>>>>>> 96741fe0d295ef0ab1d8e27573fb6b0661647cef
 
         for ptag in party_tags:
             for party in root.iter():
@@ -1418,11 +1427,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 line = party.sourceline or 1
 
                 # --- Name validation ---
+<<<<<<< HEAD
                 nm_el = None
                 for child in party:
                     if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Nm':
                         nm_el = child
                         break
+=======
+                nm_el = find_child(party, 'Nm')
+>>>>>>> 96741fe0d295ef0ab1d8e27573fb6b0661647cef
 
                 if nm_el is not None and nm_el.text is not None:
                     name_val = nm_el.text
@@ -1480,12 +1493,6 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         ))
 
                 # --- OrgId / PrvtId mutual exclusivity ---
-                def find_child(parent, tag_name):
-                    for c in parent.iter():
-                        if isinstance(c.tag, str) and c.tag.split('}')[-1] == tag_name:
-                            return c
-                    return None
-
                 id_el = find_child(party, 'Id')
                 if id_el is not None:
                     org_id = find_child(id_el, 'OrgId')
