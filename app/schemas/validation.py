@@ -8,6 +8,10 @@ class ValidationRequest(BaseModel):
     message_type: str = "Auto-detect"
     store_in_history: bool = True
     batch_id: Optional[str] = None
+    file_id: Optional[str] = None
+
+class BatchInitRequest(BaseModel):
+    file_count: int
 
 class MTConversionRequest(BaseModel):
     mt_message: str
@@ -33,10 +37,13 @@ class ValidationResponse(BaseModel):
     total_time_ms: float
     layer_status: Dict[str, Any]
     details: List[IssueSchema]
+    file_id: Optional[str] = None
+    batch_id: Optional[str] = None
 
 class HistorySummary(BaseModel):
     validation_id: str
     batch_id: Optional[str] = None
+    file_id: Optional[str] = None
     timestamp: Any  # Keep as Any to handle the manual conversion
     message_type: str
     status: str

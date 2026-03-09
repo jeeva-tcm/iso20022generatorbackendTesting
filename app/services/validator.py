@@ -22,7 +22,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
     _daily_counter = 0
     _counter_date = ""
 
-    def __init__(self):
+    def __init__(self, history_service=None):
+        self.history_service = history_service
         # Path configuration
         base_dir = os.path.dirname(os.path.abspath(__file__))
         backend_root = os.path.normpath(os.path.join(base_dir, "../../"))
@@ -69,6 +70,17 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
     def generate_next_id(self) -> str:
         """Generates the next sequential validation ID in format VAL{DDMMYY}{00001}"""
         today = time.strftime('%d%m%y')
+        
+        # 1. Try Firebase for globally unique/persistent sequence
+        if self.history_service and self.history_service.enabled:
+            try:
+                seq = self.history_service.get_next_sequence(today)
+                if seq is not None:
+                    return f"VAL{today}{seq:05d}"
+            except Exception as e:
+                print(f"DEBUG: Firebase ID generation failed, falling back: {e}")
+
+        # 2. Fallback to in-memory sequential counter
         with ISOValidator._id_lock:
             if ISOValidator._counter_date != today:
                 ISOValidator._counter_date = today
@@ -1730,6 +1742,43 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         "Structured remittance does not contain a reference (CdtrRefInf/Ref).",
                         "Add a <CdtrRefInf> with a <Ref> element to provide the creditor reference."
                     ))
+
+            # --- CBPR+ Purpose & Category Purpose Validation (SR2025) ---
+            if tag_local in ['Purp', 'CtgyPurp']:
+                ln = elem.sourceline or 1
+                type_name = "Purpose" if tag_local == 'Purp' else "Category Purpose"
+                code_list_key = "purp" if tag_local == 'Purp' else "ctgypurp"
+                
+                # Must contain Cd
+                cd_elem = None
+                for child in elem:
+                    if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Cd':
+                        cd_elem = child
+                        break
+                
+                if cd_elem is None:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, f"SR2025_{tag_local.upper()}_NO_CD", str(ln),
+                        f"{type_name} must contain a code <Cd>.",
+                        f"Provide a valid ISO 20022 external code within <{tag_local}><Cd>...</Cd></{tag_local}>."
+                    ))
+                elif not cd_elem.text or not cd_elem.text.strip():
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, f"SR2025_{tag_local.upper()}_EMPTY_CD", str(cd_elem.sourceline or ln),
+                        f"{type_name} code <Cd> cannot be empty.",
+                        "Provide a valid ISO 20022 external code."
+                    ))
+                else:
+                    val = cd_elem.text.strip()
+                    # Check against codelist
+                    if code_list_key in self.codelists:
+                        valid_codes = self.codelists[code_list_key].get("codes", [])
+                        if val not in valid_codes:
+                            report.add_issue(ValidationIssue(
+                                "ERROR", 3, f"SR2025_{tag_local.upper()}_INVALID_CODE", str(cd_elem.sourceline or ln),
+                                f"Invalid {type_name} code: '{val}'.",
+                                f"Value must be one of the official CBPR+ {type_name} codes."
+                            ))
 
     def _normalize_message(self, xml_content: str) -> tuple:
         """

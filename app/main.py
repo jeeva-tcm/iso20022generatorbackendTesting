@@ -16,8 +16,8 @@ from .services.schema_generator import SchemaGenerator
 from .services.mt_mx_converter import MT2MXConverter
 
 # Initialize services
-validator = ISOValidator()
 history_service = FirebaseHistoryService()
+validator = ISOValidator(history_service=history_service)
 mt_mx_converter = MT2MXConverter()
 
 # DEPRECATED: SQLite Initialization
@@ -44,10 +44,17 @@ async def validate_message(
     report = await validator.validate(request.xml_content, request.mode, request.message_type)
     report_dict = report.to_dict()
     
+    # Attach file_id and batch_id to the report dict for frontend display
+    if request.file_id:
+        report_dict["file_id"] = request.file_id
+    if request.batch_id:
+        report_dict["batch_id"] = request.batch_id
+    
     if request.store_in_history:
         record = {
             "validation_id": report_dict["validation_id"],
             "batch_id": request.batch_id or report_dict["validation_id"],
+            "file_id": request.file_id or "",
             "timestamp": report_dict["timestamp"], # Already in report
             "message_type": report_dict["message"],
             "status": report_dict["status"],
@@ -67,7 +74,8 @@ async def validate_file(
     mode: str = Form("Full 1-3"),
     message_type: str = Form("Auto-detect"),
     store_in_history: bool = Form(True),
-    batch_id: Optional[str] = Form(None)
+    batch_id: Optional[str] = Form(None),
+    file_id: Optional[str] = Form(None)
 ):
     content = await file.read()
     xml_content = content.decode("utf-8")
@@ -75,10 +83,17 @@ async def validate_file(
     report = await validator.validate(xml_content, mode, message_type, filename=file.filename)
     report_dict = report.to_dict()
     
+    # Attach file_id and batch_id to the report dict
+    if file_id:
+        report_dict["file_id"] = file_id
+    if batch_id:
+        report_dict["batch_id"] = batch_id
+    
     if store_in_history:
         record = {
             "validation_id": report_dict["validation_id"],
             "batch_id": batch_id or report_dict["validation_id"],
+            "file_id": file_id or "",
             "timestamp": report_dict["timestamp"],
             "message_type": report_dict["message"],
             "status": report_dict["status"],
@@ -162,8 +177,7 @@ def get_history_detail(validation_id: str):
 @app.delete("/history")
 def delete_all_history():
     num_deleted = history_service.delete_all()
-    validator.reset_counter()
-    return {"message": f"Deleted {num_deleted} records successfully"}
+    return {"message": f"Soft deleted {num_deleted} records. Validation counter continues."}
 
 @app.delete("/history/{validation_id}")
 def delete_history_record(validation_id: str):
@@ -176,6 +190,23 @@ def delete_history_record(validation_id: str):
 def generate_id():
     """Generate the next sequential validation ID for batch use"""
     return {"id": validator.generate_next_id()}
+
+@app.post("/validate-batch")
+async def validate_batch_init(
+    request: schemas.BatchInitRequest
+):
+    """
+    Initialize a validation batch:
+    - Generates a single VAL{DDMMYY}{NNNNN} batch ID
+    - Generates FILE{NNNN} IDs for each file in the batch
+    Returns the batch_id and file_ids list.
+    """
+    batch_id = validator.generate_next_id()
+    file_ids = [f"FILE{str(i + 1).zfill(4)}" for i in range(request.file_count)]
+    return {
+        "batch_id": batch_id,
+        "file_ids": file_ids
+    }
 
 @app.get("/messages", response_model=List[str])
 def get_messages():

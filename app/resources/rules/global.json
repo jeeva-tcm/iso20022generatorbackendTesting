@@ -103,6 +103,24 @@
         "expression": "not any(k.endswith('IntrmyAgt3.FinInstnId.BICFI') for k in DATA.keys()) or any(k.endswith('IntrmyAgt2.FinInstnId.BICFI') for k in DATA.keys())"
     },
     {
+        "rule_id": "L3_PURPOSE_001",
+        "description": "ISO Purpose Code Validation (SR2025)",
+        "type": "codelist",
+        "selector": ".*Purp\\.Cd$",
+        "list_name": "purp",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_CTGYPURP_001",
+        "description": "ISO Category Purpose Code Validation (SR2025)",
+        "type": "codelist",
+        "selector": ".*CtgyPurp\\.Cd$",
+        "list_name": "ctgypurp",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
         "rule_id": "L3_STTLM_CLRG_001",
         "description": "If Settlement Method is CLRG (Clearing System), Clearing System (ClrSys) identity must be present.",
         "condition": "Document..GrpHdr.SttlmInf.SttlmMtd == 'CLRG'",

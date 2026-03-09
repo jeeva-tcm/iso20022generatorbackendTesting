@@ -222,6 +222,59 @@ class FirebaseHistoryService:
             print(f"Error during batch delete: {e}")
             return 0
 
+    def reset_all_counters(self):
+        """Deletes all documents in the validation_counters collection to reset sequences"""
+        if not self.enabled:
+            return
+        try:
+            docs = list(self.db.collection("validation_counters").stream())
+            batch = self.db.batch()
+            count = 0
+            for doc in docs:
+                batch.delete(doc.reference)
+                count += 1
+                if count % 500 == 0:
+                    batch.commit()
+                    batch = self.db.batch()
+            if count % 500 != 0:
+                batch.commit()
+            print(f"Reset {count} counter document(s) in Firebase.")
+        except Exception as e:
+            print(f"Error resetting counters: {e}")
+
+    def hard_delete_all(self) -> int:
+        """
+        HARD deletes all records from validation_history AND resets validation_counters.
+        This is a full wipe — documents are permanently removed from Firestore.
+        """
+        if not self.enabled:
+            return 0
+        
+        total_deleted = 0
+        try:
+            # 1. Hard delete all validation_history documents
+            docs = list(self.db.collection("validation_history").stream())
+            batch = self.db.batch()
+            count = 0
+            for doc in docs:
+                batch.delete(doc.reference)
+                count += 1
+                if count % 500 == 0:
+                    batch.commit()
+                    batch = self.db.batch()
+            if count % 500 != 0:
+                batch.commit()
+            total_deleted = count
+            
+            # 2. Reset all counters
+            self.reset_all_counters()
+            
+            print(f"Hard deleted {total_deleted} history documents and reset all counters.")
+        except Exception as e:
+            print(f"Error during hard delete: {e}")
+        
+        return total_deleted
+
     def get_detail(self, validation_id: str) -> Optional[Dict[str, Any]]:
         """Gets full report and original message"""
         if not self.enabled:
@@ -236,3 +289,34 @@ class FirebaseHistoryService:
         except Exception as e:
             print(f"Error fetching detail: {e}")
             return None
+
+    def get_next_sequence(self, date_str: str) -> int:
+        """
+        Atomically increments and returns the sequence number for a given date.
+        This ensures that validation IDs (VAL{DDMMYY}XXXXX) are unique and sequential 
+        across server restarts and multiple instances.
+        """
+        if not self.enabled:
+            return None
+            
+        doc_ref = self.db.collection("validation_counters").document(date_str)
+        try:
+            # Use a transaction to ensure atomicity
+            transaction = self.db.transaction()
+            
+            @firestore.transactional
+            def get_and_increment(transaction):
+                snapshot = doc_ref.get(transaction=transaction)
+                if snapshot.exists:
+                    new_seq = snapshot.get("seq") + 1
+                    transaction.update(doc_ref, {"seq": new_seq})
+                else:
+                    new_seq = 1
+                    transaction.set(doc_ref, {"seq": 1})
+                return new_seq
+                
+            return get_and_increment(transaction)
+        except Exception as e:
+            print(f"Firebase counter error: {e}")
+            return None
+
