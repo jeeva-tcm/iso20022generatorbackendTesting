@@ -36,8 +36,8 @@
         },
         {
             "mt_tag": "30",
-            "name": "Relevant Date",
-            "mandatory": false,
+            "name": "Value Date",
+            "mandatory": true,
             "type": "date",
             "mx_path": "NtfctnToRcv/Ntfctn/Itm/XpctdValDt"
         },

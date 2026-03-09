@@ -1,6 +1,7 @@
 {
     "source_mt": "103+",
     "target_mx": "pacs.008.001.08",
+    "biz_svc": "swift.cbprplus.02",
     "xml_namespaces": {
         "xmlns": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
     },
@@ -59,6 +60,14 @@
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId"
         },
         {
+            "mt_tag": "23B",
+            "name": "Bank Operation Code",
+            "mandatory": true,
+            "type": "text",
+            "value": "CRED",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Prtry"
+        },
+        {
             "mt_tag": "20",
             "name": "End to End Identification",
             "mandatory": true,
@@ -76,38 +85,46 @@
             "currency_attribute": "Ccy"
         },
         {
-            "mt_tag": "50K",
-            "name": "Ordering Customer (Dbtr)",
+            "mt_tag": "50A",
+            "name": "Ordering Institution (Dbtr)",
             "mandatory": true,
-            "type": "account_name_address",
-            "mx_path_name": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Nm",
-            "mx_path_address": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr/AdrLine",
-            "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr/Id"
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
         },
         {
             "mt_tag": "52A",
             "name": "Debtor Agent",
             "mandatory": false,
-            "fallback_tag": "_senderBic",
             "type": "bic",
             "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_senderBic",
+            "name": "Debtor Agent Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "59A",
+            "name": "Beneficiary Institution (Cdtr)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
         },
         {
             "mt_tag": "57A",
             "name": "Creditor Agent",
             "mandatory": false,
-            "fallback_tag": "_receiverBic",
             "type": "bic",
             "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
         },
         {
-            "mt_tag": "59",
-            "name": "Beneficiary Customer (Cdtr)",
-            "mandatory": true,
-            "type": "account_name_address",
-            "mx_path_name": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Nm",
-            "mx_path_address": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr/AdrLine",
-            "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id"
+            "mt_tag": "_receiverBic",
+            "name": "Creditor Agent Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "71A",
@@ -116,6 +133,13 @@
             "type": "text",
             "max_length": 4,
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Unique End-to-End Transaction Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
     ]
 }

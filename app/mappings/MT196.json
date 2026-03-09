@@ -1,6 +1,7 @@
 {
     "source_mt": "196",
     "target_mx": "camt.029.001.09",
+    "biz_svc": "swift.cbprplus.02",
     "xml_namespaces": {
         "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.029.001.09"
     },
@@ -12,13 +13,6 @@
             "mandatory": true,
             "type": "text",
             "mx_path": "RsltnOfInvstgtn/Assgnmt/Id"
-        },
-        {
-            "mt_tag": "_timestamp",
-            "name": "Creation Date Time",
-            "mandatory": false,
-            "type": "timestamp",
-            "mx_path": "RsltnOfInvstgtn/Assgnmt/CreDtTm"
         },
         {
             "mt_tag": "_senderBic",
@@ -35,18 +29,48 @@
             "mx_path_bic": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt/FinInstnId/BICFI"
         },
         {
-            "mt_tag": "21",
-            "name": "Related Reference (Conf)",
-            "mandatory": true,
-            "type": "text",
+            "mt_tag": "_timestamp",
+            "name": "Creation Date Time",
+            "mandatory": false,
+            "type": "timestamp",
+            "mx_path": "RsltnOfInvstgtn/Assgnmt/CreDtTm"
+        },
+        {
+            "mt_tag": "_static_conf",
+            "name": "Resolution Confirmation",
+            "mandatory": false,
+            "type": "static",
+            "value": "RJCT",
             "mx_path": "RsltnOfInvstgtn/Sts/Conf"
         },
         {
-            "mt_tag": "76",
-            "name": "Answers",
+            "mt_tag": "21",
+            "name": "Related Reference (Original Instruction Id)",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlInstrId"
+        },
+        {
+            "mt_tag": "_auto_status",
+            "name": "Cancellation Status ID",
+            "mandatory": false,
+            "type": "static",
+            "value": "RJCT",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsId"
+        },
+        {
+            "mt_tag": "79",
+            "name": "Narrative (Resolution)",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsRsnInf/AddtlInf"
+        },
+        {
+            "mt_tag": "11S",
+            "name": "Original Message Header",
             "mandatory": false,
             "type": "text",
-            "mx_path": "RsltnOfInvstgtn/CxlDetails/TxInfAndSts/AddtlInf"
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf/OrgnlMsgId"
         }
     ]
 }

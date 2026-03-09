@@ -1,6 +1,7 @@
 {
     "source_mt": "940",
     "target_mx": "camt.053.001.08",
+    "biz_svc": "swift.cbprplus.02",
     "xml_namespaces": {
         "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"
     },
@@ -28,6 +29,13 @@
             "mx_path": "BkToCstmrStmt/Stmt/Id"
         },
         {
+            "mt_tag": "21",
+            "name": "Related Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrStmt/Stmt/RltdRef"
+        },
+        {
             "mt_tag": "25",
             "name": "Account Identification",
             "mandatory": true,
@@ -35,12 +43,43 @@
             "mx_path": "BkToCstmrStmt/Stmt/Acct/Id/Othr/Id"
         },
         {
-            "mt_tag": "60F",
-            "name": "Opening Balance",
+            "mt_tag": "28C",
+            "name": "Statement Number/Sequence Number",
             "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrStmt/Stmt/LglSeqNb"
+        },
+        {
+            "mt_tag": "60F",
+            "name": "Opening Balance (OPBD)",
+            "mandatory": true,
             "type": "balance",
+            "balance_type": "OPBD",
             "mx_path": "BkToCstmrStmt/Stmt/Bal/Amt",
             "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "62F",
+            "name": "Closing Available Balance (CLBD)",
+            "mandatory": true,
+            "type": "balance",
+            "balance_type": "CLBD",
+            "mx_path": "BkToCstmrStmt/Stmt/Bal/Amt",
+            "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "61",
+            "name": "Statement Line",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrStmt/Stmt/Ntry/NtryDtls/TxDtls/Refs/InstrId"
+        },
+        {
+            "mt_tag": "86",
+            "name": "Information to Account Owner",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrStmt/Stmt/Ntry/AddtlNtryInf"
         }
     ]
 }

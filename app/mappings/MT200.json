@@ -53,6 +53,20 @@
             "currency_attribute": "Ccy"
         },
         {
+            "mt_tag": "52A",
+            "name": "Ordering Institution",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "57A",
+            "name": "Account With Institution",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+        },
+        {
             "mt_tag": "_senderBic",
             "name": "Debtor Agent fallback",
             "mandatory": false,
@@ -60,11 +74,18 @@
             "mx_path_bic": "FICdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
         },
         {
+            "mt_tag": "20",
+            "name": "End to End Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
+        },
+        {
             "mt_tag": "_receiverBic",
-            "name": "Creditor Agent fallback",
+            "name": "Creditor (Beneficiary)",
             "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
         }
     ]
 }

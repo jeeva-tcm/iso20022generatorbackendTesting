@@ -76,6 +76,13 @@
         },
         {
             "mt_tag": "_senderBic",
+            "name": "Ordering Institution (Dbtr) Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_senderBic",
             "name": "Debtor Agent Fallback",
             "mandatory": false,
             "type": "bic",
@@ -96,9 +103,16 @@
             "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
         },
         {
+            "mt_tag": "_receiverBic",
+            "name": "Beneficiary Institution (Cdtr) Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
+        },
+        {
             "mt_tag": "50K",
             "name": "Ordering Customer (Undrlyg Dbtr)",
-            "mandatory": false,
+            "mandatory": true,
             "type": "account_name_address",
             "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/Nm",
             "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/PstlAdr/AdrLine",
@@ -107,11 +121,18 @@
         {
             "mt_tag": "59",
             "name": "Beneficiary Customer (Undrlyg Cdtr)",
-            "mandatory": false,
+            "mandatory": true,
             "type": "account_name_address",
             "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/Nm",
             "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/PstlAdr/AdrLine",
             "mx_path_account": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/Othr/Id"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Unique End-to-End Transaction Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
     ]
 }

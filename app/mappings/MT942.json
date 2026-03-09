@@ -28,11 +28,47 @@
             "mx_path": "BkToCstmrAcctRpt/Rpt/Id"
         },
         {
+            "mt_tag": "21",
+            "name": "Related Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrAcctRpt/Rpt/RltdRef"
+        },
+        {
             "mt_tag": "25",
             "name": "Account Identification",
             "mandatory": true,
             "type": "text",
             "mx_path": "BkToCstmrAcctRpt/Rpt/Acct/Id/Othr/Id"
+        },
+        {
+            "mt_tag": "13D",
+            "name": "Date/Time Indication",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "BkToCstmrAcctRpt/Rpt/CreDtTm"
+        },
+        {
+            "mt_tag": "34F",
+            "name": "Floor Limit Indicator",
+            "mandatory": false,
+            "type": "currency_amount",
+            "mx_path": "BkToCstmrAcctRpt/Rpt/TxsSummry/TtlDbtEntries/Sum",
+            "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "61",
+            "name": "Statement Line",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrAcctRpt/Rpt/Ntry/NtryDtls/TxDtls/Refs/InstrId"
+        },
+        {
+            "mt_tag": "86",
+            "name": "Information to Account Owner",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrAcctRpt/Rpt/Ntry/AddtlNtryInf"
         }
     ]
 }

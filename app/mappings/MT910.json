@@ -28,6 +28,13 @@
             "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Id"
         },
         {
+            "mt_tag": "21",
+            "name": "Related Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/NtryDtls/TxDtls/Refs/RltdRef"
+        },
+        {
             "mt_tag": "25",
             "name": "Account Identification",
             "mandatory": true,
@@ -42,6 +49,36 @@
             "mx_path_amount": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Amt",
             "mx_path_date": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/ValDt/Dt",
             "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "52A",
+            "name": "Ordering Institution",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/NtryDtls/TxDtls/RltdPties/DbtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "72",
+            "name": "Sender to Receiver Information",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/AddtlNtryInf"
+        },
+        {
+            "mt_tag": "_static_ind",
+            "name": "Credit Debit Indicator",
+            "mandatory": false,
+            "type": "static",
+            "value": "CRDT",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/CdtDbtInd"
+        },
+        {
+            "mt_tag": "_static_sts",
+            "name": "Entry Status",
+            "mandatory": false,
+            "type": "static",
+            "value": "BOOK",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Sts"
         }
     ]
 }
