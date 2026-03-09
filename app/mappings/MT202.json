@@ -67,6 +67,14 @@
             "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
         },
         {
+            "mt_tag": "_static_pmttype",
+            "name": "Payment Type",
+            "mandatory": false,
+            "type": "static",
+            "value": "TRF",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtTpInf/SvcLvl/Cd"
+        },
+        {
             "mt_tag": "32A",
             "name": "Value Date, Currency, Interbank Settled Amount",
             "mandatory": true,
@@ -84,10 +92,24 @@
         },
         {
             "mt_tag": "_senderBic",
+            "name": "Ordering Institution Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_senderBic",
             "name": "Debtor Agent fallback",
             "mandatory": false,
             "type": "bic",
             "mx_path_bic": "FICdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "57A",
+            "name": "Receiving Institution",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
@@ -102,6 +124,20 @@
             "mandatory": true,
             "type": "bic",
             "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Beneficiary Institution Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Unique End-to-End Transaction Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
     ]
 }

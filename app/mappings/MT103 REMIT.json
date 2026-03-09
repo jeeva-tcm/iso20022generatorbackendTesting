@@ -1,6 +1,7 @@
 {
     "source_mt": "103 REMIT",
     "target_mx": "pacs.008.001.08",
+    "biz_svc": "swift.cbprplus.02",
     "xml_namespaces": {
         "xmlns": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
     },
@@ -67,6 +68,14 @@
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
         },
         {
+            "mt_tag": "23B",
+            "name": "Bank Operation Code",
+            "mandatory": true,
+            "type": "text",
+            "max_length": 4,
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Prtry"
+        },
+        {
             "mt_tag": "32A",
             "name": "Value Date, Currency, Interbank Settled Amount",
             "mandatory": true,
@@ -74,6 +83,14 @@
             "mx_path_amount": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
             "mx_path_date": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
             "currency_attribute": "Ccy"
+        },
+        {
+            "mt_tag": "71A",
+            "name": "Details of Charges",
+            "mandatory": true,
+            "type": "text",
+            "max_length": 4,
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr"
         },
         {
             "mt_tag": "50K",
@@ -88,17 +105,15 @@
             "mt_tag": "52A",
             "name": "Debtor Agent",
             "mandatory": false,
-            "fallback_tag": "_senderBic",
             "type": "bic",
             "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
         },
         {
-            "mt_tag": "57A",
-            "name": "Creditor Agent",
+            "mt_tag": "_senderBic",
+            "name": "Debtor Agent Fallback",
             "mandatory": false,
-            "fallback_tag": "_receiverBic",
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "59",
@@ -110,12 +125,39 @@
             "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id"
         },
         {
-            "mt_tag": "71A",
-            "name": "Details of Charges",
-            "mandatory": true,
+            "mt_tag": "57A",
+            "name": "Creditor Agent",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Creditor Agent Fallback",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "70",
+            "name": "Remittance Information",
+            "mandatory": false,
             "type": "text",
-            "max_length": 4,
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf/Ustrd"
+        },
+        {
+            "mt_tag": "77T",
+            "name": "Remittance Data",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf/Strd/AddtlRmtInf"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Unique End-to-End Transaction Reference",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
     ]
 }

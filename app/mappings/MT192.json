@@ -1,6 +1,7 @@
 {
     "source_mt": "192",
     "target_mx": "camt.056.001.08",
+    "biz_svc": "swift.cbprplus.02",
     "xml_namespaces": {
         "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.056.001.08"
     },
@@ -8,17 +9,10 @@
     "mappings": [
         {
             "mt_tag": "20",
-            "name": "Transaction Reference Number",
+            "name": "Cancellation Request Identification",
             "mandatory": true,
             "type": "text",
             "mx_path": "FIToFIPmtCxlReq/Assgnmt/Id"
-        },
-        {
-            "mt_tag": "_timestamp",
-            "name": "Creation Date Time",
-            "mandatory": false,
-            "type": "timestamp",
-            "mx_path": "FIToFIPmtCxlReq/Assgnmt/CreDtTm"
         },
         {
             "mt_tag": "_senderBic",
@@ -35,11 +29,40 @@
             "mx_path_bic": "FIToFIPmtCxlReq/Assgnmt/Assgne/Agt/FinInstnId/BICFI"
         },
         {
+            "mt_tag": "_timestamp",
+            "name": "Creation Date Time",
+            "mandatory": false,
+            "type": "timestamp",
+            "mx_path": "FIToFIPmtCxlReq/Assgnmt/CreDtTm"
+        },
+        {
+            "mt_tag": "21",
+            "name": "Original Instruction Identity",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Case/Id"
+        },
+        {
+            "mt_tag": "_senderBic",
+            "name": "Case Creator",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path_bic": "FIToFIPmtCxlReq/Case/Cretr/Agt/FinInstnId/BICFI"
+        },
+        {
             "mt_tag": "21",
             "name": "Related Reference (Original Instruction Id)",
             "mandatory": true,
             "type": "text",
             "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlInstrId"
+        },
+        {
+            "mt_tag": "_auto_reason",
+            "name": "Cancellation Reason Code",
+            "mandatory": false,
+            "type": "static",
+            "value": "CUST",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/Rsn/Cd"
         }
     ]
 }
