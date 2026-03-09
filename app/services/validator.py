@@ -298,6 +298,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 4.14: REMITTANCE INFORMATION RULES
             self._validate_remittance_rules(xml_content, report)
 
+            # STEP 4.15: CLEARING SYSTEM SPECIFIC RULES (T2, CHAPS)
+            self._validate_clearing_system_rules(xml_content, report)
+
             if mode != "Layer 1 only":
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
@@ -797,6 +800,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             'YE':30,  # Yemen
         }
         IBAN_PATTERN = re.compile(r'^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$')
+
+
 
         # Account container tags to scan
         ACCOUNT_TAGS = [
@@ -1946,4 +1951,55 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             pass
 
         return None
+
+    def _validate_clearing_system_rules(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.15 — Clearing System Specific Rules
+        1. TARGET2 (T2) -> Settlement Currency MUST be "EUR"
+        2. CHAPS -> Transaction Currency MUST be "GBP"
+        Uses etree for absolute reliability with namespaces and prefixes.
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        def local(tag):
+            return tag.split('}')[-1] if '}' in tag else tag
+
+        # 1. Identify which clearing systems are present
+        active_systems = set()
+        for cd in root.xpath("//*[local-name()='Cd']"):
+            if cd.text:
+                val = cd.text.strip().upper()
+                parent = cd.getparent()
+                if parent is not None and local(parent.tag) in ('ClrSysId', 'ClrSys'):
+                    active_systems.add(val)
+        
+        if not active_systems:
+            return
+
+        # 2. Extract Currency from IntrBkSttlmAmt
+        for amt in root.xpath("//*[local-name()='IntrBkSttlmAmt']"):
+            ccy = amt.get('Ccy')
+            if not ccy: continue
+            ccy = ccy.strip().upper()
+            line_num = amt.sourceline or "Unknown"
+
+            # Check T2 Rule
+            if 'T2' in active_systems and ccy != 'EUR':
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "TARGET2_CURRENCY_ERROR", str(line_num),
+                    "TARGET2 payments must use EUR as the settlement currency.",
+                    f"Clearing System 'T2' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'EUR'."
+                ))
+
+            # Check CHAPS Rule
+            if 'CHAPS' in active_systems and ccy != 'GBP':
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "CHAPS_CURRENCY_ERROR", str(line_num),
+                    "Invalid Currency for CHAPS clearing system. When ClrSysId/Cd = CHAPS, the transaction currency must be GBP.",
+                    f"Clearing System 'CHAPS' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'GBP'."
+                ))
 
