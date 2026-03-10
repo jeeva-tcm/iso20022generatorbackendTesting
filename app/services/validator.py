@@ -1677,13 +1677,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
     def _validate_remittance_rules(self, xml_content: str, report: ValidationReport) -> None:
         """
-        Step 4.14 — Remittance Information Validation
+        Step 4.14 — Remittance Information Validation (CBPR+ SR2025)
         Validates:
           1. Ustrd max length 140
-          2. Ustrd no control characters
-          3. Ustrd no XML reserved characters
-          4. Structured remittance must contain reference
-          5. Reference max length 35
+          2. Strd and Ustrd mutually exclusive
+          3. CdtrRefInf SCOR validation (ISO 11649)
+          4. Ustrd no control characters (FIN-X)
         """
         try:
             parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
@@ -1691,67 +1690,139 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         except Exception:
             return
 
+        # Determine if this is a pacs.009 standard vs COV
+        message_type = "Unknown"
+        if root.tag and '}' in root.tag:
+            ns = root.tag.split('}')[0]
+            if 'pacs.008' in ns: message_type = 'pacs.008'
+            elif 'pacs.009' in ns: message_type = 'pacs.009'
+            elif 'pacs.004' in ns: message_type = 'pacs.004'
+            elif 'pacs.002' in ns: message_type = 'pacs.002'
+            elif 'camt.056' in ns: message_type = 'camt.056'
+            elif 'camt.029' in ns: message_type = 'camt.029'
+            elif 'camt.053' in ns: message_type = 'camt.053'
+            elif 'camt.052' in ns: message_type = 'camt.052'
+            elif 'camt.054' in ns: message_type = 'camt.054'
+            elif 'pain.001' in ns: message_type = 'pain.001'
+            elif 'pain.002' in ns: message_type = 'pain.002'
+
+        # Special logic to determine if it is pacs.009 COV
+        if message_type == 'pacs.009':
+            # Fast check if it is COV by looking for UndrlygCstmrCdtTrf
+            is_cov = False
+            for _ in root.iter(f"{{{root.tag.split('}')[0]}}}UndrlygCstmrCdtTrf"):
+                is_cov = True
+                break
+            if is_cov:
+                message_type += '.COV'
+        
+        # Helper for ISO 11649 Creditor Reference validation
+        def is_iso11649(ref: str) -> bool:
+            # ISO 11649 must start with RF and have exactly 2 check digits, up to 25 chars total length.
+            # E.g. RF18...
+            ref = ref.replace(" ", "").upper()
+            if not ref.startswith("RF") or len(ref) < 5 or len(ref) > 25:
+                return False
+            # Check digits calculation
+            try:
+                rearranged = ref[4:] + ref[:4]
+                numeric_val = ""
+                for char in rearranged:
+                    if char.isdigit():
+                        numeric_val += char
+                    else:
+                        numeric_val += str(ord(char) - 55)
+                return int(numeric_val) % 97 == 1
+            except Exception:
+                return False
+
         for elem in root.iter():
             if not isinstance(elem.tag, str):
                 continue
+            ns_prefix = f"{{{elem.tag.split('}')[0]}}}" if '}' in elem.tag else ""
             tag_local = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
 
-            # --- Unstructured remittance ---
-            if tag_local == 'Ustrd' and elem.text:
-                val = elem.text
-                ln = elem.sourceline or 1
+            if tag_local == 'RmtInf':
+                rm_ln = elem.sourceline or 1
+                
+                if message_type == 'pacs.009':
+                    report.add_issue(ValidationIssue("ERROR", 3, "PACS009-RMT-001", str(rm_ln), "Remittance information is not permitted in standard pacs.009. Use pacs.009 COV variant."))
+                    
+                if message_type in ['pacs.002', 'pain.002']:
+                    report.add_issue(ValidationIssue("ERROR", 3, f"{message_type.upper().replace('.', '')}-RMT-001", str(rm_ln), f"Remittance information is not permitted in {message_type} status report messages."))
 
-                # Max 140
-                if len(val) > 140:
-                    report.add_issue(ValidationIssue(
-                        "ERROR", 3, "RMTINF_USTRD_LENGTH", str(ln),
-                        f"Unstructured remittance exceeds 140 characters ({len(val)} chars).",
-                        "Shorten the unstructured remittance text to 140 characters or less."
-                    ))
+                has_strd = False
+                has_ustrd = False
+                
+                for child in elem:
+                    c_tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                    c_ln = child.sourceline or rm_ln
+                    if c_tag == 'Ustrd':
+                        has_ustrd = True
+                        val = child.text or ""
+                        
+                        if len(val) > 140:
+                            report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-UST-LEN", str(c_ln), f"Unstructured remittance exceeds 140 characters ({len(val)} chars)."))
+                        if self._CONTROL_CHAR_RE.search(val):
+                            report.add_issue(ValidationIssue("WARNING", 3, "GLOBAL-RMT-FINX", str(c_ln), "Remittance field contains characters outside the permitted FIN-X extended character set."))
+                            
+                    elif c_tag == 'Strd':
+                        has_strd = True
+                        # AddtlRmtInf validation
+                        addtls = child.findall(f"{ns_prefix}AddtlRmtInf")
+                        if len(addtls) > 3:
+                            report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-ADDTL-OCCUR", str(c_ln), "AdditionalRemittanceInformation may only occur a maximum of 3 times per Strd block."))
+                        
+                        for ad in addtls:
+                            ad_val = ad.text or ""
+                            if len(ad_val) > 140:
+                                report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-ADDTL-LEN", str(ad.sourceline or c_ln), "AdditionalRemittanceInformation must not exceed 140 characters."))
+                        
+                        # SCOR Creditor Reference Validation
+                        cdtr_ref_inf = child.find(f"{ns_prefix}CdtrRefInf")
+                        if cdtr_ref_inf is not None:
+                            tp = cdtr_ref_inf.find(f"{ns_prefix}Tp")
+                            if tp is not None:
+                                cd_or_prtry = tp.find(f"{ns_prefix}CdOrPrtry")
+                                if cd_or_prtry is not None:
+                                    cd = cd_or_prtry.find(f"{ns_prefix}Cd")
+                                    if cd is not None and cd.text == "SCOR":
+                                        ref = cdtr_ref_inf.find(f"{ns_prefix}Ref")
+                                        if ref is not None and ref.text:
+                                            if not is_iso11649(ref.text):
+                                                report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-SCOR", str(ref.sourceline or c_ln), "Creditor reference type SCOR must conform to ISO 11649 format."))
+                        
+                        # Extended fields length validation
+                        invcr = child.find(f"{ns_prefix}Invcr")
+                        if invcr is not None:
+                            nm = invcr.find(f"{ns_prefix}Nm")
+                            if nm is not None and nm.text and len(nm.text) > 140:
+                                report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-INVCR-LEN", str(nm.sourceline or c_ln), "Invoicer Name must not exceed 140 characters."))
+                        invcee = child.find(f"{ns_prefix}Invcee")
+                        if invcee is not None:
+                            nm = invcee.find(f"{ns_prefix}Nm")
+                            if nm is not None and nm.text and len(nm.text) > 140:
+                                report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-INVCEE-LEN", str(nm.sourceline or c_ln), "Invoicee Name must not exceed 140 characters."))
+                        rfrd_doc = child.find(f"{ns_prefix}RfrdDocInf")
+                        if rfrd_doc is not None:
+                            nb = rfrd_doc.find(f"{ns_prefix}Nb")
+                            if nb is not None and nb.text and len(nb.text) > 35:
+                                report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-RFRDDOC-LEN", str(nb.sourceline or c_ln), "Referred Document Number must not exceed 35 characters."))
 
-                # Control characters
-                if self._CONTROL_CHAR_RE.search(val):
-                    report.add_issue(ValidationIssue(
-                        "ERROR", 3, "RMTINF_USTRD_CTRL", str(ln),
-                        "Unstructured remittance contains invalid control characters.",
-                        "Remove invisible control characters (ASCII 0-31) from the remittance text."
-                    ))
-
-                # XML reserved characters (unescaped in parsed text means they were in source)
-                if self._XML_RESERVED_RE.search(val):
-                    report.add_issue(ValidationIssue(
-                        "WARNING", 3, "RMTINF_USTRD_XML", str(ln),
-                        "Unstructured remittance contains XML-reserved characters (< > & \").",
-                        "Escape or remove XML-reserved characters from the remittance text."
-                    ))
-
-            # --- Structured remittance: check reference ---
-            if tag_local == 'Strd':
-                strd_line = elem.sourceline or 1
-
-                # Must contain CdtrRefInf or Ref
-                has_ref = False
-                for child in elem.iter():
-                    if not isinstance(child.tag, str):
-                        continue
-                    cl = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                    if cl in ['CdtrRefInf', 'Ref', 'RfrdDocInf']:
-                        has_ref = True
-                        # Check reference max length
-                        if cl == 'Ref' and child.text and len(child.text) > 35:
-                            report.add_issue(ValidationIssue(
-                                "ERROR", 3, "RMTINF_REF_LENGTH", str(child.sourceline or strd_line),
-                                f"Structured remittance reference exceeds 35 characters ({len(child.text)} chars).",
-                                "Shorten the remittance reference to 35 characters or less."
-                            ))
-                        break
-
-                if not has_ref:
-                    report.add_issue(ValidationIssue(
-                        "WARNING", 3, "RMTINF_STRD_NO_REF", str(strd_line),
-                        "Structured remittance does not contain a reference (CdtrRefInf/Ref).",
-                        "Add a <CdtrRefInf> with a <Ref> element to provide the creditor reference."
-                    ))
+                if has_strd and has_ustrd:
+                    report.add_issue(ValidationIssue("ERROR", 3, "GLOBAL-RMT-001", str(rm_ln), "Structured and Unstructured remittance are mutually exclusive in all CBPR+ messages.", "Remove either Strd or Ustrd from the RmtInf block."))
+                
+                if message_type in ['pacs.008', 'pain.001']:
+                    mandate_date_str = self.config.get("validation_rules", {}).get("cbpr_plus_mandate_date", "2027-11-01T00:00:00")
+                    try:
+                         mandate_date = datetime.fromisoformat(mandate_date_str)
+                    except:
+                         mandate_date = datetime(2027, 11, 1)
+                         
+                    is_after_2027 = datetime.now() > mandate_date
+                    if has_ustrd and not has_strd:
+                         severity = "ERROR" if is_after_2027 else "WARNING"
+                         report.add_issue(ValidationIssue(severity, 3, "GLOBAL-RMT-004", str(rm_ln), f"Structured remittance is mandatory in payment messages from November 2027. Currently using Unstructured (Ustrd)."))
 
             # --- CBPR+ Purpose & Category Purpose Validation (SR2025) ---
             if tag_local in ['Purp', 'CtgyPurp']:
@@ -1759,7 +1830,6 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 type_name = "Purpose" if tag_local == 'Purp' else "Category Purpose"
                 code_list_key = "purp" if tag_local == 'Purp' else "ctgypurp"
                 
-                # Must contain Cd
                 cd_elem = None
                 for child in elem:
                     if isinstance(child.tag, str) and child.tag.split('}')[-1] == 'Cd':
@@ -1767,28 +1837,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         break
                 
                 if cd_elem is None:
-                    report.add_issue(ValidationIssue(
-                        "ERROR", 3, f"SR2025_{tag_local.upper()}_NO_CD", str(ln),
-                        f"{type_name} must contain a code <Cd>.",
-                        f"Provide a valid ISO 20022 external code within <{tag_local}><Cd>...</Cd></{tag_local}>."
-                    ))
+                    report.add_issue(ValidationIssue("ERROR", 3, f"SR2025_{tag_local.upper()}_NO_CD", str(ln), f"{type_name} must contain a code <Cd>."))
                 elif not cd_elem.text or not cd_elem.text.strip():
-                    report.add_issue(ValidationIssue(
-                        "ERROR", 3, f"SR2025_{tag_local.upper()}_EMPTY_CD", str(cd_elem.sourceline or ln),
-                        f"{type_name} code <Cd> cannot be empty.",
-                        "Provide a valid ISO 20022 external code."
-                    ))
+                    report.add_issue(ValidationIssue("ERROR", 3, f"SR2025_{tag_local.upper()}_EMPTY_CD", str(cd_elem.sourceline or ln), f"{type_name} code <Cd> cannot be empty."))
                 else:
                     val = cd_elem.text.strip()
-                    # Check against codelist
                     if code_list_key in self.codelists:
                         valid_codes = self.codelists[code_list_key].get("codes", [])
                         if val not in valid_codes:
-                            report.add_issue(ValidationIssue(
-                                "ERROR", 3, f"SR2025_{tag_local.upper()}_INVALID_CODE", str(cd_elem.sourceline or ln),
-                                f"Invalid {type_name} code: '{val}'.",
-                                f"Value must be one of the official CBPR+ {type_name} codes."
-                            ))
+                            report.add_issue(ValidationIssue("ERROR", 3, f"SR2025_{tag_local.upper()}_INVALID_CODE", str(cd_elem.sourceline or ln), f"Invalid {type_name} code: '{val}'."))
 
     def _normalize_message(self, xml_content: str) -> tuple:
         """
