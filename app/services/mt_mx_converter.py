@@ -498,9 +498,10 @@ class MT2MXConverter:
         # Mapping rules will use the pre-parsed information from parse_mt_blocks
 
         # Process mapping rules
-        for rule in mapping.get("mappings", []):
+        for i, rule in enumerate(mapping.get("mappings", [])):
             tag = rule["mt_tag"]
             is_mandatory = rule.get("mandatory", False)
+
             
             # Get the value
             rule_type = rule.get("type", "text")
@@ -599,8 +600,10 @@ class MT2MXConverter:
             
             if rule_type == "static" or rule_type == "timestamp":
                 # Path set direct
-                overwrite = not rule.get("fallback", False)
-                self.set_element_text(mx_root, rule["mx_path"], val, namespaces, overwrite=overwrite)
+                path = rule.get("mx_path")
+                if path:
+                    overwrite = not rule.get("fallback", False)
+                    self.set_element_text(mx_root, path, val, namespaces, overwrite=overwrite)
                 continue
 
             if rule_type == "text":
@@ -629,7 +632,9 @@ class MT2MXConverter:
                         continue
                 
                 overwrite = not rule.get("fallback", False)
-                self.set_element_text(mx_root, rule["mx_path"], val.replace("\\n", "\n"), namespaces, overwrite=overwrite)
+                path = rule.get("mx_path")
+                if path:
+                    self.set_element_text(mx_root, path, val.replace("\\n", "\n"), namespaces, overwrite=overwrite)
                 continue
             elif rule_type == "date_currency_amount":
                 # MT Format: YYMMDDCCYY[amount] (e.g. 230915USD10000,50)
@@ -663,8 +668,10 @@ class MT2MXConverter:
                     continue
                 
                 overwrite = not rule.get("fallback", False)
-                self.set_element_attr(mx_root, rule["mx_path_amount"], rule["currency_attribute"], currency, amount_str, namespaces, overwrite=overwrite)
-                self.set_element_text(mx_root, rule["mx_path_date"], iso_date, namespaces, overwrite=overwrite)
+                if rule.get("mx_path_amount"):
+                    self.set_element_attr(mx_root, rule["mx_path_amount"], rule.get("currency_attribute", "Ccy"), currency, amount_str, namespaces, overwrite=overwrite)
+                if rule.get("mx_path_date"):
+                    self.set_element_text(mx_root, rule["mx_path_date"], iso_date, namespaces, overwrite=overwrite)
                 
             elif rule_type == "account_name_address":
                 # Robust MT Name & Address parsing (e.g., /ACCOUNT\nNAME\nADDRESS LINES)
@@ -821,20 +828,20 @@ class MT2MXConverter:
                 stmt_num = parts[0]
                 seq_num = parts[1] if len(parts) > 1 else None
                 
-                if "mx_path_id" in rule:
+                if rule.get("mx_path_id"):
                     self.set_element_text(mx_root, rule["mx_path_id"], stmt_num[:35], namespaces)
                 
                 # Valid LglSeqNb is decimal, so just integers are fine.
-                if "mx_path_lgl" in rule and stmt_num.isdigit():
+                if rule.get("mx_path_lgl") and stmt_num.isdigit():
                     self.set_element_text(mx_root, rule["mx_path_lgl"], stmt_num, namespaces)
                     
-                if seq_num and "mx_path_elctrnc" in rule and seq_num.isdigit():
+                if seq_num and rule.get("mx_path_elctrnc") and seq_num.isdigit():
                     self.set_element_text(mx_root, rule["mx_path_elctrnc"], seq_num, namespaces)
 
                 # StmtPgntn is typically mandatory in camt.053 preceding ElctrncSeqNb
-                if "mx_path_pgntn_pgnb" in rule:
+                if rule.get("mx_path_pgntn_pgnb"):
                     self.set_element_text(mx_root, rule["mx_path_pgntn_pgnb"], "1", namespaces)
-                if "mx_path_pgntn_last" in rule:
+                if rule.get("mx_path_pgntn_last"):
                     self.set_element_text(mx_root, rule["mx_path_pgntn_last"], "true", namespaces)
 
             elif rule_type == "account_with_ccy":
@@ -897,7 +904,9 @@ class MT2MXConverter:
                     if not parsed_61: continue
                     
                     # Create a NEW Ntry node (don't merge)
-                    path_parts = rule["mx_path"].split("/")
+                    path = rule.get("mx_path")
+                    if not path: continue
+                    path_parts = path.split("/")
                     parent_path = "/".join(path_parts[:-1])
                     terminal_tag = path_parts[-1]
                     parent_node = self._get_or_create_node(mx_root, parent_path, namespaces)
@@ -958,9 +967,10 @@ class MT2MXConverter:
                         self.set_element_attr(ntry_node, "NtryDtls/TxDtls/Amt", "Ccy", currency, parsed_61["amount"], namespaces)
                         self.set_element_text(ntry_node, "NtryDtls/TxDtls/CdtDbtInd", indicator, namespaces)
                         self.set_element_text(ntry_node, ref_path, parsed_61["reference"], namespaces)
-                else:
                     # Basic fallback for failed parse
-                    self.set_element_text(mx_root, f"{rule['mx_path']}/AddtlNtryInf", val, namespaces)
+                    path = rule.get("mx_path")
+                    if path:
+                        self.set_element_text(mx_root, f"{path}/AddtlNtryInf", val, namespaces)
 
         if errors:
             v_logs.append(f"Data mapping FAILED with {len(errors)} errors.")

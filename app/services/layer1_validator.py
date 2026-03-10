@@ -143,10 +143,47 @@ class Layer1Mixin:
                 ))
 
         except etree.XMLSyntaxError as e:
+            error_line = str(e.lineno) if e.lineno else "?"
+            error_msg = str(e)
+
+            # Detect if a literal & (unescaped ampersand) is the root cause
+            has_raw_amp = bool(re.search(r"&(?![a-zA-Z#][a-zA-Z0-9#]*;)", xml_content))
+            if has_raw_amp:
+                # Find the exact line number of the & in the raw content
+                for i, line in enumerate(xml_content.split("\n"), start=1):
+                    if re.search(r"&(?![a-zA-Z#][a-zA-Z0-9#]*;)", line):
+                        error_line = str(i)
+                        break
+                friendly_msg = (
+                    f"Invalid character '&' (ampersand) at line {error_line}. "
+                    f"The '&' character is reserved in XML and is not allowed in name or address fields."
+                )
+                fix_hint = (
+                    f"Check line {error_line} and remove the '&' character. "
+                    f"If you mean 'and', write the word 'and' instead."
+                )
+            elif "invalid char" in error_msg.lower() or "illegal char" in error_msg.lower():
+                friendly_msg = (
+                    f"Invalid character at line {error_line}. "
+                    f"Name and address fields must only contain letters, digits, spaces and . , ( ) ' -"
+                )
+                fix_hint = (
+                    f"Check line {error_line} for any special characters such as &, @, !, #, $ and remove them."
+                )
+            else:
+                friendly_msg = (
+                    f"XML syntax error at line {error_line}: the message cannot be parsed. "
+                    f"Check for unclosed tags, missing quotes, or reserved characters like '&'."
+                )
+                fix_hint = (
+                    f"Technical details: {error_msg}. "
+                    f"Check near line {error_line} for unclosed tags, invalid characters, or malformed XML."
+                )
+
             report.add_issue(ValidationIssue(
-                "ERROR", 1, "XML Syntax Error", f"Line {e.lineno}",
-                "Your XML has a syntax error that prevents it from being read.",
-                f"Technical details: {str(e)}. Check for unclosed tags or invalid characters."
+                "ERROR", 1, "XML Syntax Error", error_line,
+                friendly_msg,
+                fix_hint
             ))
             report.layer_status["1"] = {"status": "❌", "time": (time.time() - start) * 1000}
             return False

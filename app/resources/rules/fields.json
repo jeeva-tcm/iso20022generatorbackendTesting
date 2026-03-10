@@ -1,0 +1,115 @@
+{
+    "fields": {
+        "BICFI": {
+            "regex": "BICFI",
+            "min": 1,
+            "max": 1
+        },
+        "MsgId": {
+            "regex": "Max35Text",
+            "min": 1,
+            "max": 1
+        },
+        "BizMsgIdr": {
+            "regex": "Max35Text",
+            "min": 1,
+            "max": 1
+        },
+        "CreDtTm": {
+            "regex": "DateTime",
+            "min": 1,
+            "max": 1
+        },
+        "IntrBkSttlmDt": {
+            "regex": "Date",
+            "min": 1,
+            "max": 1
+        },
+        "IntrBkSttlmAmt": {
+            "regex": "Amount",
+            "attributes": {
+                "Ccy": "Currency"
+            },
+            "min": 1,
+            "max": 1
+        },
+        "InstdAmt": {
+            "regex": "Amount",
+            "attributes": {
+                "Ccy": "Currency"
+            },
+            "min": 0,
+            "max": 1
+        },
+        "NbOfTxs": {
+            "regex": "Numeric15",
+            "min": 1,
+            "max": 1
+        },
+        "InstrId": {
+            "regex": "Max35Text",
+            "min": 1,
+            "max": 1
+        },
+        "EndToEndId": {
+            "regex": "Max35Text",
+            "min": 1,
+            "max": 1
+        },
+        "TxId": {
+            "regex": "Max35Text",
+            "min": 0,
+            "max": 1
+        },
+        "UETR": {
+            "regex": "UUID",
+            "min": 0,
+            "max": 1
+        },
+        "ChrgBr": {
+            "regex": "^(CRED|DEBT|SHAR)$",
+            "min": 1,
+            "max": 1
+        },
+        "InstrPrty": {
+            "regex": "^(HIGH|NORM)$",
+            "min": 0,
+            "max": 1
+        },
+        "SttlmPrty": {
+            "regex": "^(HIGH|NORM|URGT)$",
+            "min": 0,
+            "max": 1
+        },
+        "ClrChanl": {
+            "regex": "^(RTNS|RTGS|MPNS)$",
+            "min": 0,
+            "max": 1
+        },
+        "Nm": {
+            "regex": "Max140Text",
+            "min": 0,
+            "max": 1
+        },
+        "Ustrd": {
+            "regex": "Max140Text",
+            "min": 0,
+            "max": 1
+        },
+        "Country": {
+            "regex": "Country",
+            "min": 0,
+            "max": 1
+        },
+        "IBAN": {
+            "regex": "IBAN",
+            "min": 0,
+            "max": 1
+        },
+        "LEI": {
+            "regex": "LEI",
+            "min": 0,
+            "max": 1
+        }
+    }
+}

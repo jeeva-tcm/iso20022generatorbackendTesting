@@ -8,6 +8,23 @@ from .models import ValidationIssue, ValidationReport
 
 class Layer3Mixin:
 
+    def _load_generic_config(self):
+        """Loads the new global algorithms and field library."""
+        config = {"algorithms": {}, "fields": {}, "messages": {}}
+        try:
+            for name in ["algorithms", "fields", "message_definitions"]:
+                path = os.path.join(self.rules_path, f"{name}.json")
+                if os.path.exists(path):
+                    with open(path, "r") as f:
+                        data = json.load(f)
+                        if name == "message_definitions":
+                            config["messages"] = data.get("messages", {})
+                        else:
+                            config[name] = data.get(name, {})
+        except Exception as e:
+            print(f"Error loading generic config: {e}")
+        return config
+
     def _load_all_rules(self, message_type: str) -> List[Dict[str, Any]]:
         """
         Loads global rules + family rules + message-specific rules.
@@ -72,6 +89,89 @@ class Layer3Mixin:
             "status": "✅" if success else "❌", 
             "time": round((time.time() - start) * 1000, 2)
         }
+
+    def _run_generic_field_validation(self, message_type: str, data: Dict[str, Any], line_map: Dict[str, int], report: ValidationReport):
+        """
+        Executes validation based on the Generic Field Library and Global Algorithms.
+        This acts as Layer 2.5 (Syntax + Semantic).
+        """
+        start = time.time()
+        config = self._load_generic_config()
+        algorithms = config.get("algorithms", {})
+        fields_lib = config.get("fields", {})
+        message_defs = config.get("messages", {})
+
+        # 1. Identify which message definition to use
+        # Normalize message_type (e.g. pacs.008.001.08 -> pacs.008)
+        parts = message_type.split(".")
+        short_type = ".".join(parts[:2]) if len(parts) >= 2 else message_type
+        
+        # Try finding the exact or short version (pacs.008.cov vs pacs.008)
+        msg_def = message_defs.get(message_type)
+        if not msg_def:
+            msg_def = message_defs.get(short_type)
+            
+        if not msg_def:
+            # If no definition for this message type, skip this validation layer
+            return
+
+        # 2. Iterate through sections of the message (AppHdr, GrpHdr, etc.)
+        for section, expected_fields in msg_def.items():
+            # Find elements in data that belong to this section
+            # We look for keys starting with [section] or ending with [section].[field]
+            for field_name in expected_fields:
+                field_cfg = fields_lib.get(field_name)
+                if not field_cfg:
+                    continue
+
+                # Find all occurrences of this field in the current section
+                # Use regex to find keys like Document.CdtTrfTxInf.InstrId or AppHdr.CreDtTm
+                pattern = rf"(^|\.){section}(\.\w+)*\.{field_name}$"
+                matching_keys = [k for k in data.keys() if re.search(pattern, k)]
+                
+                # Removed redundant mandatory check (XSD Layer 2 handles existence)
+                # This fixes the issue where optional fields were being reported as missing
+                
+                for key in matching_keys:
+                    # Apply regex ONLY for mandatory fields as requested by USER
+                    # Generic Layer focuses on core identifiers defined as min: 1 in fields.json
+                    if field_cfg.get("min", 0) <= 0:
+                        continue
+                        
+                    value = data[key]
+                    algo_name = field_cfg.get("regex")
+                    regex_pattern = algorithms.get(algo_name, algo_name) # Fallback if it's a literal regex
+
+                    # 1. Regex Validation
+                    if regex_pattern and not re.match(regex_pattern, str(value)):
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "INVALID_FIELD_FORMAT", str(line_map.get(key, "/")),
+                            f"Field '{field_name}' has invalid format: '{value}'.",
+                            f"Value must match pattern for '{algo_name}': {regex_pattern}"
+                        ))
+
+                    # 2. Attributes Validation (e.g. Ccy)
+                    attrs_cfg = field_cfg.get("attributes", {})
+                    for attr_name, attr_algo in attrs_cfg.items():
+                        attr_key = f"{key}@{attr_name}"
+                        attr_val = data.get(attr_key)
+                        attr_regex = algorithms.get(attr_algo, attr_algo)
+                        
+                        if not attr_val:
+                             report.add_issue(ValidationIssue(
+                                "ERROR", 3, "MISSING_ATTRIBUTE", str(line_map.get(key, "/")),
+                                f"Mandatory attribute '{attr_name}' is missing for field '{field_name}'.",
+                                f"Add {attr_name}=\"...\" to the <{field_name}> tag."
+                            ))
+                        elif attr_regex and not re.match(attr_regex, str(attr_val)):
+                             report.add_issue(ValidationIssue(
+                                "ERROR", 3, "INVALID_ATTRIBUTE_FORMAT", str(line_map.get(attr_key, "/")),
+                                f"Attribute '{attr_name}' for '{field_name}' has invalid format: '{attr_val}'.",
+                                f"Value must match pattern for '{attr_algo}': {attr_regex}"
+                            ))
+
+        # No longer assigning to report.layer_status["Global Algorithms"] as requested.
+        pass
 
     def _execute_rule_logic(self, rule: Dict[str, Any], data: Dict[str, Any], line_map: Dict[str, int], codelists: Dict[str, list], report: ValidationReport):
         """

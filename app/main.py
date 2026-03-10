@@ -31,7 +31,7 @@ mt_mx_converter = MT2MXConverter()
 app = FastAPI(title="ISO 20022 Validation API (Firebase Powered)")
 
 # Configure CORS
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,https://iso20022generatorfrontend.vercel.app")
+origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,http://127.0.0.1:8001,https://iso20022generatorfrontend.vercel.app,https://46lzw3h8-4200.inc1.devtunnels.ms")
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
@@ -114,31 +114,39 @@ async def validate_file(
 
 @app.post("/convert-mt-to-mx")
 async def convert_mt_to_mx(request: schemas.MTConversionRequest):
-    result = mt_mx_converter.validate_and_convert(request.mt_message, forced_mt_type=request.target_mt_type)
-    
-    # Always include a validation report if conversion didn't fail at the pre-parsing/MT level
-    mx_message = result.get("mx_message", "")
-    if mx_message:
-        validation_report = await validator.validate(mx_message, mode="Full 1-3", message_type="Auto-detect", filename="conversion.xml")
-        report_dict = validation_report.to_dict()
-        result["validation_report"] = report_dict
+    try:
+        result = mt_mx_converter.validate_and_convert(request.mt_message, forced_mt_type=request.target_mt_type)
         
-        # If the generated MX fails schema (L2) or mandatory L3 rules, mark as error
-        # but keep the successful conversion parts so the user can see the output
-        if report_dict.get("status") != "PASS":
-            l2_errors = [iss for iss in report_dict.get("issues", []) if iss.get("layer") == 2]
-            if l2_errors:
-                result["status"] = "error"
-                # Accumulate error messages for display
-                current_errors = result.get("errors", [])
-                for iss in l2_errors:
-                    current_errors.append(f"Layer 2 (Schema Compliance): {iss['message']}")
-                result["errors"] = current_errors
-    
-    if result.get("status") == "error":
-        raise HTTPException(status_code=400, detail=result)
+        # Always include a validation report if conversion didn't fail at the pre-parsing/MT level
+        mx_message = result.get("mx_message", "")
+        if mx_message:
+            validation_report = await validator.validate(mx_message, mode="Full 1-3", message_type="Auto-detect", filename="conversion.xml")
+            report_dict = validation_report.to_dict()
+            result["validation_report"] = report_dict
+            
+            # If the generated MX fails schema (L2) or mandatory L3 rules, mark as error
+            # but keep the successful conversion parts so the user can see the output
+            if report_dict.get("status") != "PASS":
+                l2_errors = [iss for iss in report_dict.get("issues", []) if iss.get("layer") == 2]
+                if l2_errors:
+                    result["status"] = "error"
+                    # Accumulate error messages for display
+                    current_errors = result.get("errors", [])
+                    for iss in l2_errors:
+                        current_errors.append(f"Layer 2 (Schema Compliance): {iss['message']}")
+                    result["errors"] = current_errors
+        
+        if result.get("status") == "error":
+            raise HTTPException(status_code=400, detail=result)
 
-    return result
+        return result
+    except Exception as e:
+        import traceback
+        import os
+        log_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crash_report.txt")
+        with open(log_path, "w") as f:
+            f.write(traceback.format_exc())
+        raise
 
 @app.get("/history", response_model=List[schemas.HistorySummary])
 def get_history(skip: int = 0, limit: int = 100):

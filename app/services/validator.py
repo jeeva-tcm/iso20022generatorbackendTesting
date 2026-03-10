@@ -301,6 +301,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 4.15: CLEARING SYSTEM SPECIFIC RULES (T2, CHAPS)
             self._validate_clearing_system_rules(xml_content, report)
 
+            # STEP 4.16: CHARACTER SET VALIDATION (Nm, AdrLine, StrtNm, TwnNm, etc.)
+            self._validate_charsets_in_xml(xml_content, report)
+
             if mode != "Layer 1 only":
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
@@ -317,6 +320,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             except Exception as e:
                 report.add_issue(ValidationIssue("ERROR", 3, "FATAL_L3", "/", f"Failed to normalize message: {str(e)}"))
                 return self._finalize_report(report, start_time)
+
+            # STEP 5.0: Run Generic Field Library & Global Algorithms Validation
+            self._run_generic_field_validation(detected_type, canonical_data, line_map, report)
 
             # (Date validation already ran in Step 4.5 above, before Layer 2)
 
@@ -2060,3 +2066,49 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                     f"Clearing System 'CHAPS' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'GBP'."
                 ))
 
+
+
+    def _validate_charsets_in_xml(self, xml_content: str, report) -> None:
+        """
+        STEP 4.16 - Character Set Validation for Name and Address Tags
+
+        Checks that text fields like Nm, StrtNm, TwnNm, BldgNm, AdrLine, DstrctNm, CtrySubDvsn
+        only contain safe characters: a-z A-Z 0-9 space . , ( ) ' -
+
+        Specifically BLOCKS: & @ ! # $ % * < > ; : / ^ ~ ` | {{ }} [ ] = +
+        """
+        import re as _re
+        from .models import ValidationIssue as _VI
+
+        CHECKED_TAGS = {
+            'Nm', 'StrtNm', 'TwnNm', 'BldgNm', 'AdrLine',
+            'DstrctNm', 'CtrySubDvsn', 'TwnLctnNm'
+        }
+        SAFE = _re.compile(r"^[a-zA-Z0-9 .,()\'\-]+$")
+        tag_alt = "|".join(_re.escape(t) for t in CHECKED_TAGS)
+        patt = _re.compile(r'<(' + tag_alt + r')>\s*([^<]+?)\s*</\1>')
+
+        seen = set()
+        for m in patt.finditer(xml_content):
+            tag_name = m.group(1)
+            raw_value = m.group(2).strip()
+            key = (tag_name, raw_value)
+            if key in seen or not raw_value:
+                continue
+            seen.add(key)
+
+            if not SAFE.match(raw_value):
+                inv = sorted(set(c for c in raw_value if not _re.match(r"[a-zA-Z0-9 .,()\'\-]", c)))
+                inv_display = ' '.join(repr(c) for c in inv)
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = 'Unknown'
+                report.add_issue(_VI(
+                    "ERROR", 3, "INVALID_CHARSET", str(line_num),
+                    f"Field <{tag_name}> contains invalid character(s): {inv_display}. "
+                    f"Only letters, digits, spaces and . , ( ) \' - are allowed.",
+                    f"Remove or replace {inv_display} in <{tag_name}>. "
+                    f"Characters such as \'&\', \'@\', \'!\', \'#\', \'$\' are not permitted "
+                    f"in name/address fields."
+                ))
