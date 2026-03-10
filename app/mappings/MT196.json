@@ -51,9 +51,23 @@
             "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlInstrId"
         },
         {
+            "mt_tag": "21",
+            "name": "Original End to End Id",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlEndToEndId"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Original UETR (from Block 3 Tag 121)",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlUETR"
+        },
+        {
             "mt_tag": "_auto_status",
             "name": "Cancellation Status ID",
-            "mandatory": false,
+            "mandatory": true,
             "type": "static",
             "value": "RJCT",
             "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsId"
@@ -71,6 +85,14 @@
             "mandatory": false,
             "type": "text",
             "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf/OrgnlMsgId"
+        },
+        {
+            "mt_tag": "_static_msg_nm",
+            "name": "Original Message Name ID",
+            "mandatory": false,
+            "type": "static",
+            "value": "pacs.008",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf/OrgnlMsgNmId"
         }
     ]
 }

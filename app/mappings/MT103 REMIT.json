@@ -39,17 +39,15 @@
         },
         {
             "mt_tag": "_senderBic",
-            "name": "Instructing Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructing Agent",
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
-            "name": "Instructed Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructed Agent",
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "20",
@@ -73,7 +71,7 @@
             "mandatory": true,
             "type": "text",
             "max_length": 4,
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Prtry"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Cd"
         },
         {
             "mt_tag": "32A",
@@ -155,7 +153,7 @@
         {
             "mt_tag": "_uetr",
             "name": "Unique End-to-End Transaction Reference",
-            "mandatory": false,
+            "mandatory": true,
             "type": "text",
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR"
         }

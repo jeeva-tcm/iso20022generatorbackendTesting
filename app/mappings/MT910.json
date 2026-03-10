@@ -38,8 +38,9 @@
             "mt_tag": "25",
             "name": "Account Identification",
             "mandatory": true,
-            "type": "text",
-            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/Othr/Id"
+            "type": "account_with_ccy",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/Othr/Id",
+            "mx_path_currency": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Ccy"
         },
         {
             "mt_tag": "32A",
@@ -78,7 +79,14 @@
             "mandatory": false,
             "type": "static",
             "value": "BOOK",
-            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Sts"
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Sts/Cd"
+        },
+        {
+            "mt_tag": "_static_ref",
+            "name": "Entry Reference",
+            "mandatory": true,
+            "type": "static",
+            "mx_path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/NtryRef"
         }
     ]
 }

@@ -21,20 +21,6 @@
             "mx_path": "FIToFIPmtStsRpt/GrpHdr/CreDtTm"
         },
         {
-            "mt_tag": "_senderBic",
-            "name": "Instructing Agent (GrpHdr)",
-            "mandatory": false,
-            "type": "bic",
-            "mx_path_bic": "FIToFIPmtStsRpt/GrpHdr/InstgAgt/FinInstnId/BICFI"
-        },
-        {
-            "mt_tag": "_receiverBic",
-            "name": "Instructed Agent (GrpHdr)",
-            "mandatory": false,
-            "type": "bic",
-            "mx_path_bic": "FIToFIPmtStsRpt/GrpHdr/InstdAgt/FinInstnId/BICFI"
-        },
-        {
             "mt_tag": "_auto_status",
             "name": "Transaction Status",
             "mandatory": false,
@@ -44,17 +30,49 @@
         },
         {
             "mt_tag": "21",
+            "name": "Original Message Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlGrpInf/OrgnlMsgId",
+            "fallback_tag": "20"
+        },
+        {
+            "mt_tag": "_static_msg_nm",
+            "name": "Original Message Name ID",
+            "mandatory": true,
+            "type": "static",
+            "value": "pacs.008",
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlGrpInf/OrgnlMsgNmId"
+        },
+        {
+            "mt_tag": "21",
             "name": "Related Reference",
             "mandatory": false,
             "type": "text",
             "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlInstrId"
         },
         {
-            "mt_tag": "20",
-            "name": "Original Message Identification",
-            "mandatory": false,
+            "mt_tag": "21",
+            "name": "Original End to End Id",
+            "mandatory": true,
             "type": "text",
-            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlMsgId"
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlEndToEndId",
+            "fallback_tag": "20"
+        },
+        {
+            "mt_tag": "21",
+            "name": "Original Transaction Id",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlTxId",
+            "fallback_tag": "20"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Original UETR",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/OrgnlUETR"
         },
         {
             "mt_tag": "79",
@@ -62,6 +80,20 @@
             "mandatory": true,
             "type": "text",
             "mx_path": "FIToFIPmtStsRpt/TxInfAndSts/StsRsnInf/AddtlInf"
+        },
+        {
+            "mt_tag": "_senderBic",
+            "name": "Instructing Agent (TxInfAndSts)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FIToFIPmtStsRpt/TxInfAndSts/InstgAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Instructed Agent (TxInfAndSts)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FIToFIPmtStsRpt/TxInfAndSts/InstdAgt/FinInstnId/BICFI"
         }
     ]
 }

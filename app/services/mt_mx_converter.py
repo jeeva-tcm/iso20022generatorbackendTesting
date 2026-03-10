@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
@@ -15,6 +16,17 @@ class MT2MXConverter:
             self.mappings_dir = os.path.join(base_dir, "mappings")
         else:
             self.mappings_dir = os.path.abspath(mappings_dir)
+            
+        # Load global swift validation rules if available
+        self.swift_rules = {}
+        rules_path = os.path.join(self.mappings_dir, "swift_validation_rules.json")
+        if os.path.exists(rules_path):
+            try:
+                with open(rules_path, "r", encoding="utf-8") as rf:
+                    self.swift_rules = json.load(rf)
+            except Exception:
+                pass
+
 
     def detect_mt_type(self, mt_message: str) -> str:
         """
@@ -43,23 +55,61 @@ class MT2MXConverter:
 
     def parse_mt_blocks(self, mt_message: str) -> dict:
         """
-        Parses the text block of an MT message (Block 4) into a dictionary of tags.
+        Parses all blocks of an MT message into a dictionary of tags.
+        Includes Block 1/2 BICs and Block 3 tags.
         """
         fields = {}
+        
+        # 1. Extract BICs from Block 1 and 2
+        # Block 1 (Sender): {1:F01BANKBEBBAXXX...} -> Sender BIC is BANKBEBBAXXX
+        b1_match = re.search(r"\{1:[A-Z]\d{2}([A-Z0-9]{12})", mt_message)
+        if b1_match:
+            # Skip the 9th character (logical terminal code) to get the 11-char BIC
+            fields["_senderBic"] = b1_match.group(1)[:8] + b1_match.group(1)[9:12]
+            
+        # Block 2 (Receiver): {2:I103BANKDEFFXXXXN} or {2:O103...}
+        # For Outbound (O), the receiver BIC is at offset 14. For Inbound (I), it starts at offset 4.
+        b2_match = re.search(r"\{2:([IO])\d{3}([A-Z0-9]+)", mt_message)
+        if b2_match:
+            io_dir = b2_match.group(1)
+            raw_b2 = b2_match.group(2)
+            if io_dir == "I":
+                # Inbound Block 2: {2:I103BANKBEBBAXXX...}
+                # raw_b2 starts with 12-char BIC (8 BIC + 1 LT + 3 Branch)
+                if len(raw_b2) >= 12:
+                    bic12 = raw_b2[:12]
+                    fields["_receiverBic"] = bic12[:8] + bic12[9:12]
+            else:
+                # Outbound Block 2: {2:O1031030030116BANKDEFFXXXX...}
+                # Offset 0-3: Time, 4-9: Date, 10-21: BIC12
+                if len(raw_b2) >= 22:
+                    bic12 = raw_b2[10:22]
+                    fields["_receiverBic"] = bic12[:8] + bic12[9:12]
+                elif len(raw_b2) >= 12:
+                    # Fallback for short/malformed blocks
+                    bic12 = raw_b2[:12]
+                    fields["_receiverBic"] = bic12[:8] + bic12[9:12]
+
+        # 2. Extract Block 3 tags (e.g. {121:UETR})
+        b3_matches = re.findall(r"\{(\d{3}):(.*?)\}", mt_message)
+        for tag, val in b3_matches:
+            fields[f"block3_{tag}"] = val
+            if tag == "121":
+                # Only accept as _uetr if it looks like a UUID to avoid schema validation errors later
+                if re.match(r"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$", val):
+                    fields["_uetr"] = val
+
         # This regex looks for :TAG: value, stopping at the next :TAG: at the start of a line
-        pattern = re.compile(r"^:([0-9]{2}[a-zA-Z]?):((?:(?!\n:[0-9]{2}[a-zA-Z]?:).)*)", re.MULTILINE | re.DOTALL)
+        # Improved: Stop before ANY :XXX: at start of line, even if it's 3 digits (like 119)
+        pattern = re.compile(r"^:([0-9]{2,3}[a-zA-Z]?):((?:(?!\n:[0-9]{2,3}[a-zA-Z]?:).)*)", re.MULTILINE | re.DOTALL)
         
         # If message has {4: ... -}, extract just block 4
         block4_match = re.search(r"\{4:(.*?)(?:\-?\}|\Z)", mt_message, re.DOTALL)
         text_to_parse = block4_match.group(1) if block4_match else mt_message
         
-        # Split by the actual tag pattern to ensure we don't skip orphaned lines
-        # But for just getting fields, we use finditer
         for match in pattern.finditer(text_to_parse):
             tag = match.group(1)
             value = match.group(2).strip()
-            # If tag already exists, in a real system we might use lists. 
-            # For simplicity, we overwrite or append. Let's append to a list.
             if tag in fields:
                 if isinstance(fields[tag], list):
                     fields[tag].append(value)
@@ -88,55 +138,88 @@ class MT2MXConverter:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def _get_element_text(self, root: ET.Element, path: str, namespaces: dict) -> str:
+    def _navigate_path(self, root: ET.Element, path: str, namespaces: dict, create_missing: bool = False) -> ET.Element:
         """
-        Travels the path and returns the text if it exists.
+        Internal helper to navigate XML tree. 
+        Robustly handles namespaces and avoids duplicates.
         """
+        if not path:
+            return root
+            
         parts = path.split("/")
         current = root
         xmlns = namespaces.get("xmlns", "")
-        for part in parts:
+        
+        # Determine if we are navigating from the root Document or a child element
+        # root_tag_local is the tag name without namespace
+        root_tag_local = root.tag.split("}")[-1] if "}" in root.tag else root.tag
+        
+        start_idx = 0
+        if parts[0] == root_tag_local:
+            start_idx = 1
+        elif parts[0] == "Document" and root_tag_local != "Document":
+            # If we are inside e.g. FIToFICstmrCdtTrf but path starts with Document/, skip it
+            # This is a bit of a hack for inconsistent paths in config
+            pass 
+            
+        for part in parts[start_idx:]:
+            if not part: continue
+            
+            # Search for child ignoring namespace or with our namespace
             tag_with_ns = f"{{{xmlns}}}{part}" if xmlns else part
+            
+            # Try finding with explicit namespace first, then wildcard if supported
             child = current.find(tag_with_ns)
             if child is None:
-                return ""
-            current = child
-        return current.text or ""
-
-    def _get_or_create_node(self, root: ET.Element, path: str, namespaces: dict) -> ET.Element:
-        """Helper to navigate path and create nodes if missing."""
-        parts = path.split("/")
-        current = root
-        xmlns = namespaces.get("xmlns", "")
-        for part in parts:
-            tag_with_ns = f"{{{xmlns}}}{part}" if xmlns else part
-            child = current.find(tag_with_ns)
+                # Try finding any element with the same local name to avoid duplicates
+                # especially if namespaces were mixed
+                for c in list(current):
+                    c_local = c.tag.split("}")[-1] if "}" in c.tag else c.tag
+                    if c_local == part:
+                        child = c
+                        break
+            
             if child is None:
-                child = ET.SubElement(current, tag_with_ns)
+                if create_missing:
+                    child = ET.SubElement(current, tag_with_ns)
+                else:
+                    return None
             current = child
         return current
 
-    def set_element_text(self, root: ET.Element, path: str, text: str, namespaces: dict):
-        """
-        Navigates or creates the XML path and sets the text.
-        path is something like "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId"
-        """
-        current = self._get_or_create_node(root, path, namespaces)
-        current.text = text
+    def _get_element_text(self, root: ET.Element, path: str, namespaces: dict) -> str:
+        """Travels the path and returns the text if it exists."""
+        node = self._navigate_path(root, path, namespaces, create_missing=False)
+        return node.text if node is not None else ""
 
-    def set_element_attr(self, root: ET.Element, path: str, attr: str, attr_val: str, text: str, namespaces: dict):
-        parts = path.split("/")
-        current = root
-        xmlns = namespaces.get("xmlns", "")
-        for i, part in enumerate(parts):
-            tag_with_ns = f"{{{xmlns}}}{part}" if xmlns else part
-            child = current.find(tag_with_ns)
-            if child is None:
-                child = ET.SubElement(current, tag_with_ns)
-            current = child
-            if i == len(parts) - 1:
-                current.text = text
-                current.set(attr, attr_val)
+    def _get_or_create_node(self, root: ET.Element, path: str, namespaces: dict) -> ET.Element:
+        """Helper to navigate path and create nodes if missing."""
+        return self._navigate_path(root, path, namespaces, create_missing=True)
+
+    def set_element_text(self, root: ET.Element, path: str, text: str, namespaces: dict, overwrite: bool = True):
+        """Navigates or creates the XML path and sets the text."""
+        if text is None or str(text).strip() == "":
+            return # Don't create anything for empty text
+            
+        # Sanitize text: Remove newlines and characters not allowed in restricted text types
+        sanitized = str(text).replace("\n", " ").replace("\r", " ").strip()
+        # Remove leading slashes if they are not part of a structured account field
+        if sanitized.startswith("/") and "Acct" not in path:
+            sanitized = sanitized[1:].strip()
+
+        node = self._get_or_create_node(root, path, namespaces)
+        if node is not None:
+            if overwrite or not node.text or not node.text.strip():
+                node.text = sanitized
+
+    def set_element_attr(self, root: ET.Element, path: str, attr: str, attr_val: str, text: str, namespaces: dict, overwrite: bool = True):
+        node = self._navigate_path(root, path, namespaces, create_missing=True)
+        if node is not None:
+            if overwrite or not node.text or not node.text.strip():
+                # Sanitize text for attributes too
+                sanitized = str(text).replace("\n", " ").replace("\r", " ").strip()
+                node.text = sanitized
+                node.set(attr, attr_val)
 
 
 
@@ -146,13 +229,45 @@ class MT2MXConverter:
         def get_rank(el):
             tag_name = el.tag.split('}')[-1]
             try: return order_list.index(tag_name)
-            except: return 999
+            except: return 1000  # Put unknown tags at the end
         
         sorted_children = sorted(current_children, key=get_rank)
         for child in current_children:
             element.remove(child)
         for child in sorted_children:
             element.append(child)
+
+    def _parse_tag_61(self, value: str) -> dict:
+        """
+        Parses SWIFT MT Tag 61 (Statement Line).
+        Format: 6!n[4!n]2a[1!c]15d1!a3!c16x[//16x]
+        """
+        # Value Date(6) [Entry Date(4)] DC(2) [Funds(1)] Amount(15) Type(1) IDCode(3) Ref(16)
+        pattern = r'^(\d{6})(\d{4})?([A-Z]{1,2})([A-Z])?(\d+,\d*[0-9])([A-Z])([A-Z0-9]{3})(.*)$'
+        clean_val = value.replace('\n', '').replace('\r', '').strip()
+        match = re.match(pattern, clean_val)
+        if not match:
+            # Fallback for simpler or non-standard 61 tags
+            alt_pattern = r'^(\d{6}).*?([CD])(\d+,\d*).*?([A-Z0-9]{3})(.*)$'
+            match = re.match(alt_pattern, clean_val)
+            if not match: return None
+            return {
+                "value_date": match.group(1),
+                "dc_mark": match.group(2),
+                "amount": match.group(3).replace(',', '.'),
+                "id_code": match.group(4),
+                "reference": match.group(5).strip()
+            }
+        
+        return {
+            "value_date": match.group(1),
+            "entry_date": match.group(2),
+            "dc_mark": match.group(3),
+            "funds_code": match.group(4),
+            "amount": match.group(5).replace(',', '.'),
+            "id_code": match.group(7),
+            "reference": match.group(8).strip()
+        }
 
     def _check_mt_charset(self, text: str) -> list:
         """
@@ -264,14 +379,18 @@ class MT2MXConverter:
         """
         errs = []
         val = val.strip()
+        common = self.swift_rules.get("common_validations", {})
         
-        if field_type == "text":
-            # Simple text length already checked by max_length in parent
-            pass
-            
-        elif field_type == "date_currency_amount":
+        # 1. Use regex from common_validations if available for the field_type
+        if field_type in common:
+            pattern = common[field_type]
+            if not re.match(pattern, val):
+                errs.append(f"Field :{tag}: ({name}) has invalid format. Expected {field_type} pattern.")
+            return errs
+
+        # 2. Existing manual validation for composite types or fallbacks
+        if field_type == "date_currency_amount":
             # Format: YYMMDD(CUR)AMOUNT
-            # e.g. 261231USD1500,00
             if len(val) < 6:
                 errs.append(f"Field :{tag}: ({name}) has invalid Date/Ccy/Amount format.")
             else:
@@ -279,7 +398,6 @@ class MT2MXConverter:
                 if not date_part.isdigit():
                     errs.append(f"Field :{tag}: ({name}) date '{date_part}' must be numeric (YYMMDD).")
                 
-                # Check for Currency (3 letters)
                 remaining = val[6:]
                 curr_match = re.match(r"^([A-Z]{3})", remaining)
                 if curr_match:
@@ -287,7 +405,6 @@ class MT2MXConverter:
                     if not amount_part:
                         errs.append(f"Field :{tag}: ({name}) is missing the amount.")
                     else:
-                        # SWIFT use comma as decimal separator
                         amount_clean = amount_part.replace(",", ".")
                         try:
                             float(amount_clean)
@@ -295,17 +412,10 @@ class MT2MXConverter:
                             errs.append(f"Field :{tag}: ({name}) contains invalid amount value '{amount_part}'.")
         
         elif field_type == "bic":
-            # 8 or 11 chars
-            clean_bic = val.replace("\r", "").replace("\n", "").strip()
-            if len(clean_bic) not in [8, 11]:
-                errs.append(f"Field :{tag}: ({name}) BIC must be 8 or 11 characters. Found '{clean_bic}'.")
-            elif not clean_bic.isalnum():
-                errs.append(f"Field :{tag}: ({name}) BIC contains invalid characters.")
+            pattern = common.get("bic", "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$")
+            if not re.match(pattern, val):
+                errs.append(f"Field :{tag}: ({name}) BIC must be 8 or 11 characters in valid SWIFT format. Found '{val}'.")
         
-        elif field_type == "account_name_address":
-            # Usually /account + 4 lines of name/address
-            pass
-
         return errs
 
     def validate_and_convert(self, mt_message: str, forced_mt_type: str = None) -> dict:
@@ -327,6 +437,15 @@ class MT2MXConverter:
                 ]
             }
         v_logs.append("Charset validation passed.")
+
+        # Reload swift validation rules so live changes take effect without server restart
+        rules_path = os.path.join(self.mappings_dir, "swift_validation_rules.json")
+        if os.path.exists(rules_path):
+            try:
+                with open(rules_path, "r", encoding="utf-8") as rf:
+                    self.swift_rules = json.load(rf)
+            except Exception:
+                pass
 
         # 2. Detect MT type for mapping
         mt_type = forced_mt_type or self.detect_mt_type(mt_message)
@@ -376,26 +495,7 @@ class MT2MXConverter:
         root_tag = mapping["root_element"]
         mx_root = ET.Element(f"{{{xmlns}}}{root_tag}" if xmlns else root_tag)
 
-        # Parse SWIFT block 1 and 2 for AppHdr sender/receiver
-        block1_match = re.search(r"\{1:([A-Z0-9]+)\}", mt_message)
-        if block1_match:
-            b1 = block1_match.group(1)
-            parsed_fields["_senderBic"] = b1[3:11] + ("XXX" if len(b1) <= 11 else b1[11:14] or "XXX")
-            
-        block3_match = re.search(r"\{3:.*?\{121:([a-f0-9-]{36})\}", mt_message, re.I)
-        if block3_match:
-            parsed_fields["_uetr"] = block3_match.group(1)
-            v_logs.append(f"Detected UETR from Block 3: {parsed_fields['_uetr']}")
-            
-        block2_match = re.search(r"\{2:([A-Z0-9]+)\}", mt_message)
-        if block2_match:
-            b2 = block2_match.group(1)
-            if b2.startswith("I"):
-                receiver = b2[4:12]
-                parsed_fields["_receiverBic"] = receiver + ("XXX" if len(b2) < 15 else b2[12:15] or "XXX")
-            else:
-                receiver = b2[14:22]
-                parsed_fields["_receiverBic"] = receiver + ("XXX" if len(b2) < 25 else b2[22:25] or "XXX")
+        # Mapping rules will use the pre-parsed information from parse_mt_blocks
 
         # Process mapping rules
         for rule in mapping.get("mappings", []):
@@ -403,9 +503,11 @@ class MT2MXConverter:
             is_mandatory = rule.get("mandatory", False)
             
             # Get the value
-            if tag.startswith("_timestamp"):
-                val = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            elif tag.startswith("_static"):
+            rule_type = rule.get("type", "text")
+            
+            if tag.startswith("_timestamp") or rule_type == "timestamp":
+                val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            elif tag.startswith("_static") or rule_type == "static":
                 val = rule.get("value", "")
             else:
                 if tag not in parsed_fields:
@@ -415,7 +517,10 @@ class MT2MXConverter:
                     elif is_mandatory:
                         # Schema auto-correction: If mandatory field is missing in MT, try to provide a safe default for schema validity
                         if rule.get("type") == "timestamp" or "CreDt" in rule.get("mx_path", ""):
-                            val = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                            val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        elif "UETR" in rule.get("mx_path", ""):
+                            import uuid
+                            val = str(uuid.uuid4())
                         elif "MsgId" in rule.get("mx_path", "") or "Id" in rule.get("mx_path", ""):
                             val = parsed_fields.get("20", f"AUTO-{datetime.now().strftime('%Y%j%H%M%S')}")
                         elif "ChrgBr" in rule.get("mx_path", ""):
@@ -437,13 +542,65 @@ class MT2MXConverter:
                 if is_mandatory and (not val or not str(val).strip()):
                     errors.append(f"Conversion Blocked: Mandatory Fields Missing. Please add valid values for: [{rule.get('name', 'Tag')}] :{tag}: to proceed.")
                     continue
+
+                # Ensure UETR fields always contain a valid UUIDv4, regardless of source
+                if "UETR" in rule.get("mx_path", ""):
+                    val_str = str(val).strip()
+                    # UUID v4 pattern check
+                    if not re.match(r"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89ab][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$", val_str):
+                        import uuid
+                        val = str(uuid.uuid4())
+
                 
-            # Validate & Map
+            # JSON validation block checks
+            validation = rule.get("validation", {})
+            mt_base_type = f"MT{mt_type}"
+            global_mapping = self.swift_rules.get("mappings", {}).get(mt_base_type, {})
+            global_req = global_mapping.get("required_fields", {}).get(tag, {})
+            
             rule_type = rule.get("type", "text")
+
+            if validation or global_req:
+                val_str = str(val).strip()
+                name = rule.get('name', tag)
+                
+                # Check Local and Global length constraints
+                max_len = validation.get("max_length") or global_req.get("max_length")
+                if max_len and len(val_str) > max_len:
+                    errors.append(f"Field :{tag}: ({name}) exceeds maximum allowed length of {max_len} (found {len(val_str)})")
+                
+                allowed = validation.get("allowed_values") or global_req.get("allowed_values")
+                if allowed and val_str not in allowed:
+                    # Try uppercase matching just in case
+                    if val_str.upper() not in allowed:
+                        errors.append(f"Field :{tag}: ({name}) value '{val_str}' is not one of the allowed values: {allowed}")
+                
+                if validation.get("bic_format") or global_req.get("format") == "bic":
+                    clean_bic = val_str.replace('\r', '').replace('\n', '').replace(' ', '')
+                    if not re.match(r"^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$", clean_bic):
+                        errors.append(f"Field :{tag}: ({name}) is not a valid BIC format.")
+                
+                if validation.get("uuid_format"):
+                    if not re.match(r"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$", val_str):
+                        errors.append(f"Field :{tag}: ({name}) is not a valid UUID format.")
+                        
+                # Global Regex Validations
+                global_format = global_req.get("format")
+                if global_format and "common_validations" in self.swift_rules:
+                    regex_str = self.swift_rules["common_validations"].get(global_format)
+                    if regex_str:
+                        if rule_type == "text" or rule_type == "static" or rule_type == "bic":
+                            if not re.match(regex_str, val_str):
+                                errors.append(f"Field :{tag}: ({name}) failed global SWIFT format validation for '{global_format}'.")
+                        elif rule_type == "date_currency_amount":
+                            if len(val_str) >= 6 and not re.match(regex_str, val_str[0:6]):
+                                errors.append(f"Field :{tag}: Date segment failed SWIFT format validation for '{global_format}'.")
+
             
             if rule_type == "static" or rule_type == "timestamp":
                 # Path set direct
-                self.set_element_text(mx_root, rule["mx_path"], val, namespaces)
+                overwrite = not rule.get("fallback", False)
+                self.set_element_text(mx_root, rule["mx_path"], val, namespaces, overwrite=overwrite)
                 continue
 
             if rule_type == "text":
@@ -471,7 +628,8 @@ class MT2MXConverter:
                         errors.extend(type_errors)
                         continue
                 
-                self.set_element_text(mx_root, rule["mx_path"], val.replace("\\n", "\n"), namespaces)
+                overwrite = not rule.get("fallback", False)
+                self.set_element_text(mx_root, rule["mx_path"], val.replace("\\n", "\n"), namespaces, overwrite=overwrite)
                 continue
             elif rule_type == "date_currency_amount":
                 # MT Format: YYMMDDCCYY[amount] (e.g. 230915USD10000,50)
@@ -504,8 +662,9 @@ class MT2MXConverter:
                     errors.append(f"Invalid amount format '{amount_str}' in field :{tag}:")
                     continue
                 
-                self.set_element_attr(mx_root, rule["mx_path_amount"], rule["currency_attribute"], currency, amount_str, namespaces)
-                self.set_element_text(mx_root, rule["mx_path_date"], iso_date, namespaces)
+                overwrite = not rule.get("fallback", False)
+                self.set_element_attr(mx_root, rule["mx_path_amount"], rule["currency_attribute"], currency, amount_str, namespaces, overwrite=overwrite)
+                self.set_element_text(mx_root, rule["mx_path_date"], iso_date, namespaces, overwrite=overwrite)
                 
             elif rule_type == "account_name_address":
                 # Robust MT Name & Address parsing (e.g., /ACCOUNT\nNAME\nADDRESS LINES)
@@ -523,32 +682,56 @@ class MT2MXConverter:
                     name = lines[0]
                     address_lines = lines[1:]
                 
+                if validation:
+                    if "account_max_length" in validation and len(account) > validation["account_max_length"]:
+                        errors.append(f"Field :{tag}: ({rule.get('name')}) Account exceeds max length of {validation['account_max_length']}.")
+                    if "name_max_length" in validation and len(name) > validation["name_max_length"]:
+                        errors.append(f"Field :{tag}: ({rule.get('name')}) Name exceeds max length of {validation['name_max_length']}.")
+                    if "address_lines" in validation and len(address_lines) > validation["address_lines"]:
+                        errors.append(f"Field :{tag}: ({rule.get('name')}) Too many address lines. Max {validation['address_lines']}, found {len(address_lines)}.")
+                
                 if "mx_path_name" in rule and name:
                     self.set_element_text(mx_root, rule["mx_path_name"], name, namespaces)
                 
-                if "mx_path_address" in rule and address_lines:
+                if "mx_path_address" in rule:
                     parent_path = rule["mx_path_address"].rsplit('/', 1)[0]
-                    # CBPR+ Structured preference:
-                    # If we have lines, try to map L1 to StrtNm and L2 to TwnNm
-                    if len(address_lines) >= 1:
-                        self.set_element_text(mx_root, f"{parent_path}/StrtNm", address_lines[0], namespaces)
-                    if len(address_lines) >= 2:
-                        self.set_element_text(mx_root, f"{parent_path}/TwnNm", address_lines[1].split(' ')[0], namespaces) # Use first word as town name
                     
-                    # Also keep AdrLine for fallback (CBPR+ allows mixed during transition, but structured is preferred)
-                    full_address = " ".join(address_lines)
-                    self.set_element_text(mx_root, rule["mx_path_address"], full_address, namespaces)
-                    
-                    # Ensure Country Code (Mandatory in ISO 20022)
-                    ctry_path = f"{parent_path}/Ctry"
-                    if not self._get_element_text(mx_root, ctry_path, namespaces):
-                        # Detect from last line
-                        last_line = address_lines[-1].strip()
-                        potential_cc = last_line[-2:].upper() if len(last_line) >= 2 else ""
-                        if re.match(r"^[A-Z]{2}$", potential_cc):
-                            self.set_element_text(mx_root, ctry_path, potential_cc, namespaces)
-                        else:
-                            self.set_element_text(mx_root, ctry_path, "US", namespaces)
+                    if address_lines:
+                        # Ensure Town Name (Mandatory if AdrLine + Ctry are present in CBPR+)
+                        town_path = f"{parent_path}/TwnNm"
+                        if not self._get_element_text(mx_root, town_path, namespaces):
+                            if len(address_lines) >= 1:
+                                parts = address_lines[0].split(',')
+                                if len(parts) > 1:
+                                    self.set_element_text(mx_root, town_path, parts[-1].strip()[:35], namespaces)
+                                elif len(address_lines) >= 2:
+                                    self.set_element_text(mx_root, town_path, address_lines[1].strip()[:35], namespaces)
+                                else:
+                                    self.set_element_text(mx_root, town_path, "NOTPROVIDED", namespaces)
+                            else:
+                                self.set_element_text(mx_root, town_path, "NOTPROVIDED", namespaces)
+
+                        # Set the Address Line (Unstructured) - Join all lines to stay within max 2 allowed tags
+                        if rule.get("mx_path_address"):
+                            full_address = " ".join(address_lines)
+                            self.set_element_text(mx_root, rule["mx_path_address"], full_address[:140], namespaces)
+
+                        # Ensure Country Code (Mandatory in ISO 20022 and CBPR+)
+                        ctry_path = f"{parent_path}/Ctry"
+                        if not self._get_element_text(mx_root, ctry_path, namespaces):
+                            # Detect from last line
+                            last_line = address_lines[-1].strip()
+                            potential_cc = last_line[-2:].upper() if len(last_line) >= 2 else ""
+                            if re.match(r"^[A-Z]{2}$", potential_cc):
+                                self.set_element_text(mx_root, ctry_path, potential_cc, namespaces)
+                            else:
+                                self.set_element_text(mx_root, ctry_path, "GB", namespaces)
+                    else:
+                        # Fallback for empty address to satisfy mandatory L2 validation
+                        self.set_element_text(mx_root, f"{parent_path}/Ctry", "GB", namespaces)
+                        self.set_element_text(mx_root, f"{parent_path}/TwnNm", "NOTPROVIDED", namespaces)
+                        if rule.get("mx_path_address"):
+                            self.set_element_text(mx_root, rule["mx_path_address"], "NOTPROVIDED", namespaces)
 
                 if "mx_path_account" in rule and account:
                     self.set_element_text(mx_root, rule["mx_path_account"], account, namespaces)
@@ -574,6 +757,18 @@ class MT2MXConverter:
                     self.set_element_attr(mx_root, rule["mx_path"], rule["currency_attribute"] if "currency_attribute" in rule else "Ccy", currency, amount_str, namespaces)
                 except ValueError:
                     errors.append(f"Invalid amount format in field :{tag}:")
+
+            elif rule_type == "amount_no_currency":
+                # MT Format: CCC[amount] (e.g. USD1234,56 -> extracts only 1234.56)
+                if len(val) < 4:
+                    errors.append(f"Invalid amount format in field :{tag}:")
+                    continue
+                amount_str = val[3:].replace(",", ".")
+                try:
+                    float(amount_str)
+                    self.set_element_text(mx_root, rule["mx_path"], amount_str, namespaces)
+                except ValueError:
+                    errors.append(f"Invalid numerical amount in field :{tag}:")
 
             elif rule_type == "balance":
                 # MT Format: [D/C]YYMMDDCCCAmount
@@ -611,7 +806,161 @@ class MT2MXConverter:
                     errors.append(f"Balance processing failed for tag {tag}: {str(e)}")
 
             elif rule_type == "bic":
-                self.set_element_text(mx_root, rule["mx_path_bic"], val, namespaces)
+                target_path = rule.get("mx_path_bic") or rule.get("mx_path")
+                if target_path:
+                    # Clean up: extract only the BIC part if joined with account
+                    clean_val = str(val).replace('\n', ' ')
+                    bic_match = re.search(r"([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?)", clean_val.upper())
+                    if bic_match:
+                        val = bic_match.group(1)
+                    self.set_element_text(mx_root, target_path, val, namespaces)
+
+            elif rule_type == "statement_number":
+                # Split MT format 5n[/5n]
+                parts = str(val).split("/")
+                stmt_num = parts[0]
+                seq_num = parts[1] if len(parts) > 1 else None
+                
+                if "mx_path_id" in rule:
+                    self.set_element_text(mx_root, rule["mx_path_id"], stmt_num[:35], namespaces)
+                
+                # Valid LglSeqNb is decimal, so just integers are fine.
+                if "mx_path_lgl" in rule and stmt_num.isdigit():
+                    self.set_element_text(mx_root, rule["mx_path_lgl"], stmt_num, namespaces)
+                    
+                if seq_num and "mx_path_elctrnc" in rule and seq_num.isdigit():
+                    self.set_element_text(mx_root, rule["mx_path_elctrnc"], seq_num, namespaces)
+
+                # StmtPgntn is typically mandatory in camt.053 preceding ElctrncSeqNb
+                if "mx_path_pgntn_pgnb" in rule:
+                    self.set_element_text(mx_root, rule["mx_path_pgntn_pgnb"], "1", namespaces)
+                if "mx_path_pgntn_last" in rule:
+                    self.set_element_text(mx_root, rule["mx_path_pgntn_last"], "true", namespaces)
+
+            elif rule_type == "account_with_ccy":
+                # Extracts the account value and conditionally populates currency from balance fields
+                val_str = str(val).strip()
+                if val_str.startswith("/"):
+                    val_str = val_str[1:]
+                if "mx_path" in rule:
+                    self.set_element_text(mx_root, rule["mx_path"], val_str, namespaces)
+                
+                if "mx_path_currency" in rule:
+                    ccy = None
+                    for t in ["60F", "60M", "62F", "62M", "64", "65", "32A", "34F", "34G"]:
+                        if t in parsed_fields:
+                            b_val = str(parsed_fields[t]).strip()
+                            # 32A style (6n3a15d) or 34F style (3a[1!a]15d)
+                            if len(b_val) >= 9 and b_val[:6].isdigit() and b_val[6:9].isalpha():
+                                ccy = b_val[6:9]
+                                break
+                            elif len(b_val) >= 3 and b_val[:3].isalpha():
+                                ccy = b_val[:3]
+                                break
+                            # Balance style
+                            elif len(b_val) >= 10 and b_val[0].upper() in ["C", "D"] and b_val[7:10].isalpha():
+                                ccy = b_val[7:10]
+                                break
+                    if ccy:
+                        self.set_element_text(mx_root, rule["mx_path_currency"], ccy, namespaces)
+
+            elif rule_type == "account_bic":
+                # Handle hybrid tags like 50A/59A containing /Account\nBIC
+                lines = [line.strip() for line in str(val).split("\n") if line.strip()]
+                # If space-joined
+                if len(lines) == 1 and " " in lines[0]:
+                    lines = lines[0].split()
+                
+                account = ""
+                bic = ""
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith("/"):
+                        account = line[1:]
+                    else:
+                        bic_match = re.search(r"([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?)", line.upper())
+                        if bic_match:
+                            bic = bic_match.group(1)
+                
+                if "mx_path_account" in rule and account:
+                    self.set_element_text(mx_root, rule["mx_path_account"], account, namespaces)
+                if ("mx_path_bic" in rule or "mx_path" in rule) and bic:
+                    self.set_element_text(mx_root, rule.get("mx_path_bic") or rule.get("mx_path"), bic, namespaces)
+
+            elif rule_type == "statement_line":
+                parsed_61_list = self._parse_tag_61(val)
+                # Ensure it's a list for iteration
+                if not isinstance(parsed_61_list, list):
+                    parsed_61_list = [parsed_61_list]
+                
+                for parsed_61 in parsed_61_list:
+                    if not parsed_61: continue
+                    
+                    # Create a NEW Ntry node (don't merge)
+                    path_parts = rule["mx_path"].split("/")
+                    parent_path = "/".join(path_parts[:-1])
+                    terminal_tag = path_parts[-1]
+                    parent_node = self._get_or_create_node(mx_root, parent_path, namespaces)
+                    
+                    xmlns = namespaces.get("xmlns", "")
+                    tag_with_ns = f"{{{xmlns}}}{terminal_tag}" if xmlns else terminal_tag
+                    ntry_node = ET.SubElement(parent_node, tag_with_ns)
+                    
+                    # Set amount and indicator
+                    currency = "USD"
+                    for t in ["60F", "60M", "62F", "62M", "64", "65", "32A", "34F", "34G"]:
+                        if t in parsed_fields:
+                            b_val = str(parsed_fields[t]).strip()
+                            # 32A style (6n3a15d) or 34F style (3a[1!a]15d)
+                            if len(b_val) >= 9 and b_val[:6].isdigit() and b_val[6:9].isalpha():
+                                currency = b_val[6:9]
+                                break
+                            elif len(b_val) >= 3 and b_val[:3].isalpha():
+                                currency = b_val[:3]
+                                break
+                            # Balance style
+                            elif len(b_val) >= 10 and b_val[0].upper() in ["C", "D"] and b_val[7:10].isalpha():
+                                currency = b_val[7:10]
+                                break
+
+                    # Mandatory NtryRef before Amt (CBPR+ requires it)
+                    ref_val = parsed_61.get("reference")
+                    if not ref_val or str(ref_val).upper() == "NONREF":
+                        ref_val = f"REF-{str(uuid.uuid4())[:8].upper()}"
+                    self.set_element_text(ntry_node, "NtryRef", ref_val, namespaces)
+
+                    self.set_element_attr(ntry_node, "Amt", "Ccy", currency, parsed_61["amount"], namespaces)
+                    indicator = "CRDT" if "C" in parsed_61["dc_mark"].upper() else "DBIT"
+                    self.set_element_text(ntry_node, "CdtDbtInd", indicator, namespaces)
+                    
+                    # Set Status (Mandatory)
+                    self.set_element_text(ntry_node, "Sts/Cd", "BOOK", namespaces)
+                    
+                    # Set Bank Transaction Code (Mandatory in many CBPR+ profiles for camt.053)
+                    # Use a default if not found in id_code
+                    domain_node = self._get_or_create_node(ntry_node, "BkTxCd/Domn", namespaces)
+                    self.set_element_text(domain_node, "Cd", "PMNT", namespaces)
+                    self.set_element_text(domain_node, "Fmly/Cd", "RCDT", namespaces)
+                    self.set_element_text(domain_node, "Fmly/SubFmlyCd", "OTHR", namespaces)
+
+                    # Set dates
+                    try:
+                        v_date = datetime.strptime(parsed_61["value_date"], "%y%m%d").strftime("%Y-%m-%d")
+                        self.set_element_text(ntry_node, "ValDt/Dt", v_date, namespaces)
+                        self.set_element_text(ntry_node, "BookgDt/Dt", v_date, namespaces)
+                    except: pass
+                    
+                    # Set references if path provided
+                    if "reference" in parsed_61 and parsed_61["reference"]:
+                        # Deep path for reference
+                        ref_path = "NtryDtls/TxDtls/Refs/InstrId"
+                        # Mandatory elements inside TxDtls if TxDtls exists (CBPR+)
+                        self.set_element_attr(ntry_node, "NtryDtls/TxDtls/Amt", "Ccy", currency, parsed_61["amount"], namespaces)
+                        self.set_element_text(ntry_node, "NtryDtls/TxDtls/CdtDbtInd", indicator, namespaces)
+                        self.set_element_text(ntry_node, ref_path, parsed_61["reference"], namespaces)
+                else:
+                    # Basic fallback for failed parse
+                    self.set_element_text(mx_root, f"{rule['mx_path']}/AddtlNtryInf", val, namespaces)
 
         if errors:
             v_logs.append(f"Data mapping FAILED with {len(errors)} errors.")
@@ -623,7 +972,14 @@ class MT2MXConverter:
             
         v_logs.append("Data mapping and type validation PASSED.")
             
-        # Create Envelope and AppHdr
+        # 6. Apply V2 Mandatory XML Healing if defined in swift_rules
+        mt_key = f"MT{mt_type}"
+        v2_rules = self.swift_rules.get("mappings", {}).get(mt_key, {}).get("mx_mandatory_xml_fields", {})
+        if v2_rules:
+            v_logs.append(f"Applying V2 Mandatory Healing for {mt_key}")
+            self._apply_v2_mandatory_healing(mx_root, v2_rules, parsed_fields, namespaces)
+
+        # 7. Create Envelope and AppHdr
         # We'll build the XML with explicitly defined default namespaces for subtrees
         # to ensure L2 validation passes even without prefixes.
         
@@ -631,11 +987,22 @@ class MT2MXConverter:
         envelope = ET.Element("{urn:swift:xsd:envelope}BusMsgEnvlp")
         
         # 2. Build AppHdr with its own namespace
-        head_ns = "urn:iso:std:iso:20022:tech:xsd:head.001.001.01"  # Adjusted to v01 as per config.json
+        head_ns = "urn:iso:std:iso:20022:tech:xsd:head.001.001.02"
         app_hdr = ET.SubElement(envelope, f"{{{head_ns}}}AppHdr")
         
-        sender_bic = parsed_fields.get("_senderBic", "UNKNOWN")
-        receiver_bic = parsed_fields.get("_receiverBic", "UNKNOWN")
+        # BAH BICs must match Instructing/Instructed agents per CBPR+
+        # Use a more flexible search for these common agent paths (both pacs.008 and pacs.009)
+        sender_bic = self._get_element_text(mx_root, "FIToFICstmrCdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                     self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                     self._get_element_text(mx_root, "FICdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                     self._get_element_text(mx_root, "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                     parsed_fields.get("_senderBic", "UNKNOWN")
+        
+        receiver_bic = self._get_element_text(mx_root, "FIToFICstmrCdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                       self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                       self._get_element_text(mx_root, "FICdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                       self._get_element_text(mx_root, "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                       parsed_fields.get("_receiverBic", "UNKNOWN")
         
         # Helper to create sub-elements with head namespace
         def head_sub(parent, tag, text=None):
@@ -656,474 +1023,29 @@ class MT2MXConverter:
         head_sub(app_hdr, "BizMsgIdr", parsed_fields.get("20", "AUTO-B01"))
         head_sub(app_hdr, "MsgDefIdr", mapping["target_mx"])
         head_sub(app_hdr, "BizSvc", mapping.get("biz_svc", "swift.cbprplus.02"))
-        head_sub(app_hdr, "CreDt", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"))
+        head_sub(app_hdr, "CreDt", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00"))
         
-        # 3. Handle Structural Mandatories (Agents, Status, etc.)
-        # Categorical Auto-Fill based on message type and presence in headers
-        is_camt = "camt" in mapping["target_mx"]
-        is_pacs = "pacs" in mapping["target_mx"]
+        # 4. Mandatory Field Healing (V2) - Already applied above in Step 6
         
-        # We perform a final pass to ensure schema-critical elements are present
-        for rule in mapping.get("mappings", []):
-            target_path = rule.get("mx_path") or rule.get("mx_path_bic", "")
-            if not target_path: continue
-            
-            # 3a. Agents Category Auto-Fill
-            # Assigner/InstgAgt/Cretr/DbtrAgt -> usually Sender
-            # Assignee/InstdAgt/CdtrAgt -> usually Receiver
-            is_sender_side = any(k in target_path for k in ["Assgnr", "InstgAgt", "Cretr", "DbtrAgt"])
-            is_receiver_side = any(k in target_path for k in ["Assgne", "InstdAgt", "CdtrAgt"])
-            
-            if (is_sender_side or is_receiver_side) and not self._get_element_text(mx_root, target_path, namespaces):
-                fill_bic = sender_bic if is_sender_side else receiver_bic
-                if fill_bic and fill_bic != "UNKNOWN":
-                    # Force creation of Agent structure even for auto-fill
-                    self.set_element_text(mx_root, target_path, fill_bic, namespaces)
-            
-            # 3b. Cancellation/Investigation Specifics (camt.056 / camt.029)
-            if any(k in target_path for k in ["CxlDtls", "CxlDetails", "Undrlyg"]):
-                # Fix typos in mapping paths on the fly
-                fixed_path = target_path.replace("CxlDetails", "CxlDtls")
-                if not self._get_element_text(mx_root, fixed_path, namespaces):
-                    # For OrgnlInstrId or Identification, we definitely need a value
-                    if any(k in fixed_path for k in ["OrgnlInstrId", "Id", "OrgnlMsgId"]):
-                        val = parsed_fields.get("21") or parsed_fields.get("20") or f"REF-{datetime.now().strftime('%M%S')}"
-                        self.set_element_text(mx_root, fixed_path, val, namespaces)
-
-            # 3c. Payment/Status Targets (pacs.002)
-            if "/TxSts" in target_path and not self._get_element_text(mx_root, target_path, namespaces):
-                self.set_element_text(mx_root, target_path, "ACTC", namespaces)
-            elif "/StsRsn/Cd" in target_path and not self._get_element_text(mx_root, target_path, namespaces):
-                self.set_element_text(mx_root, target_path, "G000", namespaces)
-
-        # 4. Global Structural Sequence Correction & Mandatory Injection
-        doc_ns = namespaces.get("xmlns", "")
-        target_mx = mapping.get("target_mx", "")
-
-        # 4.0. Guarantee Root skeletal structure for specific message types
-        if "camt.029" in target_mx:
-            self._get_or_create_node(mx_root, "RsltnOfInvstgtn/Assgnmt", namespaces)
-            self._get_or_create_node(mx_root, "RsltnOfInvstgtn/Sts", namespaces)
-        elif "camt.056" in target_mx:
-            self._get_or_create_node(mx_root, "FIToFIPmtCxlReq/Assgnmt", namespaces)
-            self._get_or_create_node(mx_root, "FIToFIPmtCxlReq/Case", namespaces)
-        elif "pacs.002" in target_mx:
-            self._get_or_create_node(mx_root, "FIToFIPmtStsRpt/GrpHdr", namespaces)
-            self._get_or_create_node(mx_root, "FIToFIPmtStsRpt/TxInfAndSts", namespaces)
-        elif "camt.057" in target_mx:
-            self._get_or_create_node(mx_root, "NtfctnToRcv/Ntfctn/Itm", namespaces)
-        elif "camt.054" in target_mx:
-            self._get_or_create_node(mx_root, "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry", namespaces)
-
-        # 4a. camt handling (Ntry / Itm re-ordering and BkTxCd injection)
-        if "camt." in target_mx:
-            # camt.052/053/054 Entry Re-ordering and mandatory healing
-            for ntry in mx_root.findall(".//{*}Ntry"):
-                # 1. Mandatory Sts/Cd Healing
-                sts = ntry.find("{*}Sts")
-                if sts is None:
-                    sts = ET.SubElement(ntry, f"{{{doc_ns}}}Sts")
-                if sts.find("{*}Cd") is None:
-                    ET.SubElement(sts, f"{{{doc_ns}}}Cd").text = "BOOK"
-
-                # 2. Mandatory BookgDt Healing
-                if ntry.find("{*}BookgDt") is None:
-                    bookg_dt = ET.Element(f"{{{doc_ns}}}BookgDt")
-                    ET.SubElement(bookg_dt, f"{{{doc_ns}}}Dt").text = parsed_fields.get("32A", "")[:6] if "32A" in str(parsed_fields) else datetime.now().strftime("%Y-%m-%d")
-                    # Convert YYMMDD to YYYY-MM-DD if needed
-                    if "32A" in str(parsed_fields) and len(str(parsed_fields.get("32A", ""))) >= 6:
-                        yymmdd = str(parsed_fields.get("32A", ""))[:6]
-                        try:
-                            val_dt = datetime.strptime(yymmdd, "%y%m%d").strftime("%Y-%m-%d")
-                            bookg_dt.find("{*}Dt").text = val_dt
-                        except: pass
-                    ntry.append(bookg_dt)
-
-                # 3. Mandatory BkTxCd (Bank Transaction Code) Healing - Deep Structure
-                ntry_order = ["Id", "Amt", "CdtDbtInd", "Sts", "BookgDt", "ValDt", "BkTxCd", "AmtDtls", "NtryDtls", "AddtlNtryInf"]
-                bk_tx_cd = ntry.find("{*}BkTxCd")
-                if bk_tx_cd is None:
-                    bk_tx_cd = ET.Element(f"{{{doc_ns}}}BkTxCd")
-                    ntry.append(bk_tx_cd)
-                
-                domn = bk_tx_cd.find("{*}Domn")
-                if domn is None:
-                    domn = ET.SubElement(bk_tx_cd, f"{{{doc_ns}}}Domn")
-                if domn.find("{*}Cd") is None:
-                    ET.SubElement(domn, f"{{{doc_ns}}}Cd").text = "PMNT"
-                
-                fmly = domn.find("{*}Fmly")
-                if fmly is None:
-                    fmly = ET.SubElement(domn, f"{{{doc_ns}}}Fmly")
-                if fmly.find("{*}Cd") is None:
-                    ET.SubElement(fmly, f"{{{doc_ns}}}Cd").text = "ICDT"
-                if fmly.find("{*}SubFmlyCd") is None:
-                    ET.SubElement(fmly, f"{{{doc_ns}}}SubFmlyCd").text = "DMCT"
-
-                self._sort_children_by_list(ntry, ntry_order)
-            
-            # Statement/Report/Notification level re-ordering and mandatory healing
-            for tag in ["Stmt", "Rpt", "Ntfctn"]:
-                for el in mx_root.findall(f".//{{*}}{tag}"):
-                    # Mandatory Id Heal
-                    if el.find("{*}Id") is None or not (el.find("{*}Id").text or "").strip():
-                        id_node = el.find("{*}Id")
-                        if id_node is None: id_node = ET.SubElement(el, f"{{{doc_ns}}}Id")
-                        id_node.text = parsed_fields.get("20") or f"STMT-{datetime.now().strftime('%M%S')}"
-                    
-                    # Mandatory Legal Sequence Number Heal (ONLY for Stmt and Rpt)
-                    if tag in ["Stmt", "Rpt"]:
-                        seq_node = el.find("{*}LglSeqNb")
-                        if seq_node is None or not (seq_node.text or "").strip():
-                            if seq_node is None:
-                                seq_node = ET.SubElement(el, f"{{{doc_ns}}}LglSeqNb")
-                            seq_val = ""
-                            for tag_alt in ["28C", "28"]:
-                                if tag_alt in parsed_fields and str(parsed_fields[tag_alt]).strip():
-                                    seq_val = str(parsed_fields[tag_alt]).split('/')[0].strip()
-                                    break
-                            seq_node.text = seq_val if seq_val else "00001"
-
-                    # Mandatory Account Heal
-                    if el.find("{*}Acct") is None:
-                        acct = ET.SubElement(el, f"{{{doc_ns}}}Acct")
-                        id_other = self._get_or_create_node(acct, "Id/Othr", namespaces)
-                        ET.SubElement(id_other, f"{{{doc_ns}}}Id").text = parsed_fields.get("25", "ACCOUNT-UNKNOWN")
-
-                    # Apply correct order per tag type
-                    if tag == "Ntfctn":
-                        ntf_order = ["Id", "CreDtTm", "Acct", "RltdAcct", "Intrst", "TxsSummry", "Ntry", "Itm", "AddtlNtfctnInf"]
-                        self._sort_children_by_list(el, ntf_order)
-                    else:
-                        stmt_order = ["Id", "LglSeqNb", "CreDtTm", "FrToDt", "Acct", "Bal", "TxsSummry", "Ntry"]
-                        self._sort_children_by_list(el, stmt_order)
-            
-            # camt.057 Notification Item Re-ordering and mandatory healing
-            for itm in mx_root.findall(".//{*}Itm"):
-                # Mandatory Id Heal
-                if itm.find("{*}Id") is None or not (itm.find("{*}Id").text or "").strip():
-                    id_node = itm.find("{*}Id")
-                    if id_node is None: id_node = ET.SubElement(itm, f"{{{doc_ns}}}Id")
-                    id_node.text = parsed_fields.get("20") or f"ITM-{datetime.now().strftime('%M%S')}"
-
-                itm_order = ["Id", "EndToEndId", "UETR", "Amt", "XpctdValDt", "Dbtr", "DbtrAcct"]
-                self._sort_children_by_list(itm, itm_order)
-
-            # camt.056 Cancellation Underlying Tx Re-ordering
-            for tx_inf in mx_root.findall(".//{*}Undrlyg/{*}TxInf"):
-                tx_inf_order = ["CxlReqId", "OrgnlGrpInf", "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "CxlRsnInf"]
-                self._sort_children_by_list(tx_inf, tx_inf_order)
-
-            # camt.029 Resolution Cancellation Details healing
-            for tx_sts in mx_root.findall(".//{*}CxlDtls/{*}TxInfAndSts"):
-                # Mandatory CxlStsId Heal
-                if tx_sts.find("{*}CxlStsId") is None or not (tx_sts.find("{*}CxlStsId").text or "").strip():
-                    id_node = tx_sts.find("{*}CxlStsId")
-                    if id_node is None: id_node = ET.SubElement(tx_sts, f"{{{doc_ns}}}CxlStsId")
-                    id_node.text = parsed_fields.get("20", f"CXL-{datetime.now().strftime('%M%S')}")
-                
-                # Mandatory OrgnlMsgId fallback
-                if tx_sts.find("{*}OrgnlMsgId") is None or not (tx_sts.find("{*}OrgnlMsgId").text or "").strip():
-                    id_node = tx_sts.find("{*}OrgnlMsgId")
-                    if id_node is None: id_node = ET.SubElement(tx_sts, f"{{{doc_ns}}}OrgnlMsgId")
-                    id_node.text = str(parsed_fields.get("21") or parsed_fields.get("20") or f"ORIG-{datetime.now().strftime('%M%S')}")
-                
-                # Mandatory OrgnlInstrId Heal
-                if tx_sts.find("{*}OrgnlInstrId") is None or not (tx_sts.find("{*}OrgnlInstrId").text or "").strip():
-                    id_node = tx_sts.find("{*}OrgnlInstrId")
-                    if id_node is None: id_node = ET.SubElement(tx_sts, f"{{{doc_ns}}}OrgnlInstrId")
-                    id_node.text = str(parsed_fields.get("21") or parsed_fields.get("20") or f"INST-{datetime.now().strftime('%M%S')}")
-
-                # Mandatory OrgnlEndToEndId Heal
-                if tx_sts.find("{*}OrgnlEndToEndId") is None:
-                    ET.SubElement(tx_sts, f"{{{doc_ns}}}OrgnlEndToEndId").text = str(parsed_fields.get("21") or parsed_fields.get("20") or "NOTPROVIDED")
-
-                # Mandatory OrgnlTxId Heal
-                if tx_sts.find("{*}OrgnlTxId") is None:
-                    ET.SubElement(tx_sts, f"{{{doc_ns}}}OrgnlTxId").text = str(parsed_fields.get("21") or parsed_fields.get("20") or "NOTPROVIDED")
-
-                # Ensure Cancellation Reason Information exists (CBPR+ requires CxlStsRsnInf)
-                rsn_inf = tx_sts.find("{*}CxlStsRsnInf")
-                if rsn_inf is None:
-                    rsn_inf = ET.SubElement(tx_sts, f"{{{doc_ns}}}CxlStsRsnInf")
-                if rsn_inf.find("{*}AddtlInf") is None:
-                    ET.SubElement(rsn_inf, f"{{{doc_ns}}}AddtlInf").text = parsed_fields.get("79", "REQUEST REJECTED")
-
-                tx_sts_order = ["CxlStsId", "OrgnlGrpInf", "OrgnlMsgId", "OrgnlMsgNmId", "OrgnlCreDtTm", "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "CxlStsRsnInf"]
-                self._sort_children_by_list(tx_sts, tx_sts_order)
-
-            # camt.056 / camt.029 Case/Assignment re-ordering and injection
-            for assgn in mx_root.findall(".//{*}Assgnmt"):
-                # Mandatory Id Heal
-                if assgn.find("{*}Id") is None or not (assgn.find("{*}Id").text or "").strip():
-                    id_node = assgn.find("{*}Id")
-                    if id_node is None: id_node = ET.SubElement(assgn, f"{{{doc_ns}}}Id")
-                    id_node.text = parsed_fields.get("20", f"ASSG-{datetime.now().strftime('%M%S')}")
-
-                # Mandatory Assgnr injection (Heal if missing or empty)
-                assgnr = assgn.find("{*}Assgnr")
-                if assgnr is None or len(list(assgnr)) == 0:
-                    if assgnr is not None: assgn.remove(assgnr)
-                    assgnr = ET.Element(f"{{{doc_ns}}}Assgnr")
-                    agt = ET.SubElement(assgnr, f"{{{doc_ns}}}Agt")
-                    fii = ET.SubElement(agt, f"{{{doc_ns}}}FinInstnId")
-                    ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_senderBic", "BANKUS33XXX")
-                    assgn.append(assgnr)
-                
-                # Mandatory Assgne injection (Heal if missing or empty)
-                assgne = assgn.find("{*}Assgne")
-                if assgne is None or len(list(assgne)) == 0:
-                    if assgne is not None: assgn.remove(assgne)
-                    assgne = ET.Element(f"{{{doc_ns}}}Assgne")
-                    agt = ET.SubElement(assgne, f"{{{doc_ns}}}Agt")
-                    fii = ET.SubElement(agt, f"{{{doc_ns}}}FinInstnId")
-                    ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_receiverBic", "BANKGB2LXXX")
-                    assgn.append(assgne)
-
-                # Mandatory CreDtTm injection
-                if assgn.find("{*}CreDtTm") is None:
-                    ET.SubElement(assgn, f"{{{doc_ns}}}CreDtTm").text = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
-
-                self._sort_children_by_list(assgn, ["Id", "Assgnr", "Assgne", "CreDtTm"])
-
-            # Status re-ordering and injection (camt.029 / camt.056 - only if choice selected)
-            for sts in mx_root.findall(".//{*}Sts"):
-                if sts.find("{*}Conf") is None:
-                    ET.SubElement(sts, f"{{{doc_ns}}}Conf").text = "RJCT"
-                
-                # Mandatory Status Reason Code (NARR is safe fallback for narrative info)
-                rsn = sts.find("{*}Rsn")
-                if rsn is not None:
-                    if rsn.find("{*}Cd") is None:
-                        ET.SubElement(rsn, f"{{{doc_ns}}}Cd").text = "NARR"
-                
-                self._sort_children_by_list(sts, ["Conf", "Rsn", "OrgnlGrpInfAndSts"])
-
-            # Case re-ordering and injection
-            for cse in mx_root.findall(".//{*}Case"):
-                if cse.find("{*}Id") is None:
-                    ET.SubElement(cse, f"{{{doc_ns}}}Id").text = parsed_fields.get("21") or parsed_fields.get("20") or f"CASE-{datetime.now().strftime('%M%S')}"
-                if cse.find("{*}Cretr") is None:
-                    cretr = ET.SubElement(cse, f"{{{doc_ns}}}Cretr")
-                    agt = ET.SubElement(cretr, f"{{{doc_ns}}}Agt")
-                    fii = ET.SubElement(agt, f"{{{doc_ns}}}FinInstnId")
-                    ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_senderBic", "BANKUS33XXX")
-                self._sort_children_by_list(cse, ["Id", "Cretr", "ReopnInd"])
-
-        # 4b. pacs handling (PmtId and CdtTrfTxInf re-ordering)
-        if "pacs." in mapping.get("target_mx", ""):
-            # pacs.008/009 Transaction Re-ordering
-            for tfi in mx_root.findall(".//{*}CdtTrfTxInf"):
-                # Mandatory PmtId fixes
-                pmt_id = tfi.find("{*}PmtId")
-                if pmt_id is not None:
-                    # EndToEndId fallback
-                    if pmt_id.find("{*}EndToEndId") is None:
-                        val = parsed_fields.get("21") or parsed_fields.get("20") or f"E2E-{datetime.now().strftime('%M%S')}"
-                        ET.SubElement(pmt_id, f"{{{doc_ns}}}EndToEndId").text = str(val)
-                    # TxId (Mandatory in pacs.009)
-                    if "pacs.009" in mapping["target_mx"] and pmt_id.find("{*}TxId") is None:
-                        val = parsed_fields.get("20") or f"TX-{datetime.now().strftime('%M%S')}"
-                        ET.SubElement(pmt_id, f"{{{doc_ns}}}TxId").text = str(val)
-                    # UETR
-                    if "_uetr" in parsed_fields and pmt_id.find("{*}UETR") is None:
-                        ET.SubElement(pmt_id, f"{{{doc_ns}}}UETR").text = parsed_fields["_uetr"]
-                    self._sort_children_by_list(pmt_id, ["InstrId", "EndToEndId", "TxId", "UETR"])
-
-                # pacs.009 specific Party Structure Correction
-                if "pacs.009" in mapping["target_mx"]:
-                    for party_tag in ["Dbtr", "Cdtr"]:
-                        party = tfi.find(f"{{*}}{party_tag}")
-                        if party is not None:
-                            fii = party.find("{*}FinInstnId")
-                            if fii is not None:
-                                bic_node = fii.find("{*}BICFI")
-                                bic_val = bic_node.text if bic_node is not None else ""
-                                # Ensure Agent carries the BIC if missing
-                                agt_tag = f"{party_tag}Agt"
-                                agt = tfi.find(f"{{*}}{agt_tag}")
-                                if agt is None:
-                                    agt = ET.Element(f"{{{doc_ns}}}{agt_tag}")
-                                    tfi.append(agt)
-                                fii_agt = self._get_or_create_node(agt, "FinInstnId", namespaces)
-                                if fii_agt.find("{*}BICFI") is None:
-                                    ET.SubElement(fii_agt, f"{{{doc_ns}}}BICFI").text = bic_val or "UNKNOWN"
-                                # Transform Party to use Nm (Name) as per CBPR+ requirements
-                                party.remove(fii)
-                                ET.SubElement(party, f"{{{doc_ns}}}Nm").text = f"BANK {bic_val}" if bic_val else "UNKNOWN BANK"
-                    
-                    # Mandatory PmtTpInf injection for pacs.009
-                    if tfi.find("{*}PmtTpInf") is None:
-                        ptinf = ET.Element(f"{{{doc_ns}}}PmtTpInf")
-                        svclvl = ET.SubElement(ptinf, f"{{{doc_ns}}}SvcLvl")
-                        ET.SubElement(svclvl, f"{{{doc_ns}}}Cd").text = "TRF"
-                        tfi.append(ptinf)
-                    
-                    # Mandatory ChrgBr injection for pacs.009
-                    if tfi.find("{*}ChrgBr") is None:
-                        ET.SubElement(tfi, f"{{{doc_ns}}}ChrgBr").text = "SLEV"
-
-                # Mandatory ChrgBr injection for pacs.008
-                if "pacs.008" in mapping["target_mx"] and tfi.find("{*}ChrgBr") is None:
-                    ET.SubElement(tfi, f"{{{doc_ns}}}ChrgBr").text = "SHAR"
-
-                # Universal CdtTrfTxInf sequence
-                tfi_order = ["PmtId", "PmtTpInf", "IntrBkSttlmAmt", "IntrBkSttlmDt", "InstdAmt", "ChrgBr", "Dbtr", "DbtrAcct", "DbtrAgt", "InstgAgt", "InstdAgt", "CdtrAgt", "Cdtr", "CdtrAcct", "RmtInf", "UndrlygCstmrCdtTrf"]
-                self._sort_children_by_list(tfi, tfi_order)
-
-            # pacs.002 Status Report Re-ordering and mandatory healing
-            for tx_sts in mx_root.findall(".//{*}TxInfAndSts"):
-                # Mandatory OrgnlGrpInf (If missing, use sender header info)
-                if tx_sts.find("{*}OrgnlMsgId") is None:
-                    ET.SubElement(tx_sts, f"{{{doc_ns}}}OrgnlMsgId").text = parsed_fields.get("21") or parsed_fields.get("20") or f"ORGN-{datetime.now().strftime('%M%S')}"
-                
-                # Mandatory TxSts injection if missing
-                if tx_sts.find("{*}TxSts") is None:
-                    ET.SubElement(tx_sts, f"{{{doc_ns}}}TxSts").text = "ACTC"
-
-                tx_sts_order = ["StsId", "OrgnlGrpInf", "OrgnlMsgId", "OrgnlMsgNmId", "OrgnlCreDtTm", "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "TxSts", "StsRsnInf", "AccptncDtTm"]
-                self._sort_children_by_list(tx_sts, tx_sts_order)
-
-            # Universal Header sequence
-            for hdr in mx_root.findall(".//{*}GrpHdr"):
-                # Inject mandatory Agents if missing (Common L2 failure point)
-                if hdr.find("{*}InstgAgt") is None:
-                    instg = ET.SubElement(hdr, f"{{{doc_ns}}}InstgAgt")
-                    fii = ET.SubElement(instg, f"{{{doc_ns}}}FinInstnId")
-                    ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_senderBic", "BANKUS33XXX")
-                if hdr.find("{*}InstdAgt") is None:
-                    instd = ET.SubElement(hdr, f"{{{doc_ns}}}InstdAgt")
-                    fii = ET.SubElement(instd, f"{{{doc_ns}}}FinInstnId")
-                    ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_receiverBic", "BANKGB2LXXX")
-                
-                # Inject mandatory Settlement Information for pacs.008/009
-                if "pacs.008" in mapping["target_mx"] or "pacs.009" in mapping["target_mx"]:
-                    sttlm = hdr.find("{*}SttlmInf")
-                    if sttlm is None:
-                        sttlm = ET.SubElement(hdr, f"{{{doc_ns}}}SttlmInf")
-                    
-                    if sttlm.find("{*}SttlmMtd") is None:
-                        ET.SubElement(sttlm, f"{{{doc_ns}}}SttlmMtd").text = "INDA"
-                    
-                    # CBPR+ often expects ClrSys if validating against strict schemas
-                    if sttlm.find("{*}ClrSys") is None:
-                        cs = ET.SubElement(sttlm, f"{{{doc_ns}}}ClrSys")
-                        ET.SubElement(cs, f"{{{doc_ns}}}Cd").text = "TGT"
-                    
-                    if sttlm.find("{*}InstgRmbrsmntAgt") is None:
-                        ra = ET.SubElement(sttlm, f"{{{doc_ns}}}InstgRmbrsmntAgt")
-                        fii = ET.SubElement(ra, f"{{{doc_ns}}}FinInstnId")
-                        ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_senderBic", "BANKUS33XXX")
-                    
-                    if sttlm.find("{*}InstgRmbrsmntAgtAcct") is None:
-                        raa = ET.SubElement(sttlm, f"{{{doc_ns}}}InstgRmbrsmntAgtAcct")
-                        aid = ET.SubElement(raa, f"{{{doc_ns}}}Id")
-                        ET.SubElement(aid, f"{{{doc_ns}}}IBAN").text = "US00" + parsed_fields.get("_senderBic", "BANKUS33XXX")[:10]
-                    
-                    if sttlm.find("{*}InstdRmbrsmntAgt") is None:
-                        ra = ET.SubElement(sttlm, f"{{{doc_ns}}}InstdRmbrsmntAgt")
-                        fii = ET.SubElement(ra, f"{{{doc_ns}}}FinInstnId")
-                        ET.SubElement(fii, f"{{{doc_ns}}}BICFI").text = parsed_fields.get("_receiverBic", "BANKGB2LXXX")
-                    
-                    if sttlm.find("{*}InstdRmbrsmntAgtAcct") is None:
-                        raa = ET.SubElement(sttlm, f"{{{doc_ns}}}InstdRmbrsmntAgtAcct")
-                        aid = ET.SubElement(raa, f"{{{doc_ns}}}Id")
-                        ET.SubElement(aid, f"{{{doc_ns}}}IBAN").text = "GB00" + parsed_fields.get("_receiverBic", "BANKGB2LXXX")[:10]
-
-                    # Mandatory SttlmDt for CBPR+ compliance
-                    if sttlm.find("{*}SttlmDt") is None:
-                        val_date = ""
-                        tags_to_check = ["32A", "30"]
-                        for t in tags_to_check:
-                            if t in parsed_fields:
-                                v = str(parsed_fields[t]).strip()
-                                if len(v) >= 6 and v[:6].isdigit():
-                                    val_date = v[:6]
-                                    break
-                        
-                        if val_date:
-                            try:
-                                iso_dt = datetime.strptime(val_date, "%y%m%d").strftime("%Y-%m-%d")
-                                ET.SubElement(sttlm, f"{{{doc_ns}}}SttlmDt").text = iso_dt
-                            except:
-                                ET.SubElement(sttlm, f"{{{doc_ns}}}SttlmDt").text = datetime.now().strftime("%Y-%m-%d")
-                        else:
-                            ET.SubElement(sttlm, f"{{{doc_ns}}}SttlmDt").text = datetime.now().strftime("%Y-%m-%d")
-
-                    self._sort_children_by_list(sttlm, ["SttlmMtd", "SttlmAcct", "ClrSys", "InstgRmbrsmntAgt", "InstgRmbrsmntAgtAcct", "InstdRmbrsmntAgt", "InstdRmbrsmntAgtAcct", "SttlmDt", "InstrPrty"])
-                
-                hdr_order = ["MsgId", "CreDtTm", "NbOfTxs", "SttlmInf", "InstgAgt", "InstdAgt"]
-                self._sort_children_by_list(hdr, hdr_order)
-
-        # 4c. Universal Address Re-ordering (Ensures <Ctry> before <AdrLine>)
-        for adr in mx_root.findall(".//{*}PstlAdr"):
-            adr_order = ["AdrTp", "Dept", "SubDept", "StrtNm", "BldgNb", "BldgNm", "Flr", "PstCd", "TwnNm", "TwnLctnNm", "DstrctNm", "CtrySubDvsn", "Ctry", "AdrLine"]
-            self._sort_children_by_list(adr, adr_order)
-
-        # 4d. Universal Party/Agent Identification Re-ordering
-        # Parties: Dbtr, Cdtr, UltmtDbtr, UltmtCdtr, etc.
-        party_order = ["Nm", "PstlAdr", "Id", "CtctDtls"]
-        # Agents/FIs: FinInstnId, BICFI, ClrSysMmbId, etc.
-        agent_order = ["FinInstnId", "BrnchId"]
-        fii_order = ["BICFI", "ClrSysMmbId", "LEI", "Nm", "PstlAdr", "Othr"]
-        acct_order = ["Id", "Tp", "Ccy", "Nm", "Ownr", "Svcr"]
-
-        party_tags = ["Dbtr", "Cdtr", "UltmtDbtr", "UltmtCdtr", "Cretr", "Assgnr", "Assgne", "Applt", "Ownr"]
-        for tag in party_tags:
-            for party in mx_root.findall(f".//{{*}}{tag}"):
-                self._sort_children_by_list(party, party_order)
-        
-        agent_tags = ["DbtrAgt", "CdtrAgt", "InstgAgt", "InstdAgt", "IntrmyAgt1", "AcctSvcr", "Svcr", "Agt"]
-        for tag in agent_tags:
-            for agent in mx_root.findall(f".//{{*}}{tag}"):
-                self._sort_children_by_list(agent, agent_order)
-
-        for fii in mx_root.findall(".//{*}FinInstnId"):
-            self._sort_children_by_list(fii, fii_order)
-            
-        for acct in mx_root.findall(".//{*}Acct"):
-            self._sort_children_by_list(acct, acct_order)
-
-        # 4e. Transaction Level Re-ordering (Crucial for pacs.008/009)
-        for tx in mx_root.findall(".//{*}CdtTrfTxInf"):
-            tx_order = [
-                "PmtId", "PmtTpInf", "IntrBkSttlmAmt", "IntrBkSttlmDt", "SttlmPrty", 
-                "SttlmTm", "SttlmInstn", "SttlmInf", "InstgAgt", "InstdAgt", 
-                "IntrmyAgt1", "IntrmyAgt1Acct", "IntrmyAgt2", "IntrmyAgt2Acct",
-                "IntrmyAgt3", "IntrmyAgt3Acct", "UltmtDbtr", "Dbtr", "DbtrAcct", 
-                "DbtrAgt", "DbtrAgtAcct", "PrvsInstgAgt1", "PrvsInstgAgt1Acct",
-                "PrvsInstgAgt2", "PrvsInstgAgt2Acct", "PrvsInstgAgt3", "PrvsInstgAgt3Acct",
-                "CdtrAgt", "CdtrAgtAcct", "Cdtr", "CdtrAcct", "UltmtCdtr", 
-                "InstrForCdtrAgt", "InstrForNextAgt", "Purp", "RgltryRptg", 
-                "Tax", "RltdRmtInf", "RmtInf", "SplmtryData"
-            ]
-            self._sort_children_by_list(tx, tx_order)
-            
-            # Ensure IntrBkSttlmDt exists if IntrBkSttlmAmt exists (Common L2 requirement)
-            if tx.find("{*}IntrBkSttlmAmt") is not None and tx.find("{*}IntrBkSttlmDt") is None:
-                # Try to use current date or 32A date
-                val_date = datetime.now().strftime("%Y-%m-%d")
-                if "32A" in parsed_fields:
-                    v = str(parsed_fields["32A"]).strip()
-                    if len(v) >= 6 and v[:6].isdigit():
-                        try: val_date = datetime.strptime(v[:6], "%y%m%d").strftime("%Y-%m-%d")
-                        except: pass
-                ET.SubElement(tx, f"{{{doc_ns}}}IntrBkSttlmDt").text = val_date
-                # Re-sort after adding
-                self._sort_children_by_list(tx, tx_order)
-
-        for pmt_id in mx_root.findall(".//{*}PmtId"):
-            self._sort_children_by_list(pmt_id, ["InstrId", "EndToEndId", "TxId", "UETR", "ClrSysRef"])
-            
-        for pmt_tp in mx_root.findall(".//{*}PmtTpInf"):
-            self._sort_children_by_list(pmt_tp, ["InstrPrty", "SvcLvl", "LclInstrm", "CtgyPurp"])
-
         # 5. Attach the Data Document
         envelope.append(mx_root)
         
-        # 6. Serialization with carefully managed namespaces
+        # 6. Global Recursive Sorting of all elements based on schema order
+        target_mx = mapping["target_mx"]
+        self._sort_xml_recursively(mx_root, target_mx)
+        
+        # 7. Serialization with carefully managed namespaces
         ET.register_namespace("", "urn:swift:xsd:envelope")
         # We don't register head/doc prefixes so ET might generate ns0/ns1
+        
+        # 7. Final Cleanup: Remove empty elements to satisfy schema (L1/L2)
+        self._cleanup_xml(envelope)
+        
+        # Final Global Healing for camt messages (NtryRef and BkTxCd are often mandatory)
+        self._heal_camt_mandatory_fields(mx_root, namespaces)
+        
+        # Finally sort elements based on sequence rules
+        self._sort_xml_recursively(mx_root, target_mx) # Re-sort after healing
         
         if hasattr(ET, "indent"):
             ET.indent(envelope, space="    ", level=0)
@@ -1154,7 +1076,8 @@ class MT2MXConverter:
 
         # FINAL: Remove any remaining ET suffixes (ns0:, ns1:) safely
         xml_string = re.sub(r'<(/?)\w+:', r'<\1', xml_string)
-        xml_string = re.sub(r'(\s+)\w+:(\w+(?==))', r'\1\2', xml_string)
+        # Remove any redundant namespace declarations like xmlns:ns1="..."
+        xml_string = re.sub(r'\s+xmlns:\w+="[^"]+"', '', xml_string)
         
 
         return {
@@ -1163,3 +1086,445 @@ class MT2MXConverter:
             "mx_message": xml_string,
             "logs": v_logs
         }
+
+    def _extract_composite_field(self, val: str, component: str) -> str:
+        """
+        Extracts date, currency, or amount from composite SWIFT fields like 32A, 33B, etc.
+        """
+        if not val: return ""
+        val = str(val).strip()
+        
+        # Case 1: Start with Date (6 digits YYMMDD)
+        if len(val) >= 6 and val[:6].isdigit():
+            if component == "date":
+                try: 
+                    return datetime.strptime(val[:6], "%y%m%d").strftime("%Y-%m-%d")
+                except: return val[:6]
+            
+            remaining = val[6:]
+            ccy_match = re.match(r"^([A-Z]{3})", remaining)
+            if ccy_match:
+                if component == "currency": return ccy_match.group(1)
+                if component == "amount": return remaining[3:].replace(",", ".")
+        # Case: Starts with C or D (Balance fields like 60F, 62F: D230915USD...)
+        elif val[0].upper() in ['C', 'D'] and len(val) >= 10 and val[1:7].isdigit():
+            if component == "date":
+                try:
+                    return datetime.strptime(val[1:7], "%y%m%d").strftime("%Y-%m-%d")
+                except: return val[1:7]
+            remaining = val[7:]
+            ccy_match = re.match(r"^([A-Z]{3})", remaining)
+            if ccy_match:
+                if component == "currency": return ccy_match.group(1)
+                if component == "amount": return remaining[3:].replace(",", ".")
+        else:
+            # Case 2: Start with Currency (3 letters)
+            ccy_match = re.match(r"^([A-Z]{3})", val)
+            if ccy_match:
+                if component == "currency": return ccy_match.group(1)
+                if component == "amount": return val[3:].replace(",", ".")
+                
+        return val
+
+    def _apply_v2_mandatory_healing(self, mx_root, v2_rules, parsed_fields, namespaces):
+        """
+        Recursively applies mandatory field rules from swift_validation_rules.json (v2.0).
+        """
+        for field_name, rule in v2_rules.items():
+            # print(f"DEBUG: Healing {field_name}") # Temporarily commented or just add it
+            path = rule.get("path")
+            if not path: continue
+            
+            # Try to find existing node first
+            node = self._navigate_path(mx_root, path, namespaces, create_missing=False)
+            
+            # Only set text/healing if node is missing/empty and mandatory
+            if rule.get("mandatory") and (not node or not node.text or node.text.strip() == ""):
+                val = None
+                mapped_from_str = rule.get("mapped_from")
+                
+                if mapped_from_str == "generated":
+                    if "CreDtTm" in field_name:
+                        val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                elif mapped_from_str == "generated_uetr or block3_121":
+                    val = parsed_fields.get("_uetr") or parsed_fields.get("block3_121")
+                    if not val:
+                        import uuid
+                        val = str(uuid.uuid4())
+                elif mapped_from_str:
+                    sources = [s.strip() for s in mapped_from_str.split("or")]
+                    for src in sources:
+                        tag_match = re.match(r"^(\d{2}[A-Z]?)", src)
+                        tag = tag_match.group(1) if tag_match else src
+                        if tag in parsed_fields:
+                            raw_val = parsed_fields[tag]
+                            if isinstance(raw_val, list): raw_val = raw_val[0]
+                            
+                            # Support "line X" extraction for multi-line fields like 50K, 59, 70
+                            if "line" in src.lower():
+                                line_match = re.search(r"line\s*(\d+)", src, re.IGNORECASE)
+                                if line_match:
+                                    line_idx = int(line_match.group(1)) - 1
+                                    lines = [l.strip() for l in str(raw_val).split("\n") if l.strip()]
+                                    
+                                    # Special handling for account-prefixed fields (/...)
+                                    if str(raw_val).startswith("/") and "name" in src.lower() and line_idx == 0:
+                                        # "line 1 (name)" often refers to the first line AFTER the account
+                                        if len(lines) > 1:
+                                            val = lines[1]
+                                        else:
+                                            val = lines[0]
+                                    elif line_idx < len(lines):
+                                        val = lines[line_idx]
+                                    else:
+                                        val = raw_val
+                                else:
+                                    val = raw_val
+                            else:
+                                val = raw_val
+                            break
+                    
+                    if val:
+                        target_fmt = rule.get("format", "")
+                        if target_fmt == "date_iso" or "Dt" in field_name or "Date" in field_name:
+                            val = self._extract_composite_field(val, "date")
+                        elif "Ccy" in field_name or "Cur" in field_name:
+                            val = self._extract_composite_field(val, "currency")
+                        elif "Amt" in field_name or "Amount" in field_name or target_fmt == "numeric":
+                            val = self._extract_composite_field(val, "amount")
+                    
+                    # Guard for UETR fields in V2 healing
+                    if val and ("UETR" in field_name or "UETR" in path):
+                        val_str = str(val).strip()
+                        if not re.match(r"^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$", val_str):
+                            import uuid
+                            val = str(uuid.uuid4())
+
+                
+                if not val and rule.get("value"):
+                    val = rule["value"]
+                
+                if not val and rule.get("mandatory"):
+                    # Use allowed_values if available
+                    if rule.get("allowed_values"):
+                        val = rule["allowed_values"][0]
+                    # Specific healing for DateTimes to satisfy CBPR_DateTime format
+                    elif any(kw.lower() in field_name.lower() for kw in ["DtTm", "Date", "CreDt", "Dt"]):
+                        if "DtTm" not in field_name and field_name.endswith("Dt"):
+                            val = datetime.utcnow().strftime("%Y-%m-%d")
+                        else:
+                            val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                    # Use shorter placeholder for code fields to avoid length errors
+                    elif rule.get("max_length") and rule["max_length"] < 11:
+                        val = "NARR"
+                    else:
+                        val = "NOTPROVIDED"
+                
+                if val and rule.get("mapping_values"):
+                    val = rule["mapping_values"].get(val, val)
+                
+                if val:
+                    # Specific code-block checking: if field name is "Sts" and it's a container element
+                    if field_name == "Sts":
+                        sts_node = self._get_or_create_node(mx_root, path, namespaces)
+                        if self._navigate_path(sts_node, "Cd", namespaces, create_missing=False) is None:
+                            self.set_element_text(sts_node, "Cd", "BOOK", namespaces)
+                    elif field_name == "NtryRef":
+                        self.set_element_text(mx_root, path, str(uuid.uuid4())[:35], namespaces)
+                        continue
+
+                    if node is None:
+                        node = self._get_or_create_node(mx_root, path, namespaces)
+                        
+                        if "children" not in rule:
+                            # Use the centralized set_element_text to ensure sanitation
+                            self.set_element_text(mx_root, path, val, namespaces)
+                    
+                    # Attributes can still be applied to containers
+                    if "attributes" in rule:
+                        for attr, attr_desc in rule["attributes"].items():
+                            if "currency" in attr_desc.lower():
+                                ccy = "USD"
+                                for tag in ["32A", "33B", "19A", "32B"]:
+                                    if tag in parsed_fields:
+                                        t_val = parsed_fields[tag]
+                                        if isinstance(t_val, list): t_val = t_val[0]
+                                        ccy = self._extract_composite_field(t_val, "currency")
+                                        break
+                                node.set(attr, ccy)
+                            else:
+                                node.set(attr, attr_desc)
+            
+            # Dependency check: If Name is present, PstlAdr must be too for party elements
+            # Refined to target actual party paths and avoid false positives like OrgnlMsgNmId
+            party_keywords = ["/Dbtr", "/Cdtr", "/Assgnr", "/Assgne", "/InitgPty", "/Pyr", "/Pyee", "/OrgId", "/PrvtId", "/InstgAgt", "/InstdAgt", "/IntrmyAgt", "/CdtrAgt", "/DbtrAgt"]
+            if field_name == "Nm" and node is not None and node.text and any(kw in path for kw in party_keywords):
+                parent_path = path.rsplit('/', 1)[0]
+                adr_path = f"{parent_path}/PstlAdr"
+                # Check if the node actually exists, not just if it has text (since PstlAdr is a container)
+                if self._navigate_path(mx_root, adr_path, namespaces, create_missing=False) is None:
+                    self.set_element_text(mx_root, f"{adr_path}/Ctry", "GB", namespaces)
+                    self.set_element_text(mx_root, f"{adr_path}/TwnNm", "NOTPROVIDED", namespaces)
+                    self.set_element_text(mx_root, f"{adr_path}/AdrLine", "NOTPROVIDED", namespaces)
+
+            if "children" in rule:
+                # ONLY process children if the parent node actually exists (it was mapped or created)
+                # If an optional parent was skipped, we shouldn't force-create its mandatory children.
+                check_node = self._navigate_path(mx_root, path, namespaces, create_missing=False)
+                if check_node is not None:
+                    self._process_v2_children(mx_root, rule["children"], parsed_fields, namespaces)
+
+    def _process_v2_children(self, mx_root, children, parsed_fields, namespaces):
+        """
+        Process children using mx_root for path navigation to ensure absolute paths work.
+        """
+        for child_name, child_rule in children.items():
+            self._apply_v2_mandatory_healing(mx_root, {child_name: child_rule}, parsed_fields, namespaces)
+
+    def _sort_children_by_list(self, element, sequence):
+        """
+        Sorts the children of 'element' according to the order in 'sequence'.
+        """
+        children = list(element)
+        # Sort current children based on their index in sequence
+        # Elements not in sequence come last
+        children.sort(key=lambda x: sequence.index(x.tag.split('}')[-1]) if x.tag.split('}')[-1] in sequence else len(sequence))
+        
+        # Clear element and re-append in sorted order
+        for child in children:
+            element.remove(child)
+        for child in children:
+            element.append(child)
+
+    def _sort_xml_recursively(self, element: ET.Element, target_mx: str = ""):
+        """
+        Recursively sorts children of an element based on a comprehensive list of ISO 20022 / CBPR+ sequences.
+        """
+        # Define universal sequences
+        sequences = {
+            "FIToFICstmrCdtTrf": ["GrpHdr", "CdtTrfTxInf", "SplmtryData"],
+            "FICdtTrf": ["GrpHdr", "CdtTrfTxInf", "SplmtryData"],
+            "GrpHdr": ["MsgId", "CreDtTm", "NbOfTxs", "CtrlSum", "SttlmInf", "InstgAgt", "InstdAgt"],
+            "SttlmInf": ["SttlmMtd", "SttlmAcct", "SttlmDt", "ClrSys", "InstgRmbrsmntAgt", "InstgRmbrsmntAgtAcct", "InstdRmbrsmntAgt", "InstdRmbrsmntAgtAcct", "ThrdRmbrsmntAgt", "ThrdRmbrsmntAgtAcct"],
+            "UndrlygCstmrCdtTrf": ["LclInstrm", "Purp", "InstgAgt", "InstdAgt", "InitgPty", "Dbtr", "DbtrAcct", "DbtrAgt", "DbtrAgtAcct", "IntrmyAgt1", "IntrmyAgt1Acct", "IntrmyAgt2", "IntrmyAgt2Acct", "IntrmyAgt3", "IntrmyAgt3Acct", "CdtrAgt", "CdtrAgtAcct", "Cdtr", "CdtrAcct", "UltmtCdtr", "RmtInf", "SplmtryData"],
+            "PmtId": ["InstrId", "EndToEndId", "TxId", "UETR", "ClrSysRef"],
+            "PmtTpInf": ["InstrPrty", "SvcLvl", "LclInstrm", "CtgyPurp"],
+            "FinInstnId": ["BICFI", "ClrSysMmbId", "LEI", "Nm", "PstlAdr", "Othr"],
+            "BrnchId": ["Id", "Nm", "PstlAdr"],
+            "PstlAdr": ["AdrTp", "Dept", "SubDept", "StrtNm", "BldgNb", "BldgNm", "Flr", "PstCd", "TwnNm", "TwnLctnNm", "DstrctNm", "CtrySubDvsn", "Ctry", "AdrLine"],
+            "Acct": ["Id", "Tp", "Ccy", "Nm", "Ownr", "Svcr"],
+            "Id": ["IBAN", "OrgId", "PrvtId", "Othr"],
+            "OrgId": ["AnyBIC", "LEI", "Othr"],
+            "Othr": ["Id", "SchmeNm", "Issr"],
+            "CdtTrfTxInf": [
+                "PmtId", "PmtTpInf", "IntrBkSttlmAmt", "IntrBkSttlmDt", "SttlmPrty", 
+                "SttlmTmIndctn", "SttlmTmReq", "SttlmTm", "SttlmInstn", "SttlmInf", 
+                "InstdAmt", "XchgRate", "ChrgBr", "ChrgsInf", 
+                "PrvsInstgAgt1", "PrvsInstgAgt1Acct", "PrvsInstgAgt2", "PrvsInstgAgt2Acct", "PrvsInstgAgt3", "PrvsInstgAgt3Acct",
+                "InstgAgt", "InstdAgt", "IntrmyAgt1", "IntrmyAgt1Acct", "IntrmyAgt2", "IntrmyAgt2Acct", "IntrmyAgt3", "IntrmyAgt3Acct", 
+                "UltmtDbtr", "Dbtr", "DbtrAcct", "DbtrAgt", "DbtrAgtAcct", 
+                "CdtrAgt", "CdtrAgtAcct", "Cdtr", "CdtrAcct", "UltmtCdtr", 
+                "InstrForCdtrAgt", "InstrForNextAgt", "Purp", "RgltryRptg", 
+                "Tax", "UndrlygCstmrCdtTrf", "RltdRmtInf", "RmtInf", "SplmtryData"
+            ],
+            "RsltnOfInvstgtn": ["Assgnmt", "RslvdCase", "Sts", "CxlDtls", "SplmtryData"],
+            "FIToFIPmtCxlReq": ["Assgnmt", "Undrlyg", "SplmtryData"],
+            "Undrlyg": ["TxInf"],
+            "CxlRsnInf": ["Orgtr", "Rsn", "AddtlInf"],
+            "TxInf": ["CxlId", "Case", "OrgnlGrpInf", "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "OrgnlClrSysRef", "OrgnlIntrBkSttlmAmt", "OrgnlIntrBkSttlmDt", "CxlRsnInf"],
+            "CxlDtls": ["TxInfAndSts"],
+            "TxInfAndSts": [
+                "CxlStsId", "StsId", "RslvdCase", "OrgnlGrpInf", 
+                "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "OrgnlClrSysRef",
+                "TxSts", "CxlStsRsnInf", "StsRsnInf", "ChrgsInf", "AccptncDtTm", "FctvIntrBkSttlmDt", "OrgnlIntrBkSttlmAmt", "OrgnlIntrBkSttlmDt",
+                "AcctSvcrRef", "ClrSysRef", "InstgAgt", "InstdAgt", "OrgnlTxRef"
+            ],
+            "OrgnlGrpInf": ["OrgnlMsgId", "OrgnlMsgNmId", "OrgnlCreDtTm"],
+            "Assgnr": ["Agt"],
+            "Assgne": ["Agt"],
+            "Assgnmt": ["Id", "Assgnr", "Assgne", "CreDtTm"],
+            "Case": ["Id", "Cretr", "ReopnInd"],
+            "RslvdCase": ["Id", "Cretr", "ReopnInd"],
+            "Cretr": ["Pty", "Agt"],
+            "BkTxCd": ["Domn", "Prtry"],
+            "Domn": ["Cd", "Fmly"],
+            "Fmly": ["Cd", "SubFmlyCd"],
+            "NtryDtls": ["Btch", "TxDtls"],
+            "TxDtls": ["Refs", "Amt", "AmtDtls", "Avlbty", "BkTxCd", "Chrgs", "RltdPties", "RltdAgts", "LclInstrm", "Purp", "RltdRmtInf", "RmtInf", "RltdDates", "SplmtryData", "CdtDbtInd"],
+            "Refs": ["MsgId", "AcctSvcrRef", "PmtInfId", "InstrId", "EndToEndId", "UETR", "TxId", "MndtId", "ChqNb", "ClrSysRef", "AcctOwnrTxId", "AcctSvcrTxId", "MktInfrstrctrTxId", "PrcgId", "Prtry"],
+            "Sts": ["Cd", "Prtry", "Rsn"],
+            "Amt": ["InstdAmt", "EqvtAmt"],
+            "Ntry": ["NtryRef", "Amt", "CdtDbtInd", "RvslInd", "Sts", "BookgDt", "ValDt", "AcctSvcrRef", "Avlbty", "BkTxCd", "ComssnWvrInd", "AddtlInfInd", "AmtDtls", "Chrgs", "TechInptChanl", "Intrst", "CardTx", "NtryDtls", "AddtlNtryInf"],
+            "Stmt": ["Id", "StmtPgntn", "ElctrncSeqNb", "LglSeqNb", "CreDtTm", "FrToDt", "Acct", "Bal", "TxsSummry", "Ntry"],
+            "Rpt": ["Id", "RptPgntn", "ElctrncSeqNb", "RptgSeq", "LglSeqNb", "CreDtTm", "FrToDt", "CpyDplctInd", "RptgSrc", "Acct", "RltdAcct", "Intrst", "Bal", "TxsSummry", "Ntry", "AddtlRptInf"],
+            "Ntfctn": ["Id", "CreDtTm", "Acct", "RltdAcct", "Intrst", "TxsSummry", "Ntry", "Itm", "AddtlNtfctnInf"],
+            "Itm": ["Id", "EndToEndId", "UETR", "Amt", "XpctdValDt", "Dbtr", "DbtrAcct"],
+            "Dbtr": ["Nm", "PstlAdr", "Id", "CtryOfRes", "CtctDtls"],
+            "Cdtr": ["Nm", "PstlAdr", "Id", "CtryOfRes", "CtctDtls"],
+            "UltmtDbtr": ["Nm", "PstlAdr", "Id", "CtryOfRes", "CtctDtls"],
+            "UltmtCdtr": ["Nm", "PstlAdr", "Id", "CtryOfRes", "CtctDtls"],
+            "DbtrAgt": ["FinInstnId", "BrnchId"],
+            "CdtrAgt": ["FinInstnId", "BrnchId"],
+            "InstgAgt": ["FinInstnId", "BrnchId"],
+            "InstdAgt": ["FinInstnId", "BrnchId"],
+            "Agt": ["FinInstnId", "BrnchId"],
+            "Acct": ["Id", "Tp", "Ccy", "Nm", "Prxy", "Svcr", "Ownr", "SvcrAcct"]
+        }
+        
+        local_tag = element.tag.split('}')[-1]
+        if local_tag in sequences:
+            self._sort_children_by_list(element, sequences[local_tag])
+            
+        # Recursive call for children
+        for child in list(element):
+            self._sort_xml_recursively(child, target_mx)
+
+    def _cleanup_xml(self, parent):
+        """Recursively removes elements that have no text and no children."""
+        for child in list(parent):
+            if len(list(child)) > 0:
+                self._cleanup_xml(child)
+            
+            # Re-check after children might have been removed
+            # If child is empty and has no attributes, remove it
+            if (child.text is None or child.text.strip() == "") and len(list(child)) == 0 and len(child.attrib) == 0:
+                parent.remove(child)
+
+    def _heal_camt_mandatory_fields(self, root, namespaces):
+        """Final sweep to ensure Ntry nodes are compliant with mandatory reporting rules."""
+        # Find all Ntry nodes regardless of their specific namespace version
+        all_ntries = []
+        for elem in root.iter():
+            if elem.tag.split("}")[-1] == "Ntry":
+                all_ntries.append(elem)
+        
+        xmlns = namespaces.get("xmlns", "")
+        
+        for ntry in all_ntries:
+            # 1. Ensure NtryRef exists
+            found_ref = None
+            for child in list(ntry):
+                if child.tag.split("}")[-1] == "NtryRef":
+                    found_ref = child
+                    break
+            
+            if found_ref is None:
+                # Add it at the beginning of Ntry
+                ref_tag = f"{{{xmlns}}}NtryRef" if xmlns else "NtryRef"
+                new_ref = ET.Element(ref_tag)
+                new_ref.text = f"REF-{str(uuid.uuid4())[:12].upper()}"
+                ntry.insert(0, new_ref)
+            elif not found_ref.text or str(found_ref.text).strip() == "":
+                found_ref.text = f"REF-{str(uuid.uuid4())[:12].upper()}"
+                
+            # 2. Ensure BkTxCd (Bank Transaction Code) - Mandatory in camt.053/054 reporting
+            found_bktx = None
+            for child in list(ntry):
+                if child.tag.split("}")[-1] == "BkTxCd":
+                    found_bktx = child
+                    break
+            
+            if found_bktx is None:
+                bktx_tag = f"{{{xmlns}}}BkTxCd" if xmlns else "BkTxCd"
+                found_bktx = ET.SubElement(ntry, bktx_tag)
+            
+            # Ensure complex type BkTxCd has NO text value (it's a container only)
+            if found_bktx is not None:
+                found_bktx.text = None 
+            
+            # Ensure Domn/Cd and Domn/Fmly/Cd exists regardless if node was pre-created
+            domn = self._get_or_create_node(found_bktx, "Domn", namespaces)
+            if self._navigate_path(domn, "Cd", namespaces, create_missing=False) is None:
+                self.set_element_text(domn, "Cd", "PMNT", namespaces)
+            
+            fmly = self._get_or_create_node(domn, "Fmly", namespaces)
+            if self._navigate_path(fmly, "Cd", namespaces, create_missing=False) is None:
+                self.set_element_text(fmly, "Cd", "RCDT", namespaces)
+            if self._navigate_path(fmly, "SubFmlyCd", namespaces, create_missing=False) is None:
+                self.set_element_text(fmly, "SubFmlyCd", "OTHR", namespaces)
+            
+            # 3. Ensure Sts (Status) exists
+            found_sts = None
+            for child in list(ntry):
+                if child.tag.split("}")[-1] == "Sts":
+                    found_sts = child
+                    break
+            
+            if found_sts is None:
+                sts_tag = f"{{{xmlns}}}Sts" if xmlns else "Sts"
+                found_sts = ET.SubElement(ntry, sts_tag)
+            
+            # Ensure Cd exists inside Sts
+            sts_cd = self._navigate_path(found_sts, "Cd", namespaces, create_missing=False)
+            if sts_cd is None:
+                self.set_element_text(found_sts, "Cd", "BOOK", namespaces)
+            elif not sts_cd.text or str(sts_cd.text).strip() == "":
+                sts_cd.text = "BOOK"
+
+            # Ensure complex type Sts has NO text value
+            if found_sts is not None:
+                found_sts.text = None
+
+            # 4. Ensure CdtDbtInd exist
+            found_ind = False
+            for child in list(ntry):
+                if child.tag.split("}")[-1] == "CdtDbtInd":
+                    found_ind = True
+                    break
+            if not found_ind:
+                self.set_element_text(ntry, "CdtDbtInd", "CRDT", namespaces)
+
+        # camt.057 specific healing for 'Itm' nodes
+        all_itms = []
+        for elem in root.iter():
+            if elem.tag.split("}")[-1] == "Itm":
+                all_itms.append(elem)
+
+        for itm in all_itms:
+            # 1. Ensure Itm/Id exists
+            found_id = None
+            for child in list(itm):
+                if child.tag.split("}")[-1] == "Id":
+                    found_id = child
+                    break
+            
+            if found_id is None:
+                id_tag = f"{{{xmlns}}}Id" if xmlns else "Id"
+                new_id = ET.Element(id_tag)
+                new_id.text = f"ITEM-{str(uuid.uuid4())[:8].upper()}"
+                itm.insert(0, new_id)
+            elif not found_id.text or str(found_id.text).strip() == "":
+                found_id.text = f"ITEM-{str(uuid.uuid4())[:8].upper()}"
+
+            # 2. Ensure Dbtr (Debtor) exists - often mandatory in camt.057 profiles
+            found_dbtr = None
+            for child in list(itm):
+                if child.tag.split("}")[-1] == "Dbtr":
+                    found_dbtr = child
+                    break
+            
+            if found_dbtr is None:
+                # Check if global Dbtr exists in Ntfctn
+                parent_ntfctn = None
+                # Simplistic search for parent Ntfctn
+                for parent in root.iter():
+                    if itm in list(parent):
+                        if parent.tag.split("}")[-1] == "Ntfctn":
+                            parent_ntfctn = parent
+                            break
+                
+                global_dbtr = None
+                if parent_ntfctn is not None:
+                    for child in list(parent_ntfctn):
+                        if child.tag.split("}")[-1] == "Dbtr":
+                            global_dbtr = child
+                            break
+                
+                if global_dbtr is None:
+                    # Inject default Dbtr into Itm
+                    dbtr_tag = f"{{{xmlns}}}Dbtr" if xmlns else "Dbtr"
+                    dbtr_node = ET.SubElement(itm, dbtr_tag)
+                    pty_node = ET.SubElement(dbtr_node, f"{{{xmlns}}}Pty" if xmlns else "Pty")
+                    self.set_element_text(pty_node, "Nm", "UNKNOWN DEBTOR", namespaces)
+                    # Clear parent text
+                    dbtr_node.text = None

@@ -9,10 +9,24 @@
     "mappings": [
         {
             "mt_tag": "20",
-            "name": "Cancellation Request Identification",
+            "name": "Cancellation Request Identification (Assignment Id)",
             "mandatory": true,
             "type": "text",
             "mx_path": "FIToFIPmtCxlReq/Assgnmt/Id"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Cancellation Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlId"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Case Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Id"
         },
         {
             "mt_tag": "_senderBic",
@@ -37,31 +51,60 @@
         },
         {
             "mt_tag": "21",
-            "name": "Original Instruction Identity",
-            "mandatory": true,
-            "type": "text",
-            "mx_path": "FIToFIPmtCxlReq/Case/Id"
-        },
-        {
-            "mt_tag": "_senderBic",
-            "name": "Case Creator",
-            "mandatory": false,
-            "type": "bic",
-            "mx_path_bic": "FIToFIPmtCxlReq/Case/Cretr/Agt/FinInstnId/BICFI"
-        },
-        {
-            "mt_tag": "21",
             "name": "Related Reference (Original Instruction Id)",
             "mandatory": true,
             "type": "text",
             "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlInstrId"
         },
         {
-            "mt_tag": "_auto_reason",
-            "name": "Cancellation Reason Code",
+            "mt_tag": "21",
+            "name": "Original End to End Id",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlEndToEndId"
+        },
+        {
+            "mt_tag": "21",
+            "name": "Original Transaction Id",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlTxId"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "Original UETR (from Block 3 Tag 121)",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlUETR"
+        },
+        {
+            "mt_tag": "79",
+            "name": "Cancellation Narrative",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/AddtlInf"
+        },
+        {
+            "mt_tag": "11S",
+            "name": "Original Message Identification",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlGrpInf/OrgnlMsgId"
+        },
+        {
+            "mt_tag": "_static_msg_nm",
+            "name": "Original Message Name ID",
             "mandatory": false,
             "type": "static",
-            "value": "CUST",
+            "value": "pacs.008",
+            "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlGrpInf/OrgnlMsgNmId"
+        },
+        {
+            "mt_tag": "_auto_reason",
+            "name": "Cancellation Reason Code",
+            "mandatory": true,
+            "type": "static",
+            "value": "NARR",
             "mx_path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/Rsn/Cd"
         }
     ]

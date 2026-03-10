@@ -597,11 +597,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             r'[0-9a-f]{12}$'      # 12 hex
         )
 
-        # Match all <UETR>...</UETR> elements
+        # Match all <UETR>...</UETR> and <OrgnlUETR>...</OrgnlUETR> elements
         uetr_patt = re.compile(
-            r'<(UETR)>'           # opening tag (group 1)
-            r'\s*([^<]+?)\s*'     # value        (group 2)
-            r'</\1>'              # matching closing tag
+            r'<(UETR|OrgnlUETR)>'  # opening tag (group 1)
+            r'\s*([^<]+?)\s*'      # value        (group 2)
+            r'</\1>'               # matching closing tag
         )
 
         for m in uetr_patt.finditer(xml_content):

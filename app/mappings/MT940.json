@@ -39,15 +39,20 @@
             "mt_tag": "25",
             "name": "Account Identification",
             "mandatory": true,
-            "type": "text",
-            "mx_path": "BkToCstmrStmt/Stmt/Acct/Id/Othr/Id"
+            "type": "account_with_ccy",
+            "mx_path": "BkToCstmrStmt/Stmt/Acct/Id/Othr/Id",
+            "mx_path_currency": "BkToCstmrStmt/Stmt/Acct/Ccy"
         },
         {
             "mt_tag": "28C",
             "name": "Statement Number/Sequence Number",
             "mandatory": false,
-            "type": "text",
-            "mx_path": "BkToCstmrStmt/Stmt/LglSeqNb"
+            "type": "statement_number",
+            "mx_path_id": "BkToCstmrStmt/Stmt/Id",
+            "mx_path_lgl": "BkToCstmrStmt/Stmt/LglSeqNb",
+            "mx_path_elctrnc": "BkToCstmrStmt/Stmt/ElctrncSeqNb",
+            "mx_path_pgntn_pgnb": "BkToCstmrStmt/Stmt/StmtPgntn/PgNb",
+            "mx_path_pgntn_last": "BkToCstmrStmt/Stmt/StmtPgntn/LastPgInd"
         },
         {
             "mt_tag": "60F",
@@ -71,8 +76,8 @@
             "mt_tag": "61",
             "name": "Statement Line",
             "mandatory": false,
-            "type": "text",
-            "mx_path": "BkToCstmrStmt/Stmt/Ntry/NtryDtls/TxDtls/Refs/InstrId"
+            "type": "statement_line",
+            "mx_path": "BkToCstmrStmt/Stmt/Ntry"
         },
         {
             "mt_tag": "86",

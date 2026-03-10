@@ -1,0 +1,2802 @@
+{
+    "version": "2.0",
+    "description": "SWIFT MT to MX (ISO 20022) Full Mapping with MX Mandatory XML Field Validation",
+    "common_validations": {
+        "bic": "^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$",
+        "currency": "^[A-Z]{3}$",
+        "amount": "^[0-9]+(,[0-9]{1,2})?$",
+        "reference": "^[A-Za-z0-9/?:().,'+ \\-]{1,16}$",
+        "date_yymmdd": "^[0-9]{6}$",
+        "date_yyyymmdd": "^[0-9]{8}$",
+        "date_iso": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "datetime_iso": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+        "iban": "^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$",
+        "max35text": "^.{1,35}$",
+        "max140text": "^.{1,140}$"
+    },
+    "mappings": {
+        "MT103": {
+            "description": "Single Customer Credit Transfer",
+            "target_mx": "pacs.008.001.08",
+            "mx_xml_root": "Document/FIToFICstmrCdtTrf",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "23B": {
+                        "description": "Bank Operation Code",
+                        "max_length": 4,
+                        "allowed_values": [
+                            "CRED",
+                            "CRTS",
+                            "SPAY",
+                            "SPRI",
+                            "SSTD"
+                        ]
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric",
+                        "max_length": 24
+                    },
+                    "50K": {
+                        "description": "Ordering Customer",
+                        "account_max_length": 34,
+                        "name_max_length": 35
+                    },
+                    "59": {
+                        "description": "Beneficiary Customer",
+                        "account_max_length": 34,
+                        "name_max_length": 35
+                    },
+                    "71A": {
+                        "description": "Details of Charges",
+                        "max_length": 3,
+                        "allowed_values": [
+                            "OUR",
+                            "SHA",
+                            "BEN"
+                        ]
+                    }
+                },
+                "optional": [
+                    "13C",
+                    "23E",
+                    "26T",
+                    "33B",
+                    "36",
+                    "50A",
+                    "50F",
+                    "51A",
+                    "52A",
+                    "52D",
+                    "53A",
+                    "53B",
+                    "53D",
+                    "54A",
+                    "54B",
+                    "54D",
+                    "55A",
+                    "56A",
+                    "56C",
+                    "56D",
+                    "57A",
+                    "57B",
+                    "57C",
+                    "57D",
+                    "70",
+                    "72",
+                    "77B"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "FIToFICstmrCdtTrf/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "FIToFICstmrCdtTrf/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20",
+                            "description": "Unique Message ID - mapped from MT Field 20"
+                        },
+                        "CreDtTm": {
+                            "path": "FIToFICstmrCdtTrf/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso",
+                            "mapped_from": "generated",
+                            "description": "Creation Date Time - ISO 8601 format e.g. 2024-01-15T10:30:00"
+                        },
+                        "NbOfTxs": {
+                            "path": "FIToFICstmrCdtTrf/GrpHdr/NbOfTxs",
+                            "mandatory": true,
+                            "format": "numeric",
+                            "value": "1",
+                            "description": "Number of Transactions - always 1 for MT103"
+                        },
+                        "SttlmInf": {
+                            "path": "FIToFICstmrCdtTrf/GrpHdr/SttlmInf",
+                            "mandatory": true,
+                            "children": {
+                                "SttlmMtd": {
+                                    "path": "FIToFICstmrCdtTrf/GrpHdr/SttlmInf/SttlmMtd",
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "INDA",
+                                        "INGA",
+                                        "CLRG"
+                                    ],
+                                    "description": "Settlement Method"
+                                }
+                            }
+                        }
+                    }
+                },
+                "CdtTrfTxInf": {
+                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf",
+                    "mandatory": true,
+                    "children": {
+                        "PmtId": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId",
+                            "mandatory": true,
+                            "children": {
+                                "InstrId": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId",
+                                    "mandatory": false,
+                                    "max_length": 35,
+                                    "mapped_from": "20"
+                                },
+                                "EndToEndId": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "20",
+                                    "description": "End-to-End ID - mapped from MT Field 20. Use NOTPROVIDED if not available."
+                                },
+                                "TxId": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/TxId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "20",
+                                    "description": "Transaction ID - mapped from MT Field 20"
+                                },
+                                "UETR": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR",
+                                    "mandatory": true,
+                                    "mapped_from": "generated_uetr or block3_121",
+                                    "description": "UETR from Block 3"
+                                }
+                            }
+                        },
+                        "IntrBkSttlmAmt": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
+                            "mandatory": true,
+                            "attributes": {
+                                "Ccy": "ISO4217 currency from field 32A"
+                            },
+                            "mapped_from": "32A",
+                            "description": "Interbank Settlement Amount and Currency from MT Field 32A"
+                        },
+                        "IntrBkSttlmDt": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
+                            "mandatory": false,
+                            "format": "date_iso",
+                            "mapped_from": "32A"
+                        },
+                        "ChrgBr": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr",
+                            "mandatory": true,
+                            "mapped_from": "71A",
+                            "mapping_values": {
+                                "OUR": "DEBT",
+                                "SHA": "SHAR",
+                                "BEN": "CRED",
+                                "SLEV": "SLEV"
+                            },
+                            "description": "Charge Bearer - OUR=DEBT, SHA=SHAR, BEN=CRED"
+                        },
+                        "Dbtr": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr",
+                            "mandatory": true,
+                            "mapped_from": "50K or 50A or 50F",
+                            "children": {
+                                "Nm": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Nm",
+                                    "mandatory": true,
+                                    "max_length": 140,
+                                    "mapped_from": "50K line 1 (name)",
+                                    "description": "Debtor Name from MT Field 50K"
+                                },
+                                "PstlAdr": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr",
+                                    "mandatory": true,
+                                    "children": {
+                                        "TwnNm": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr/TwnNm",
+                                            "mandatory": true,
+                                            "value": "NOTPROVIDED"
+                                        },
+                                        "Ctry": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr/Ctry",
+                                            "mandatory": true,
+                                            "value": "GB"
+                                        },
+                                        "AdrLine": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr/AdrLine",
+                                            "mandatory": true,
+                                            "value": "NOTPROVIDED",
+                                            "max_length": 70
+                                        }
+                                    }
+                                },
+                                "Id": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Id",
+                                    "mandatory": false,
+                                    "children": {
+                                        "OrgId": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Id/OrgId",
+                                            "mandatory": false
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "DbtrAcct": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct",
+                            "mandatory": true,
+                            "mapped_from": "50K account line",
+                            "children": {
+                                "Id": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/IBAN",
+                                            "mandatory": false,
+                                            "format": "iban",
+                                            "description": "Use IBAN if account starts with 2 letters + digits"
+                                        },
+                                        "Othr": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr/Id",
+                                                    "mandatory": true,
+                                                    "max_length": 34
+                                                }
+                                            },
+                                            "description": "Use Othr/Id if account is not IBAN format"
+                                        }
+                                    },
+                                    "validation_note": "Either IBAN or Othr must be present, not both"
+                                }
+                            }
+                        },
+                        "DbtrAgt": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt",
+                            "mandatory": true,
+                            "mapped_from": "52A",
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI",
+                                            "mandatory": false,
+                                            "format": "bic",
+                                            "mapped_from": "52A BIC"
+                                        },
+                                        "Nm": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/Nm",
+                                            "mandatory": false,
+                                            "max_length": 140
+                                        }
+                                    },
+                                    "validation_note": "If 52A is absent, use Othr/Id=NOTPROVIDED"
+                                }
+                            }
+                        },
+                        "CdtrAgt": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt",
+                            "mandatory": true,
+                            "mapped_from": "57A",
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI",
+                                            "mandatory": false,
+                                            "format": "bic",
+                                            "mapped_from": "57A BIC"
+                                        }
+                                    },
+                                    "validation_note": "If 57A is absent, use Othr/Id=NOTPROVIDED"
+                                }
+                            }
+                        },
+                        "Cdtr": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr",
+                            "mandatory": true,
+                            "mapped_from": "59 or 59A or 59F",
+                            "children": {
+                                "Nm": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Nm",
+                                    "mandatory": true,
+                                    "max_length": 140,
+                                    "mapped_from": "59 name line"
+                                },
+                                "PstlAdr": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr",
+                                    "mandatory": true,
+                                    "children": {
+                                        "TwnNm": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr/TwnNm",
+                                            "mandatory": true,
+                                            "value": "NOTPROVIDED"
+                                        },
+                                        "Ctry": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr/Ctry",
+                                            "mandatory": true,
+                                            "value": "GB"
+                                        },
+                                        "AdrLine": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr/AdrLine",
+                                            "mandatory": true,
+                                            "value": "NOTPROVIDED",
+                                            "max_length": 70
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "CdtrAcct": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct",
+                            "mandatory": true,
+                            "mapped_from": "59 account line",
+                            "children": {
+                                "Id": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/IBAN",
+                                            "mandatory": false,
+                                            "format": "iban"
+                                        },
+                                        "Othr": {
+                                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id",
+                                                    "mandatory": true,
+                                                    "max_length": 34
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "validation_note": "Either IBAN or Othr must be present"
+                                }
+                            }
+                        },
+                        "Purp": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Purp",
+                            "mandatory": false,
+                            "mapped_from": "26T",
+                            "children": {
+                                "Cd": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/Purp/Cd",
+                                    "mandatory": true,
+                                    "max_length": 4
+                                }
+                            }
+                        },
+                        "RmtInf": {
+                            "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf",
+                            "mandatory": false,
+                            "mapped_from": "70",
+                            "children": {
+                                "Ustrd": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf/Ustrd",
+                                    "mandatory": false,
+                                    "max_length": 140,
+                                    "max_occurrences": 4,
+                                    "mapped_from": "70 lines"
+                                },
+                                "Strd": {
+                                    "path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf/Strd",
+                                    "mandatory": false,
+                                    "description": "Structured remittance - used for MT103 REMIT from field 77T"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT103_REMIT": {
+            "description": "Single Customer Credit Transfer with Remittance Info",
+            "target_mx": "pacs.008.001.08",
+            "mx_xml_root": "Document/FIToFICstmrCdtTrf",
+            "note": "Same as MT103 MX structure but RmtInf/Strd is populated from field 77T",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "23B": {
+                        "description": "Bank Operation Code",
+                        "allowed_values": [
+                            "CRED",
+                            "CRTS",
+                            "SPAY",
+                            "SPRI",
+                            "SSTD"
+                        ]
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    },
+                    "50K": {
+                        "type": "account_name_address",
+                        "description": "Ordering Customer",
+                        "account_max_length": 34,
+                        "name_max_length": 140,
+                        "mx_path_name": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Nm",
+                        "mx_path_address": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/PstlAdr/AdrLine",
+                        "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr/Id"
+                    },
+                    "59": {
+                        "type": "account_name_address",
+                        "description": "Beneficiary Customer",
+                        "account_max_length": 34,
+                        "name_max_length": 140,
+                        "mx_path_name": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Nm",
+                        "mx_path_address": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/PstlAdr/AdrLine",
+                        "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id"
+                    },
+                    "71A": {
+                        "description": "Details of Charges",
+                        "allowed_values": [
+                            "OUR",
+                            "SHA",
+                            "BEN"
+                        ]
+                    },
+                    "77T": {
+                        "description": "Envelope Contents",
+                        "max_length": 9000
+                    }
+                },
+                "optional": [
+                    "13C",
+                    "23E",
+                    "26T",
+                    "33B",
+                    "36",
+                    "50A",
+                    "50F",
+                    "51A",
+                    "52A",
+                    "53A",
+                    "54A",
+                    "56A",
+                    "57A",
+                    "70",
+                    "72",
+                    "77B"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "note": "Identical to MT103 pacs.008 structure - refer to MT103 block. Additional field:",
+                "RmtInf_Strd": {
+                    "path": "CdtTrfTxInf/RmtInf/Strd",
+                    "mandatory": true,
+                    "mapped_from": "77T",
+                    "description": "Structured remittance info from 77T envelope contents"
+                }
+            }
+        },
+        "MT202": {
+            "description": "General Financial Institution Transfer",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "21": {
+                        "description": "Related Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    },
+                    "52A": {
+                        "description": "Ordering Institution",
+                        "format": "bic"
+                    },
+                    "58A": {
+                        "description": "Beneficiary Institution",
+                        "format": "bic"
+                    }
+                },
+                "optional": [
+                    "13C",
+                    "53A",
+                    "53B",
+                    "53D",
+                    "54A",
+                    "54B",
+                    "54D",
+                    "56A",
+                    "56D",
+                    "57A",
+                    "57B",
+                    "57D",
+                    "72"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "FICdtTrf/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "FICdtTrf/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "FICdtTrf/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso",
+                            "mapped_from": "generated"
+                        },
+                        "NbOfTxs": {
+                            "path": "FICdtTrf/GrpHdr/NbOfTxs",
+                            "mandatory": true,
+                            "value": "1"
+                        },
+                        "SttlmInf": {
+                            "path": "FICdtTrf/GrpHdr/SttlmInf",
+                            "mandatory": true,
+                            "children": {
+                                "SttlmMtd": {
+                                    "path": "FICdtTrf/GrpHdr/SttlmInf/SttlmMtd",
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "INDA",
+                                        "INGA",
+                                        "COVE",
+                                        "CLRG"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "CdtTrfTxInf": {
+                    "path": "FICdtTrf/CdtTrfTxInf",
+                    "mandatory": true,
+                    "children": {
+                        "PmtId": {
+                            "mandatory": true,
+                            "children": {
+                                "InstrId": {
+                                    "mandatory": false,
+                                    "max_length": 35,
+                                    "mapped_from": "20"
+                                },
+                                "EndToEndId": {
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "21",
+                                    "description": "Use NOTPROVIDED if field 21 is absent"
+                                },
+                                "TxId": {
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "20"
+                                }
+                            }
+                        },
+                        "IntrBkSttlmAmt": {
+                            "mandatory": true,
+                            "mapped_from": "32A",
+                            "attributes": {
+                                "Ccy": "currency from 32A"
+                            }
+                        },
+                        "IntrBkSttlmDt": {
+                            "mandatory": true,
+                            "format": "date_iso",
+                            "mapped_from": "32A"
+                        },
+                        "InstgAgt": {
+                            "mandatory": true,
+                            "mapped_from": "52A",
+                            "children": {
+                                "FinInstnId": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "mandatory": true,
+                                            "format": "bic",
+                                            "mapped_from": "52A"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "InstdAgt": {
+                            "mandatory": true,
+                            "mapped_from": "58A",
+                            "children": {
+                                "FinInstnId": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "mandatory": true,
+                                            "format": "bic",
+                                            "mapped_from": "58A"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "IntrmyAgt1": {
+                            "mandatory": false,
+                            "mapped_from": "56A",
+                            "children": {
+                                "FinInstnId": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "mandatory": false,
+                                            "format": "bic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "IntrmyAgt2": {
+                            "mandatory": false,
+                            "mapped_from": "57A",
+                            "children": {
+                                "FinInstnId": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "mandatory": false,
+                                            "format": "bic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Cdtr": {
+                            "mandatory": true,
+                            "mapped_from": "58A",
+                            "children": {
+                                "FinInstnId": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "mandatory": true,
+                                            "format": "bic",
+                                            "mapped_from": "58A BIC"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT202COV": {
+            "description": "General Financial Institution Transfer - Cover",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf",
+            "note": "Same header as MT202 but must include UndrlygCstmrCdtTrf block",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "21": {
+                        "description": "Related Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    },
+                    "52A": {
+                        "description": "Ordering Institution",
+                        "format": "bic"
+                    },
+                    "58A": {
+                        "description": "Beneficiary Institution",
+                        "format": "bic"
+                    },
+                    "50A": {
+                        "description": "Ordering Customer (Underlying)",
+                        "format": "bic"
+                    },
+                    "59A": {
+                        "description": "Beneficiary Customer (Underlying)",
+                        "mandatory": true
+                    }
+                },
+                "optional": [
+                    "13C",
+                    "53A",
+                    "53B",
+                    "54A",
+                    "54B",
+                    "56A",
+                    "57A",
+                    "70",
+                    "72"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "FICdtTrf/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "FICdtTrf/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "FICdtTrf/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        },
+                        "NbOfTxs": {
+                            "path": "FICdtTrf/GrpHdr/NbOfTxs",
+                            "mandatory": true,
+                            "value": "1"
+                        },
+                        "SttlmInf": {
+                            "path": "FICdtTrf/GrpHdr/SttlmInf",
+                            "mandatory": true,
+                            "children": {
+                                "SttlmMtd": {
+                                    "path": "FICdtTrf/GrpHdr/SttlmInf/SttlmMtd",
+                                    "mandatory": true,
+                                    "value": "INDA",
+                                    "description": "Settlement Method"
+                                }
+                            }
+                        }
+                    }
+                },
+                "CdtTrfTxInf": {
+                    "path": "FICdtTrf/CdtTrfTxInf",
+                    "mandatory": true,
+                    "children": {
+                        "PmtId": {
+                            "path": "FICdtTrf/CdtTrfTxInf/PmtId",
+                            "mandatory": true,
+                            "children": {
+                                "InstrId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/InstrId",
+                                    "mandatory": false,
+                                    "max_length": 35
+                                },
+                                "EndToEndId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "21"
+                                },
+                                "TxId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/TxId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "20"
+                                }
+                            }
+                        },
+                        "IntrBkSttlmAmt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
+                            "mandatory": true,
+                            "mapped_from": "32A",
+                            "attributes": {
+                                "Ccy": "currency from 32A"
+                            }
+                        },
+                        "IntrBkSttlmDt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
+                            "mandatory": true,
+                            "format": "date_iso",
+                            "mapped_from": "32A"
+                        },
+                        "InstgAgt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/InstgAgt",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "52A"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "InstdAgt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/InstdAgt",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "58A"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Dbtr": {
+                            "path": "FICdtTrf/CdtTrfTxInf/Dbtr",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "52A or _senderBic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "IntrmyAgt1": {
+                            "path": "FICdtTrf/CdtTrfTxInf/IntrmyAgt1",
+                            "mandatory": false,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/IntrmyAgt1/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI",
+                                            "mandatory": false,
+                                            "format": "bic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Cdtr": {
+                            "path": "FICdtTrf/CdtTrfTxInf/Cdtr",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "58A"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "UndrlygCstmrCdtTrf": {
+                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf",
+                            "mandatory": true,
+                            "description": "CRITICAL - This block is MANDATORY for MT202COV. Missing this causes MX validation failure.",
+                            "children": {
+                                "InitgPty": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/InitgPty",
+                                    "mandatory": false,
+                                    "children": {
+                                        "Nm": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/InitgPty/Nm",
+                                            "mandatory": false,
+                                            "max_length": 140
+                                        }
+                                    }
+                                },
+                                "Dbtr": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr",
+                                    "mandatory": true,
+                                    "mapped_from": "50A or 50K (underlying ordering customer)",
+                                    "children": {
+                                        "Nm": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/Nm",
+                                            "mandatory": true,
+                                            "max_length": 140,
+                                            "mapped_from": "50A/50K name"
+                                        },
+                                        "PstlAdr": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/PstlAdr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "TwnNm": {
+                                                    "mandatory": true,
+                                                    "value": "NOTPROVIDED"
+                                                },
+                                                "Ctry": {
+                                                    "mandatory": true,
+                                                    "value": "GB"
+                                                },
+                                                "AdrLine": {
+                                                    "mandatory": true,
+                                                    "value": "NOTPROVIDED",
+                                                    "max_length": 70
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "DbtrAcct": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct",
+                                    "mandatory": false,
+                                    "mapped_from": "50A/50K account",
+                                    "children": {
+                                        "Id": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct/Id",
+                                            "mandatory": true,
+                                            "children": {
+                                                "IBAN": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct/Id/IBAN",
+                                                    "mandatory": false
+                                                },
+                                                "Othr": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct/Id/Othr",
+                                                    "mandatory": false,
+                                                    "children": {
+                                                        "Id": {
+                                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAcct/Id/Othr/Id",
+                                                            "mandatory": true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "DbtrAgt": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAgt",
+                                    "mandatory": true,
+                                    "mapped_from": "52A or _senderBic",
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAgt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/DbtrAgt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "52A or _senderBic"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "CdtrAgt": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAgt",
+                                    "mandatory": true,
+                                    "mapped_from": "57A or _receiverBic",
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAgt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAgt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "57A or _receiverBic"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "Cdtr": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr",
+                                    "mandatory": true,
+                                    "mapped_from": "59A (underlying beneficiary customer)",
+                                    "children": {
+                                        "Nm": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/Nm",
+                                            "mandatory": true,
+                                            "max_length": 140,
+                                            "mapped_from": "59A name"
+                                        },
+                                        "PstlAdr": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/PstlAdr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "TwnNm": {
+                                                    "mandatory": true,
+                                                    "value": "NOTPROVIDED"
+                                                },
+                                                "Ctry": {
+                                                    "mandatory": true,
+                                                    "value": "GB"
+                                                },
+                                                "AdrLine": {
+                                                    "mandatory": true,
+                                                    "value": "NOTPROVIDED",
+                                                    "max_length": 70
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "CdtrAcct": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct",
+                                    "mandatory": false,
+                                    "mapped_from": "59A account",
+                                    "children": {
+                                        "Id": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id",
+                                            "mandatory": true,
+                                            "children": {
+                                                "IBAN": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/IBAN",
+                                                    "mandatory": false
+                                                },
+                                                "Othr": {
+                                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/Othr",
+                                                    "mandatory": false,
+                                                    "children": {
+                                                        "Id": {
+                                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/Othr/Id",
+                                                            "mandatory": true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "RmtInf": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/RmtInf",
+                                    "mandatory": false,
+                                    "mapped_from": "70",
+                                    "children": {
+                                        "Ustrd": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/RmtInf/Ustrd",
+                                            "mandatory": false,
+                                            "max_length": 140
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT192": {
+            "description": "Request for Cancellation",
+            "target_mx": "camt.056.001.08",
+            "mx_xml_root": "Document/FIToFIPmtCxlReq",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "21": {
+                        "description": "Related Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "11S": {
+                        "description": "Original MT Type and Date",
+                        "max_length": 6
+                    }
+                },
+                "optional": [
+                    "79"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "Assgnmt": {
+                    "path": "FIToFIPmtCxlReq/Assgnmt",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "FIToFIPmtCxlReq/Assgnmt/Id",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "Assgnr": {
+                            "path": "FIToFIPmtCxlReq/Assgnmt/Assgnr",
+                            "mandatory": true,
+                            "children": {
+                                "Agt": {
+                                    "path": "FIToFIPmtCxlReq/Assgnmt/Assgnr/Agt",
+                                    "mandatory": true,
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "FIToFIPmtCxlReq/Assgnmt/Assgnr/Agt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "FIToFIPmtCxlReq/Assgnmt/Assgnr/Agt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "_senderBic",
+                                                    "description": "Sender BIC"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Assgne": {
+                            "path": "FIToFIPmtCxlReq/Assgnmt/Assgne",
+                            "mandatory": true,
+                            "children": {
+                                "Agt": {
+                                    "path": "FIToFIPmtCxlReq/Assgnmt/Assgne/Agt",
+                                    "mandatory": true,
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "FIToFIPmtCxlReq/Assgnmt/Assgne/Agt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "FIToFIPmtCxlReq/Assgnmt/Assgne/Agt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "_receiverBic",
+                                                    "description": "Receiver BIC"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "CreDtTm": {
+                            "path": "FIToFIPmtCxlReq/Assgnmt/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        }
+                    }
+                },
+                "Undrlyg": {
+                    "path": "FIToFIPmtCxlReq/Undrlyg",
+                    "mandatory": true,
+                    "children": {
+                        "TxInf": {
+                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf",
+                            "mandatory": true,
+                            "children": {
+                                "CxlId": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "20"
+                                },
+                                "Case": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case",
+                                    "mandatory": true,
+                                    "children": {
+                                        "Id": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Id",
+                                            "mandatory": true,
+                                            "mapped_from": "20"
+                                        },
+                                        "Cretr": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Cretr",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Agt": {
+                                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Cretr/Agt",
+                                                    "mandatory": true,
+                                                    "children": {
+                                                        "FinInstnId": {
+                                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Cretr/Agt/FinInstnId",
+                                                            "mandatory": true,
+                                                            "children": {
+                                                                "BICFI": {
+                                                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/Case/Cretr/Agt/FinInstnId/BICFI",
+                                                                    "mandatory": true,
+                                                                    "mapped_from": "_senderBic or generated_bic",
+                                                                    "value": "BANKUS33XXX"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "OrgnlGrpInf": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlGrpInf",
+                                    "mandatory": false,
+                                    "children": {
+                                        "OrgnlMsgId": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlGrpInf/OrgnlMsgId",
+                                            "mandatory": true,
+                                            "mapped_from": "11S or 21"
+                                        },
+                                        "OrgnlMsgNmId": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlGrpInf/OrgnlMsgNmId",
+                                            "mandatory": true,
+                                            "value": "pacs.008"
+                                        }
+                                    }
+                                },
+                                "OrgnlInstrId": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlInstrId",
+                                    "mandatory": false,
+                                    "max_length": 35,
+                                    "mapped_from": "21"
+                                },
+                                "OrgnlEndToEndId": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlEndToEndId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "21",
+                                    "description": "Original End to End ID, mandatory in CBPR+"
+                                },
+                                "OrgnlTxId": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlTxId",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "21",
+                                    "description": "Original Transaction ID"
+                                },
+                                "OrgnlUETR": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlUETR",
+                                    "mandatory": true,
+                                    "max_length": 36,
+                                    "mapped_from": "generated_uetr or block3_121",
+                                    "description": "Original UETR"
+                                },
+                                "OrgnlIntrBkSttlmAmt": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlIntrBkSttlmAmt",
+                                    "mandatory": true,
+                                    "value": "1500.00",
+                                    "attributes": {
+                                        "Ccy": "USD"
+                                    }
+                                },
+                                "OrgnlIntrBkSttlmDt": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/OrgnlIntrBkSttlmDt",
+                                    "mandatory": true,
+                                    "mapped_from": "generated"
+                                },
+                                "CxlRsnInf": {
+                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf",
+                                    "mandatory": false,
+                                    "mapped_from": "79",
+                                    "children": {
+                                        "Rsn": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/Rsn",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Cd": {
+                                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/Rsn/Cd",
+                                                    "mandatory": true,
+                                                    "max_length": 4,
+                                                    "value": "NARR"
+                                                },
+                                                "Prtry": {
+                                                    "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/Rsn/Prtry",
+                                                    "mandatory": false,
+                                                    "max_length": 35,
+                                                    "mapped_from": "79 first line"
+                                                }
+                                            }
+                                        },
+                                        "AddtlInf": {
+                                            "path": "FIToFIPmtCxlReq/Undrlyg/TxInf/CxlRsnInf/AddtlInf",
+                                            "mandatory": true,
+                                            "max_length": 105,
+                                            "mapped_from": "79 remaining lines"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT940": {
+            "description": "Customer Statement Message",
+            "target_mx": "camt.053.001.08",
+            "mx_xml_root": "Document/BkToCstmrStmt",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Transaction Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "28C": {
+                        "description": "Statement Number",
+                        "format": "^[0-9]{1,5}/[0-9]{1,5}$"
+                    },
+                    "60F": {
+                        "description": "Opening Balance",
+                        "indicator": [
+                            "C",
+                            "D"
+                        ],
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    },
+                    "62F": {
+                        "description": "Closing Balance",
+                        "indicator": [
+                            "C",
+                            "D"
+                        ],
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    }
+                },
+                "optional": [
+                    "25P",
+                    "60M",
+                    "61",
+                    "62M",
+                    "64",
+                    "65",
+                    "86"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "BkToCstmrStmt/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "BkToCstmrStmt/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrStmt/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        },
+                        "MsgRcpt": {
+                            "path": "BkToCstmrStmt/GrpHdr/MsgRcpt",
+                            "mandatory": false
+                        },
+                        "MsgPgntn": {
+                            "path": "BkToCstmrStmt/GrpHdr/MsgPgntn",
+                            "mandatory": false
+                        }
+                    }
+                },
+                "Stmt": {
+                    "path": "BkToCstmrStmt/Stmt",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "BkToCstmrStmt/Stmt/Id",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "ElctrncSeqNb": {
+                            "path": "BkToCstmrStmt/Stmt/ElctrncSeqNb",
+                            "mandatory": false,
+                            "mapped_from": "28C sequence part"
+                        },
+                        "LglSeqNb": {
+                            "path": "BkToCstmrStmt/Stmt/LglSeqNb",
+                            "mandatory": false
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrStmt/Stmt/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso",
+                            "description": "Statement creation date-time"
+                        },
+                        "FrToDt": {
+                            "path": "BkToCstmrStmt/Stmt/FrToDt",
+                            "mandatory": false,
+                            "children": {
+                                "FrDtTm": {
+                                    "path": "BkToCstmrStmt/Stmt/FrToDt/FrDtTm",
+                                    "mandatory": true,
+                                    "format": "datetime_iso"
+                                },
+                                "ToDtTm": {
+                                    "path": "BkToCstmrStmt/Stmt/FrToDt/ToDtTm",
+                                    "mandatory": true,
+                                    "format": "datetime_iso"
+                                }
+                            }
+                        },
+                        "Acct": {
+                            "path": "BkToCstmrStmt/Stmt/Acct",
+                            "mandatory": true,
+                            "mapped_from": "25",
+                            "children": {
+                                "Id": {
+                                    "path": "BkToCstmrStmt/Stmt/Acct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "BkToCstmrStmt/Stmt/Acct/Id/IBAN",
+                                            "mandatory": false,
+                                            "format": "iban",
+                                            "description": "Use IBAN if account is IBAN format"
+                                        },
+                                        "Othr": {
+                                            "path": "BkToCstmrStmt/Stmt/Acct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "BkToCstmrStmt/Stmt/Acct/Id/Othr/Id",
+                                                    "mandatory": true,
+                                                    "max_length": 34
+                                                }
+                                            },
+                                            "description": "Use Othr if not IBAN"
+                                        }
+                                    },
+                                    "validation_note": "Either IBAN or Othr must be present"
+                                },
+                                "Ccy": {
+                                    "path": "BkToCstmrStmt/Stmt/Acct/Ccy",
+                                    "mandatory": false,
+                                    "format": "currency"
+                                },
+                                "Ownr": {
+                                    "path": "BkToCstmrStmt/Stmt/Acct/Ownr",
+                                    "mandatory": false,
+                                    "children": {
+                                        "Nm": {
+                                            "path": "BkToCstmrStmt/Stmt/Acct/Ownr/Nm",
+                                            "mandatory": false,
+                                            "max_length": 140
+                                        }
+                                    }
+                                },
+                                "Svcr": {
+                                    "path": "BkToCstmrStmt/Stmt/Acct/Svcr",
+                                    "mandatory": false,
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "BkToCstmrStmt/Stmt/Acct/Svcr/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "BkToCstmrStmt/Stmt/Acct/Svcr/FinInstnId/BICFI",
+                                                    "mandatory": false,
+                                                    "format": "bic"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Bal": {
+                            "path": "BkToCstmrStmt/Stmt/Bal",
+                            "mandatory": true,
+                            "min_occurrences": 2,
+                            "description": "At least 2 balances required: Opening (OPBD) and Closing (CLBD)",
+                            "children": {
+                                "Tp": {
+                                    "path": "BkToCstmrStmt/Stmt/Bal/Tp",
+                                    "mandatory": true,
+                                    "children": {
+                                        "CdOrPrtry": {
+                                            "path": "BkToCstmrStmt/Stmt/Bal/Tp/CdOrPrtry",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Cd": {
+                                                    "path": "BkToCstmrStmt/Stmt/Bal/Tp/CdOrPrtry/Cd",
+                                                    "mandatory": true,
+                                                    "allowed_values": [
+                                                        "OPBD",
+                                                        "CLBD",
+                                                        "CLAV",
+                                                        "FWAV"
+                                                    ],
+                                                    "description": "OPBD=Opening (60F), CLBD=Closing (62F)"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "Amt": {
+                                    "mandatory": true,
+                                    "attributes": {
+                                        "Ccy": "currency from 60F/62F"
+                                    },
+                                    "mapped_from": "60F or 62F amount"
+                                },
+                                "CdtDbtInd": {
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "CRDT",
+                                        "DBIT"
+                                    ],
+                                    "description": "C=CRDT, D=DBIT from 60F/62F indicator"
+                                },
+                                "Dt": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "Dt": {
+                                            "mandatory": true,
+                                            "format": "date_iso",
+                                            "mapped_from": "60F/62F date"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "TxsSummry": {
+                            "mandatory": false
+                        },
+                        "Ntry": {
+                            "mandatory": false,
+                            "description": "Transaction entries from MT field 61",
+                            "children": {
+                                "Amt": {
+                                    "mandatory": true,
+                                    "attributes": {
+                                        "Ccy": "currency"
+                                    }
+                                },
+                                "CdtDbtInd": {
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "CRDT",
+                                        "DBIT"
+                                    ]
+                                },
+                                "Sts": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "Cd": {
+                                            "mandatory": true,
+                                            "allowed_values": [
+                                                "BOOK",
+                                                "PDNG",
+                                                "INFO"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "BookgDt": {
+                                    "mandatory": false
+                                },
+                                "ValDt": {
+                                    "mandatory": false,
+                                    "children": {
+                                        "Dt": {
+                                            "mandatory": true,
+                                            "format": "date_iso"
+                                        }
+                                    }
+                                },
+                                "AcctSvcrRef": {
+                                    "mandatory": false,
+                                    "max_length": 35,
+                                    "mapped_from": "61 bank reference"
+                                },
+                                "BkTxCd": {
+                                    "mandatory": true,
+                                    "children": {
+                                        "Domn": {
+                                            "mandatory": false
+                                        },
+                                        "Prtry": {
+                                            "mandatory": false,
+                                            "children": {
+                                                "Cd": {
+                                                    "mandatory": true,
+                                                    "mapped_from": "86 transaction code"
+                                                },
+                                                "Issr": {
+                                                    "mandatory": false
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "NtryDtls": {
+                                    "mandatory": false,
+                                    "children": {
+                                        "TxDtls": {
+                                            "mandatory": false,
+                                            "children": {
+                                                "Refs": {
+                                                    "mandatory": false,
+                                                    "children": {
+                                                        "MsgId": {
+                                                            "mandatory": false,
+                                                            "max_length": 35
+                                                        },
+                                                        "EndToEndId": {
+                                                            "mandatory": false,
+                                                            "max_length": 35
+                                                        }
+                                                    }
+                                                },
+                                                "RmtInf": {
+                                                    "mandatory": false,
+                                                    "children": {
+                                                        "Ustrd": {
+                                                            "mandatory": false,
+                                                            "max_length": 140,
+                                                            "mapped_from": "86 field"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT950": {
+            "description": "Statement Message",
+            "target_mx": "camt.053.001.08",
+            "mx_xml_root": "Document/BkToCstmrStmt",
+            "note": "Same MX structure as MT940. Refer to MT940 mx_mandatory_xml_fields block.",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Transaction Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "28C": {
+                        "description": "Statement Number",
+                        "format": "^[0-9]{1,5}/[0-9]{1,5}$"
+                    },
+                    "60F": {
+                        "description": "Opening Balance",
+                        "indicator": [
+                            "C",
+                            "D"
+                        ],
+                        "format": "date_yymmdd"
+                    },
+                    "62F": {
+                        "description": "Closing Balance",
+                        "indicator": [
+                            "C",
+                            "D"
+                        ],
+                        "format": "date_yymmdd"
+                    }
+                },
+                "optional": [
+                    "60M",
+                    "61",
+                    "62M",
+                    "64",
+                    "65",
+                    "86"
+                ]
+            }
+        },
+        "MT942": {
+            "description": "Interim Transaction Report",
+            "target_mx": "camt.052.001.08",
+            "mx_xml_root": "Document/BkToCstmrAcctRpt",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Transaction Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "28C": {
+                        "description": "Statement Number",
+                        "format": "^[0-9]{1,5}/[0-9]{1,5}$"
+                    },
+                    "34F": {
+                        "description": "Floor Limit Indicator",
+                        "indicator": [
+                            "C",
+                            "D"
+                        ],
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    }
+                },
+                "optional": [
+                    "13D",
+                    "61",
+                    "86",
+                    "90C",
+                    "90D"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "BkToCstmrAcctRpt/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "BkToCstmrAcctRpt/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrAcctRpt/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        }
+                    }
+                },
+                "Rpt": {
+                    "path": "BkToCstmrAcctRpt/Rpt",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "BkToCstmrAcctRpt/Rpt/Id",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "RptPgntn": {
+                            "path": "BkToCstmrAcctRpt/Rpt/RptPgntn",
+                            "mandatory": true,
+                            "children": {
+                                "PgNb": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/RptPgntn/PgNb",
+                                    "mandatory": true,
+                                    "value": "1"
+                                },
+                                "LastPgInd": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/RptPgntn/LastPgInd",
+                                    "mandatory": true,
+                                    "value": "true"
+                                }
+                            }
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrAcctRpt/Rpt/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        },
+                        "Acct": {
+                            "path": "BkToCstmrAcctRpt/Rpt/Acct",
+                            "mandatory": true,
+                            "mapped_from": "25",
+                            "children": {
+                                "Id": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Acct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "BkToCstmrAcctRpt/Rpt/Acct/Id/IBAN",
+                                            "mandatory": false
+                                        },
+                                        "Othr": {
+                                            "path": "BkToCstmrAcctRpt/Rpt/Acct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "BkToCstmrAcctRpt/Rpt/Acct/Id/Othr/Id",
+                                                    "mandatory": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "Ccy": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Acct/Ccy",
+                                    "mandatory": true,
+                                    "value": "USD"
+                                }
+                            }
+                        },
+                        "Bal": {
+                            "path": "BkToCstmrAcctRpt/Rpt/Bal",
+                            "mandatory": false,
+                            "description": "Floor Limit Balance from field 34F",
+                            "children": {
+                                "Tp": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Bal/Tp",
+                                    "mandatory": true,
+                                    "children": {
+                                        "CdOrPrtry": {
+                                            "path": "BkToCstmrAcctRpt/Rpt/Bal/Tp/CdOrPrtry",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Cd": {
+                                                    "path": "BkToCstmrAcctRpt/Rpt/Bal/Tp/CdOrPrtry/Cd",
+                                                    "mandatory": true,
+                                                    "value": "FWAV"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "Amt": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Bal/Amt",
+                                    "mandatory": true,
+                                    "attributes": {
+                                        "Ccy": "currency from 34F"
+                                    },
+                                    "mapped_from": "34F"
+                                },
+                                "CdtDbtInd": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Bal/CdtDbtInd",
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "CRDT",
+                                        "DBIT"
+                                    ]
+                                },
+                                "Dt": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Bal/Dt",
+                                    "mandatory": true,
+                                    "children": {
+                                        "Dt": {
+                                            "path": "BkToCstmrAcctRpt/Rpt/Bal/Dt/Dt",
+                                            "mandatory": true,
+                                            "format": "date_iso"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Ntry": {
+                            "path": "BkToCstmrAcctRpt/Rpt/Ntry",
+                            "mandatory": false,
+                            "description": "Transaction entries from field 61",
+                            "children": {
+                                "Amt": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Ntry/Amt",
+                                    "mandatory": true,
+                                    "attributes": {
+                                        "Ccy": "currency"
+                                    }
+                                },
+                                "CdtDbtInd": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Ntry/CdtDbtInd",
+                                    "mandatory": true,
+                                    "allowed_values": [
+                                        "CRDT",
+                                        "DBIT"
+                                    ]
+                                },
+                                "Sts": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Ntry/Sts",
+                                    "mandatory": true,
+                                    "children": {
+                                        "Cd": {
+                                            "path": "BkToCstmrAcctRpt/Rpt/Ntry/Sts/Cd",
+                                            "mandatory": true,
+                                            "allowed_values": [
+                                                "BOOK",
+                                                "PDNG",
+                                                "INFO"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "BkTxCd": {
+                                    "path": "BkToCstmrAcctRpt/Rpt/Ntry/BkTxCd",
+                                    "mandatory": true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT900": {
+            "description": "Confirmation of Debit",
+            "target_mx": "camt.054.001.08",
+            "mx_xml_root": "Document/BkToCstmrDbtCdtNtfctn",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Transaction Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    }
+                },
+                "optional": [
+                    "21",
+                    "52A",
+                    "72"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "BkToCstmrDbtCdtNtfctn/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "BkToCstmrDbtCdtNtfctn/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrDbtCdtNtfctn/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        }
+                    }
+                },
+                "Ntfctn": {
+                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Id",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        },
+                        "Acct": {
+                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct",
+                            "mandatory": true,
+                            "children": {
+                                "Id": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/IBAN",
+                                            "mandatory": false
+                                        },
+                                        "Othr": {
+                                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Acct/Id/Othr/Id",
+                                                    "mandatory": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Ntry": {
+                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry",
+                            "mandatory": true,
+                            "children": {
+                                "Amt": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Amt",
+                                    "mandatory": true,
+                                    "mapped_from": "32A",
+                                    "attributes": {
+                                        "Ccy": "currency from 32A"
+                                    }
+                                },
+                                "CdtDbtInd": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/CdtDbtInd",
+                                    "mandatory": true,
+                                    "value": "DBIT",
+                                    "description": "Always DBIT for MT900 (Debit confirmation)"
+                                },
+                                "Sts": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Sts",
+                                    "mandatory": true,
+                                    "children": {
+                                        "Cd": {
+                                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/Sts/Cd",
+                                            "mandatory": true,
+                                            "value": "BOOK"
+                                        }
+                                    }
+                                },
+                                "ValDt": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/ValDt",
+                                    "mandatory": false,
+                                    "children": {
+                                        "Dt": {
+                                            "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/ValDt/Dt",
+                                            "mandatory": true,
+                                            "format": "date_iso",
+                                            "mapped_from": "32A date"
+                                        }
+                                    }
+                                },
+                                "BkTxCd": {
+                                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/BkTxCd",
+                                    "mandatory": true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT910": {
+            "description": "Confirmation of Credit",
+            "target_mx": "camt.054.001.08",
+            "mx_xml_root": "Document/BkToCstmrDbtCdtNtfctn",
+            "note": "Same MX structure as MT900 but CdtDbtInd = CRDT",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Transaction Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    }
+                },
+                "optional": [
+                    "21",
+                    "50A",
+                    "52A",
+                    "56A",
+                    "72"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "Ntry_CdtDbtInd": {
+                    "path": "BkToCstmrDbtCdtNtfctn/Ntfctn/Ntry/CdtDbtInd",
+                    "mandatory": true,
+                    "value": "CRDT",
+                    "description": "Always CRDT for MT910 (Credit confirmation)"
+                }
+            }
+        },
+        "MT196": {
+            "description": "Answers",
+            "target_mx": "camt.029.001.09",
+            "mx_xml_root": "Document/RsltnOfInvstgtn",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "21": {
+                        "description": "Related Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    }
+                },
+                "optional": [
+                    "76",
+                    "77A",
+                    "79"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "Assgnmt": {
+                    "path": "RsltnOfInvstgtn/Assgnmt",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "RsltnOfInvstgtn/Assgnmt/Id",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "Assgnr": {
+                            "path": "RsltnOfInvstgtn/Assgnmt/Assgnr",
+                            "mandatory": true,
+                            "children": {
+                                "Agt": {
+                                    "path": "RsltnOfInvstgtn/Assgnmt/Assgnr/Agt",
+                                    "mandatory": true,
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "RsltnOfInvstgtn/Assgnmt/Assgnr/Agt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "RsltnOfInvstgtn/Assgnmt/Assgnr/Agt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "_senderBic"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Assgne": {
+                            "path": "RsltnOfInvstgtn/Assgnmt/Assgne",
+                            "mandatory": true,
+                            "children": {
+                                "Agt": {
+                                    "path": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt",
+                                    "mandatory": true,
+                                    "children": {
+                                        "FinInstnId": {
+                                            "path": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt/FinInstnId",
+                                            "mandatory": true,
+                                            "children": {
+                                                "BICFI": {
+                                                    "path": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt/FinInstnId/BICFI",
+                                                    "mandatory": true,
+                                                    "mapped_from": "_receiverBic"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "CreDtTm": {
+                            "path": "RsltnOfInvstgtn/Assgnmt/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        }
+                    }
+                },
+                "Sts": {
+                    "path": "RsltnOfInvstgtn/Sts",
+                    "mandatory": true,
+                    "children": {
+                        "Conf": {
+                            "path": "RsltnOfInvstgtn/Sts/Conf",
+                            "mandatory": true,
+                            "allowed_values": [
+                                "CNCL",
+                                "PDCR",
+                                "RJCR",
+                                "ACCR"
+                            ],
+                            "mapped_from": "76 status code",
+                            "description": "Resolution status"
+                        }
+                    }
+                },
+                "CxlDtls": {
+                    "path": "RsltnOfInvstgtn/CxlDtls",
+                    "mandatory": false,
+                    "mapped_from": "79",
+                    "children": {
+                        "TxInfAndSts": {
+                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts",
+                            "mandatory": false,
+                            "children": {
+                                "CxlStsId": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsId",
+                                    "mandatory": true,
+                                    "mapped_from": "_auto_status or 20"
+                                },
+                                "RslvdCase": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase",
+                                    "mandatory": true,
+                                    "children": {
+                                        "Id": {
+                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Id",
+                                            "mandatory": true,
+                                            "mapped_from": "20",
+                                            "description": "Case ID, mandatory for resolution"
+                                        },
+                                        "Cretr": {
+                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Cretr",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Agt": {
+                                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Cretr/Agt",
+                                                    "mandatory": true,
+                                                    "children": {
+                                                        "FinInstnId": {
+                                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Cretr/Agt/FinInstnId",
+                                                            "mandatory": true,
+                                                            "children": {
+                                                                "BICFI": {
+                                                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Cretr/Agt/FinInstnId/BICFI",
+                                                                    "mandatory": true,
+                                                                    "mapped_from": "_senderBic"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "OrgnlEndToEndId": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlEndToEndId",
+                                    "mandatory": true,
+                                    "mapped_from": "21",
+                                    "description": "Original End to End Id - often mapped from 21"
+                                },
+                                "OrgnlTxId": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlTxId",
+                                    "mandatory": true,
+                                    "mapped_from": "21",
+                                    "description": "Original Transaction Id"
+                                },
+                                "OrgnlUETR": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlUETR",
+                                    "mandatory": true,
+                                    "mapped_from": "generated_uetr or block3_121",
+                                    "description": "Original UETR"
+                                },
+                                "OrgnlGrpInf": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf",
+                                    "mandatory": false,
+                                    "children": {
+                                        "OrgnlMsgId": {
+                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf/OrgnlMsgId",
+                                            "mandatory": true,
+                                            "mapped_from": "21"
+                                        },
+                                        "OrgnlMsgNmId": {
+                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf/OrgnlMsgNmId",
+                                            "mandatory": true,
+                                            "mapped_from": "11S tag part",
+                                            "value": "pacs.008"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT199": {
+            "description": "Free Format Message",
+            "target_mx": "pacs.002.001.10",
+            "mx_xml_root": "Document/FIToFIPmtStsRpt",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "79": {
+                        "description": "Narrative",
+                        "max_length": 2000
+                    }
+                },
+                "optional": [
+                    "21"
+                ]
+            }
+        },
+        "MT210": {
+            "description": "Notice to Receive",
+            "target_mx": "camt.057.001.06",
+            "mx_xml_root": "Document/NtfctnToRcv",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "30": {
+                        "description": "Date",
+                        "format": "date_yymmdd"
+                    },
+                    "32B": {
+                        "description": "Currency/Amount",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    }
+                },
+                "optional": [
+                    "21",
+                    "52A",
+                    "56A",
+                    "57A",
+                    "72"
+                ]
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "NtfctnToRcv/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "NtfctnToRcv/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "NtfctnToRcv/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        }
+                    }
+                },
+                "Ntfctn": {
+                    "path": "NtfctnToRcv/Ntfctn",
+                    "mandatory": true,
+                    "children": {
+                        "Id": {
+                            "path": "NtfctnToRcv/Ntfctn/Id",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "Acct": {
+                            "path": "NtfctnToRcv/Ntfctn/Acct",
+                            "mandatory": true,
+                            "children": {
+                                "Id": {
+                                    "path": "NtfctnToRcv/Ntfctn/Acct/Id",
+                                    "mandatory": true,
+                                    "children": {
+                                        "IBAN": {
+                                            "path": "NtfctnRcv/Ntfctn/Acct/Id/IBAN",
+                                            "mandatory": false
+                                        },
+                                        "Othr": {
+                                            "path": "NtfctnRcv/Ntfctn/Acct/Id/Othr",
+                                            "mandatory": false,
+                                            "children": {
+                                                "Id": {
+                                                    "path": "NtfctnRcv/Ntfctn/Acct/Id/Othr/Id",
+                                                    "mandatory": true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Itm": {
+                            "path": "NtfctnToRcv/Ntfctn/Itm",
+                            "mandatory": true,
+                            "children": {
+                                "Id": {
+                                    "path": "NtfctnToRcv/Ntfctn/Itm/Id",
+                                    "mandatory": true,
+                                    "max_length": 35,
+                                    "mapped_from": "21 or 20"
+                                },
+                                "EndToEndId": {
+                                    "path": "NtfctnToRcv/Ntfctn/Itm/EndToEndId",
+                                    "mandatory": false
+                                },
+                                "Amt": {
+                                    "path": "NtfctnToRcv/Ntfctn/Itm/Amt",
+                                    "mandatory": true,
+                                    "mapped_from": "32B",
+                                    "attributes": {
+                                        "Ccy": "currency from 32B"
+                                    }
+                                },
+                                "XpctdValDt": {
+                                    "path": "NtfctnToRcv/Ntfctn/Itm/XpctdValDt",
+                                    "mandatory": true,
+                                    "format": "date_iso",
+                                    "mapped_from": "30"
+                                },
+                                "Dbtr": {
+                                    "path": "NtfctnToRcv/Ntfctn/Itm/Dbtr",
+                                    "mandatory": false,
+                                    "children": {
+                                        "Agt": {
+                                            "path": "NtfctnToRcv/Ntfctn/Itm/Dbtr/Agt",
+                                            "mandatory": false,
+                                            "children": {
+                                                "FinInstnId": {
+                                                    "path": "NtfctnToRcv/Ntfctn/Itm/Dbtr/Agt/FinInstnId",
+                                                    "mandatory": true,
+                                                    "children": {
+                                                        "BICFI": {
+                                                            "path": "NtfctnToRcv/Ntfctn/Itm/Dbtr/Agt/FinInstnId/BICFI",
+                                                            "mandatory": false,
+                                                            "mapped_from": "52A"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT101": {
+            "description": "Request for Transfer",
+            "target_mx": "pain.001.001.09",
+            "mx_xml_root": "Document/CstmrCdtTrfInitn",
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16,
+                        "format": "reference"
+                    },
+                    "21": {
+                        "description": "Related Reference",
+                        "max_length": 16
+                    },
+                    "32B": {
+                        "description": "Currency/Amount",
+                        "currency": "ISO4217",
+                        "amount": "numeric"
+                    },
+                    "50L": {
+                        "description": "Ordering Customer",
+                        "mandatory": true
+                    },
+                    "59": {
+                        "description": "Beneficiary",
+                        "mandatory": true
+                    }
+                }
+            },
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "CstmrCdtTrfInitn/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "CstmrCdtTrfInitn/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "CstmrCdtTrfInitn/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso"
+                        },
+                        "NbOfTxs": {
+                            "path": "CstmrCdtTrfInitn/GrpHdr/NbOfTxs",
+                            "mandatory": true,
+                            "value": "1"
+                        },
+                        "InitgPty": {
+                            "path": "CstmrCdtTrfInitn/GrpHdr/InitgPty",
+                            "mandatory": true,
+                            "children": {
+                                "Nm": {
+                                    "path": "CstmrCdtTrfInitn/GrpHdr/InitgPty/Nm",
+                                    "value": "NOTPROVIDED"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "MT102": {
+            "description": "Multiple Customer Credit Transfer",
+            "target_mx": "pacs.008.001.08",
+            "mx_xml_root": "Document/FIToFICstmrCdtTrf",
+            "note": "Maps to multiple CdtTrfTxInf blocks in MX"
+        },
+        "MT104": {
+            "description": "Direct Debit",
+            "target_mx": "pain.008.001.09",
+            "mx_xml_root": "Document/CstmrDrctDbtInitn"
+        },
+        "MT200": {
+            "description": "FI Transfer for Own Account",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf",
+            "mx_mandatory_xml_fields": {
+                "GrpHdr": {
+                    "path": "FICdtTrf/GrpHdr",
+                    "mandatory": true,
+                    "children": {
+                        "MsgId": {
+                            "path": "FICdtTrf/GrpHdr/MsgId",
+                            "mandatory": true,
+                            "max_length": 35,
+                            "mapped_from": "20"
+                        },
+                        "CreDtTm": {
+                            "path": "FICdtTrf/GrpHdr/CreDtTm",
+                            "mandatory": true,
+                            "format": "datetime_iso",
+                            "mapped_from": "generated"
+                        },
+                        "NbOfTxs": {
+                            "path": "FICdtTrf/GrpHdr/NbOfTxs",
+                            "mandatory": true,
+                            "value": "1"
+                        },
+                        "SttlmInf": {
+                            "path": "FICdtTrf/GrpHdr/SttlmInf",
+                            "mandatory": true,
+                            "children": {
+                                "SttlmMtd": {
+                                    "path": "FICdtTrf/GrpHdr/SttlmInf/SttlmMtd",
+                                    "mandatory": true,
+                                    "value": "INDA"
+                                }
+                            }
+                        }
+                    }
+                },
+                "CdtTrfTxInf": {
+                    "path": "FICdtTrf/CdtTrfTxInf",
+                    "mandatory": true,
+                    "children": {
+                        "PmtId": {
+                            "path": "FICdtTrf/CdtTrfTxInf/PmtId",
+                            "mandatory": true,
+                            "children": {
+                                "InstrId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/InstrId",
+                                    "mandatory": false,
+                                    "mapped_from": "20"
+                                },
+                                "EndToEndId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId",
+                                    "mandatory": true,
+                                    "mapped_from": "20"
+                                },
+                                "TxId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/PmtId/TxId",
+                                    "mandatory": true,
+                                    "mapped_from": "20"
+                                }
+                            }
+                        },
+                        "IntrBkSttlmAmt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
+                            "mandatory": true,
+                            "mapped_from": "32A",
+                            "attributes": {
+                                "Ccy": "currency from 32A"
+                            }
+                        },
+                        "IntrBkSttlmDt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
+                            "mandatory": true,
+                            "format": "date_iso",
+                            "mapped_from": "32A"
+                        },
+                        "InstgAgt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/InstgAgt",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "_senderBic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "InstdAgt": {
+                            "path": "FICdtTrf/CdtTrfTxInf/InstdAgt",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "_receiverBic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Dbtr": {
+                            "path": "FICdtTrf/CdtTrfTxInf/Dbtr",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "52A or _senderBic"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Cdtr": {
+                            "path": "FICdtTrf/CdtTrfTxInf/Cdtr",
+                            "mandatory": true,
+                            "children": {
+                                "FinInstnId": {
+                                    "path": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId",
+                                    "mandatory": true,
+                                    "children": {
+                                        "BICFI": {
+                                            "path": "FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI",
+                                            "mandatory": true,
+                                            "mapped_from": "_receiverBic"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "mt_fields": {
+                "required": {
+                    "20": {
+                        "description": "Sender Reference",
+                        "max_length": 16
+                    },
+                    "25": {
+                        "description": "Account Identification",
+                        "max_length": 35
+                    },
+                    "32A": {
+                        "description": "Value Date/Currency/Amount",
+                        "format": "date_yymmdd"
+                    },
+                    "53B": {
+                        "description": "Sender's Correspondent",
+                        "mandatory": true
+                    }
+                }
+            }
+        },
+        "MT201": {
+            "description": "Multiple FI Transfer for Own Account",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf"
+        },
+        "MT203": {
+            "description": "Multiple FI Transfer",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf"
+        },
+        "MT205": {
+            "description": "FI Transfer Execution",
+            "target_mx": "pacs.009.001.08",
+            "mx_xml_root": "Document/FICdtTrf"
+        },
+        "MT110": {
+            "description": "Advice of Cheque",
+            "target_mx": "camt.052.001.08",
+            "mx_xml_root": "Document/BkToCstmrAcctRpt"
+        },
+        "MT191": {
+            "description": "Request for Payment of Charges",
+            "target_mx": "camt.054.001.08",
+            "mx_xml_root": "Document/BkToCstmrDbtCdtNtfctn"
+        },
+        "MT195": {
+            "description": "Queries",
+            "target_mx": "camt.027.001.07",
+            "mx_xml_root": "Document/ClmNonRct"
+        },
+        "MT198": {
+            "description": "Proprietary Message",
+            "target_mx": "camt.999.001.01",
+            "mx_xml_root": "Document/ProprietaryMsg"
+        },
+        "MT204": {
+            "description": "FI Direct Debit",
+            "target_mx": "pacs.010.001.03",
+            "mx_xml_root": "Document/FIDrctDbt"
+        }
+    },
+    "common_mx_rules": {
+        "NOTPROVIDED_rule": "If a mandatory MX field cannot be mapped from the MT message, use the value NOTPROVIDED",
+        "datetime_conversion": "MT date YYMMDD must be converted to ISO 8601: YYYY-MM-DDTHH:MM:SS (use 00:00:00 if time is unknown)",
+        "date_conversion": "MT date YYMMDD -> YYYY-MM-DD (e.g. 240115 -> 2024-01-15)",
+        "amount_conversion": "MT amount uses comma as decimal separator (1000,50). MX uses period (1000.50)",
+        "credit_debit_conversion": {
+            "C": "CRDT",
+            "D": "DBIT"
+        },
+        "charge_bearer_conversion": {
+            "OUR": "DEBT",
+            "SHA": "SHAR",
+            "BEN": "CRED"
+        },
+        "balance_type_conversion": {
+            "60F": "OPBD",
+            "62F": "CLBD",
+            "64": "CLAV",
+            "65": "FWAV"
+        }
+    }
+}

@@ -60,18 +60,25 @@
             "mx_path_bic": "FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
         },
         {
+            "mt_tag": "_senderBic",
+            "name": "Instructing Agent (Sender)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Instructed Agent (Receiver)",
+            "mandatory": true,
+            "type": "bic",
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI"
+        },
+        {
             "mt_tag": "57A",
             "name": "Account With Institution",
             "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
-        },
-        {
-            "mt_tag": "_senderBic",
-            "name": "Debtor Agent fallback",
-            "mandatory": false,
-            "type": "bic",
-            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+            "mx_path_bic": "FICdtTrf/CdtTrfTxInf/IntrmyAgt1/FinInstnId/BICFI"
         },
         {
             "mt_tag": "20",
@@ -79,6 +86,20 @@
             "mandatory": true,
             "type": "text",
             "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Transaction Identification",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/TxId"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "UETR",
+            "mandatory": true,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/UETR"
         },
         {
             "mt_tag": "_receiverBic",

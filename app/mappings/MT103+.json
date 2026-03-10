@@ -17,68 +17,63 @@
         {
             "mt_tag": "_timestamp",
             "name": "Creation Date Time",
-            "mandatory": false,
             "type": "timestamp",
             "mx_path": "FIToFICstmrCdtTrf/GrpHdr/CreDtTm"
         },
         {
-            "mt_tag": "_static_1",
+            "mt_tag": "_static",
             "name": "Number of Transactions",
-            "mandatory": false,
             "type": "static",
             "value": "1",
             "mx_path": "FIToFICstmrCdtTrf/GrpHdr/NbOfTxs"
         },
         {
-            "mt_tag": "_static_IND",
+            "mt_tag": "_static",
             "name": "Settlement Method",
-            "mandatory": false,
             "type": "static",
             "value": "INDA",
             "mx_path": "FIToFICstmrCdtTrf/GrpHdr/SttlmInf/SttlmMtd"
         },
         {
             "mt_tag": "_senderBic",
-            "name": "Instructing Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructing Agent",
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
-            "name": "Instructed Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructed Agent",
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "20",
-            "name": "Sender's Reference (PmtId)",
+            "name": "Instruction Identification",
+            "type": "text",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId"
+        },
+        {
+            "mt_tag": "20",
+            "name": "End To End Identification",
+            "type": "text",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
+        },
+        {
+            "mt_tag": "_uetr",
+            "name": "UETR",
             "mandatory": true,
             "type": "text",
-            "max_length": 16,
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR"
         },
         {
             "mt_tag": "23B",
             "name": "Bank Operation Code",
-            "mandatory": true,
             "type": "text",
-            "value": "CRED",
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Prtry"
-        },
-        {
-            "mt_tag": "20",
-            "name": "End to End Identification",
-            "mandatory": true,
-            "type": "text",
-            "max_length": 16,
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/LclInstrm/Cd"
         },
         {
             "mt_tag": "32A",
-            "name": "Value Date, Currency, Interbank Settled Amount",
-            "mandatory": true,
+            "name": "Interbank Settlement Amount",
             "type": "date_currency_amount",
             "mx_path_amount": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt",
             "mx_path_date": "FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmDt",
@@ -86,60 +81,49 @@
         },
         {
             "mt_tag": "50A",
-            "name": "Ordering Institution (Dbtr)",
-            "mandatory": true,
-            "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/BICFI"
+            "name": "Debtor (Account/BIC)",
+            "type": "account_bic",
+            "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr/Id",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Id/OrgId/AnyBIC"
         },
         {
             "mt_tag": "52A",
             "name": "Debtor Agent",
-            "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_senderBic",
             "name": "Debtor Agent Fallback",
-            "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
+            "fallback": true,
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "59A",
-            "name": "Beneficiary Institution (Cdtr)",
-            "mandatory": true,
-            "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/BICFI"
+            "name": "Beneficiary (Account/BIC)",
+            "type": "account_bic",
+            "mx_path_account": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id",
+            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Id/OrgId/AnyBIC"
         },
         {
             "mt_tag": "57A",
             "name": "Creditor Agent",
-            "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
             "name": "Creditor Agent Fallback",
-            "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
+            "fallback": true,
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "71A",
-            "name": "Details of Charges",
-            "mandatory": true,
+            "name": "Charge Bearer",
             "type": "text",
-            "max_length": 4,
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr"
-        },
-        {
-            "mt_tag": "_uetr",
-            "name": "Unique End-to-End Transaction Reference",
-            "mandatory": false,
-            "type": "text",
-            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
     ]
 }

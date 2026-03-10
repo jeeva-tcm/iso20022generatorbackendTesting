@@ -9,6 +9,18 @@
     "mappings": [
         {
             "mt_tag": "20",
+            "name": "Instruction Identification",
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/InstrId"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Transaction Identification",
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/TxId"
+        },
+        {
+            "mt_tag": "20",
             "name": "Message Identification",
             "mandatory": true,
             "type": "text",
@@ -39,17 +51,15 @@
         },
         {
             "mt_tag": "_senderBic",
-            "name": "Instructing Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructing Agent",
             "type": "bic",
-            "mx_path_bic": "FICdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI"
+            "mx_path": "FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
-            "name": "Instructed Agent (GrpHdr)",
-            "mandatory": false,
+            "name": "Instructed Agent",
             "type": "bic",
-            "mx_path_bic": "FICdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI"
+            "mx_path": "FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "21",
@@ -130,7 +140,7 @@
         {
             "mt_tag": "_uetr",
             "name": "Unique End-to-End Transaction Reference",
-            "mandatory": false,
+            "mandatory": true,
             "type": "text",
             "mx_path": "FICdtTrf/CdtTrfTxInf/PmtId/UETR"
         }
