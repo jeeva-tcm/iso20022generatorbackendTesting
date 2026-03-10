@@ -9,11 +9,16 @@ import os
 import csv
 import io
 
-from .schemas import validation as schemas
-from .services.validator import ISOValidator
-from .services.firebase_service import FirebaseHistoryService
-from .services.schema_generator import SchemaGenerator
-from .services.mt_mx_converter import MT2MXConverter
+import sys
+
+# Ensure the parent directory is in sys.path to allow absolute imports when run directly
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.schemas import validation as schemas
+from app.services.validator import ISOValidator
+from app.services.firebase_service import FirebaseHistoryService
+from app.services.schema_generator import SchemaGenerator
+from app.services.mt_mx_converter import MT2MXConverter
 
 # Initialize services
 history_service = FirebaseHistoryService()
@@ -280,3 +285,7 @@ def health_check():
     if os.path.exists(frontend_path):
         return FileResponse(os.path.join(frontend_path, "index.html"))
     return {"status": "ok", "service": "ISO 20022 Validator", "info": "Run frontend on port 4200 or build it into backend/app/static"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=True)
