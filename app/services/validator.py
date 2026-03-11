@@ -1339,11 +1339,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         """
         Step 4.10 — SWIFT Character Set Validation
         Checks <Ustrd> (unstructured remittance) content for characters
-        outside the SWIFT FIN character set.
+        outside the permitted ISO 20022 MX character set.
 
-        SWIFT allowed: a-z A-Z 0-9 / - ? : ( ) . , ' + space CR LF
+        Ustrd allowed: 0-9 a-z A-Z / - ? : ( ) . , ' + space ! # $ % & * = ^ _ ` { | } ~ " ; < > @ [ \ ]
         """
-        SWIFT_CHARSET = re.compile(r"^[a-zA-Z0-9 /\-?:().,'+\r\n]*$")
+        USTRD_CHARSET = re.compile(r'^[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]+$')
 
         ustrd_patt = re.compile(r'<Ustrd>\s*([^<]+?)\s*</Ustrd>')
 
@@ -1352,9 +1352,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             if not value:
                 continue
 
-            if not SWIFT_CHARSET.match(value):
+            if not USTRD_CHARSET.match(value):
                 # Find the offending characters
-                bad_chars = set(re.findall(r"[^a-zA-Z0-9 /\-?:().,'+\r\n]", value))
+                bad_chars = set(re.findall(r'[^0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]', value))
                 bad_str = ', '.join(f"'{c}'" for c in sorted(bad_chars)[:5])
 
                 try:
@@ -1365,9 +1365,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 report.add_issue(ValidationIssue(
                     "WARNING", 3, "SWIFT_CHARSET_WARN", str(line_num),
                     f"Unstructured remittance at line {line_num} contains characters "
-                    f"outside the SWIFT character set: {bad_str}.",
-                    "SWIFT FIN only allows: a-z A-Z 0-9 / - ? : ( ) . , ' + and space. "
-                    "Remove or replace any special characters like #, @, &, !, etc."
+                    f"outside the permitted ISO 20022 MX character set: {bad_str}.",
+                    "Allowed characters for Ustrd: letters, digits, space, and: / - ? : ( ) . , ' + ! # $ % & * = ^ _ ` {{ | }} ~ \" ; < > @ [ \\ ]. "
+                    "Remove or replace any other special characters."
                 ))
 
     def _validate_charges_currency(self, xml_content: str, report: ValidationReport) -> None:
@@ -1407,8 +1407,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         f"to match the Interbank Settlement Amount currency."
                     ))
 
-    # SWIFT FIN character set regex (reusable)
-    _SWIFT_CHARSET_RE = re.compile(r"^[a-zA-Z0-9 /\-?:().,'+\r\n]*$")
+    # ISO 20022 MX character set regex for Strd / address fields (reusable)
+    _SWIFT_CHARSET_RE = re.compile(r'^[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]\r\n]+$')
     _CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
     _XML_RESERVED_RE = re.compile(r'[<>&"]')
 
@@ -1618,14 +1618,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         ))
                         continue
 
-                    # SWIFT charset
+                    # ISO 20022 MX charset
                     if not self._SWIFT_CHARSET_RE.match(val):
-                        bad_chars = set(re.findall(r"[^a-zA-Z0-9 /\-?:().,'+\r\n]", val))
+                        bad_chars = set(re.findall(r'[^0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]\r\n]', val))
                         bad_str = ', '.join(f"'{c}'" for c in sorted(bad_chars)[:5])
                         report.add_issue(ValidationIssue(
                             "WARNING", 3, "ADDR_ADRLINE_CHARSET", str(adr_line_num),
-                            f"AdrLine in {parent_name} contains non-SWIFT characters: {bad_str}.",
-                            "Use only SWIFT allowed characters: a-z A-Z 0-9 / - ? : ( ) . , ' + and space."
+                            f"AdrLine in {parent_name} contains characters outside the ISO 20022 MX set: {bad_str}.",
+                            "Allowed characters: letters, digits, space, and: / - ? : ( ) . , ' + ! # $ % & * = ^ _ ` {{ | }} ~ \" ; < > @ [ \\ ]."
                         ))
 
                     # Control characters
@@ -2084,7 +2084,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             'Nm', 'StrtNm', 'TwnNm', 'BldgNm', 'AdrLine',
             'DstrctNm', 'CtrySubDvsn', 'TwnLctnNm'
         }
-        SAFE = _re.compile(r"^[a-zA-Z0-9 .,()\'\-]+$")
+        # ISO 20022 MX extended character set for Strd fields
+        SAFE = _re.compile(r'^[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]+$')
         tag_alt = "|".join(_re.escape(t) for t in CHECKED_TAGS)
         patt = _re.compile(r'<(' + tag_alt + r')>\s*([^<]+?)\s*</\1>')
 
@@ -2098,7 +2099,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             seen.add(key)
 
             if not SAFE.match(raw_value):
-                inv = sorted(set(c for c in raw_value if not _re.match(r"[a-zA-Z0-9 .,()\'\-]", c)))
+                inv = sorted(set(c for c in raw_value if not _re.match(r'[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]', c)))
                 inv_display = ' '.join(repr(c) for c in inv)
                 try:
                     line_num = xml_content.count('\n', 0, m.start()) + 1
@@ -2107,8 +2108,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 report.add_issue(_VI(
                     "ERROR", 3, "INVALID_CHARSET", str(line_num),
                     f"Field <{tag_name}> contains invalid character(s): {inv_display}. "
-                    f"Only letters, digits, spaces and . , ( ) \' - are allowed.",
+                    f"Only ISO 20022 MX permitted characters are allowed.",
                     f"Remove or replace {inv_display} in <{tag_name}>. "
-                    f"Characters such as \'&\', \'@\', \'!\', \'#\', \'$\' are not permitted "
-                    f"in name/address fields."
+                    f"Allowed characters: letters, digits, space, and: / - ? : ( ) . , ' + ! # $ % & * = ^ _ ` {{{{ | }}}} ~ \" ; < > @ [ \\ ]."
                 ))
