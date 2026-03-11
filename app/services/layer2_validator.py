@@ -662,48 +662,20 @@ class Layer2Mixin:
                         f"Remove the extra copy and keep only one."
                     )
 
-                # --- Missing: a completely different element was expected ---
-                # lxml reports the FIRST tag in the sequence as expected — but it may be
-                # OPTIONAL (e.g. CharSet in head.001). Walk through all expected candidates
-                # to find the first MANDATORY one from the XSD.
-                all_expected = [t.strip().strip('()') for t in expected_str.split(',')]
-
-                # Find the first truly mandatory expected tag
-                mandatory_missing = None
-                for candidate in all_expected:
-                    if tag_mandatory(candidate):   # uses live XSD info
-                        mandatory_missing = candidate
-                        break
-
-                # If all candidates are optional (unlikely but possible), fall back to first
-                first_expected = mandatory_missing or all_expected[0]
-                missing_label  = tag_label(first_expected)
-                found_label    = tag_label(found_elem)
-
-                # If the reported-expected tag was optional but we found a mandatory one, note it
-                originally_reported = all_expected[0]
-                if mandatory_missing and mandatory_missing != originally_reported:
-                    optional_note = (
-                        f"Note: <{tag_label(originally_reported)}> is optional and was skipped; "
-                        f"the required element is <{missing_label}>. "
-                    )
-                else:
-                    optional_note = ""
-
+                # --- Missing or Wrong Order: user's requested wording ---
+                all_expected = [t.strip().strip('()').split('}')[-1] for t in expected_str.split(',')]
+                expected_list = "'" + ", ".join(all_expected) + "'"
+                
                 return (
-                    f"❌ Missing mandatory tag <{first_expected}>.",
-                    f"The tag <{missing_label}> is required here but was not found in the XML. "
-                    f"Instead, <{found_label}> was encountered at this position. "
-                    f"{optional_note}"
-                    f"Add <{first_expected}>...</{first_expected}> before <{found_elem}> to fix this error."
+                    f"The element '{found_elem}' is not expected here. Either it is not allowed in this specification, or another mandatory element is missing before this one. One of the following elements is expected : {expected_list}",
+                    f"To fix this, ensure that one of the following elements is present before '{found_elem}': {expected_list}. Review the ISO 20022 schema sequence requirements for this message type."
                 )
 
             # No match for the structured pattern — generic fallback
             name = elem_name("field")
             return (
-                f"❌ Tag <{name}> is not expected at this position.",
-                f"<{name}> cannot appear at this location in the message. "
-                "Check the ISO 20022 schema for the correct field sequence."
+                f"The element '{name}' is not expected at this position. Either it is not allowed here or a mandatory field is missing before it.",
+                f"Check the ISO 20022 schema for the correct field sequence. Often this happens when you skip a mandatory field."
             )
 
         # ── 7. MISSING MANDATORY CHILD FIELD ─────────────────────────────
@@ -713,21 +685,18 @@ class Layer2Mixin:
             if not m:
                 m = re.search(r"Element '([^']+)':.*'([^']+)' fails to occur", msg)
             if m:
-                parent        = m.group(1)
+                parent        = m.group(1).split('}')[-1]
                 missing_all   = m.group(2)
-                first_missing = missing_all.split(',')[0].strip().strip('()')
-                parent_label  = tag_label(parent)
-                missing_label = tag_label(first_missing)
+                all_missing = [t.strip().strip('()').split('}')[-1] for t in missing_all.split(',')]
+                expected_list = "'" + ", ".join(all_missing) + "'"
+                
                 return (
-                    f"❌ Mandatory tag <{first_missing}> is missing inside <{parent}>.",
-                    f"The required tag <{missing_label}> was not found inside <{parent_label}>. "
-                    f"Add <{first_missing}>...</{first_missing}> to complete this section. "
-                    f"All expected tags in this section: {missing_all}."
+                    f"One or more mandatory elements are missing inside '{parent}'. One of the following elements is expected : {expected_list}",
+                    f"The parent element '{parent}' requires specific child elements to be valid. Please add {expected_list} inside your '{parent}' block."
                 )
             return (
-                "❌ A required tag is missing from this section.",
-                "One or more mandatory tags are absent. "
-                "Check the ISO 20022 schema to identify which tags must be present."
+                "One or more mandatory elements are missing. Review the schema for required fields.",
+                "Mandatory elements (child tags) are absent from a container. Check the ISO 20022 standard for which fields are required in this section."
             )
 
         # ── 8. DATE FORMAT ────────────────────────────────────────────────
