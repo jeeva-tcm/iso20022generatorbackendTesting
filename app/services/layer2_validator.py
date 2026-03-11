@@ -684,27 +684,19 @@ class Layer2Mixin:
                         f"Remove the extra copy and keep only one."
                     )
 
-                # Find the first mandatory candidate for the suggestion
-                mandatory_missing = None
-                for candidate in all_expected:
-                    if tag_mandatory(candidate):
-                        mandatory_missing = candidate
-                        break
+                # --- Missing or Wrong Order: user's requested wording ---
+                all_expected = [t.strip().strip('()').split('}')[-1] for t in expected_str.split(',')]
+                expected_list = "'" + ", ".join(all_expected) + "'"
                 
-                first_expected = mandatory_missing or all_expected[0]
-                
-                # Move the detailed info into the MAIN message (first string)
                 return (
-                    f"❌ Mandatory field missing or out of sequence. Found '<{found_elem}>', but schema expected '<{first_expected}>' at this position.",
-                    f"The element '{found_elem}' is out of order. At this position, the ISO 20022 specification requires '{first_expected}'."
+                    f"The element '{found_elem}' is not expected here. Either it is not allowed in this specification, or another mandatory element is missing before this one. One of the following elements is expected : {expected_list}",
+                    f"To fix this, ensure that one of the following elements is present before '{found_elem}': {expected_list}. Review the ISO 20022 schema sequence requirements for this message type."
                 )
 
             # FALLBACK
             return (
-                f"❌ The element '{found_elem}' is not expected here.",
-                f"The element '{found_elem}' is not expected here. Either it is not allowed in this specification, "
-                f"or another mandatory element is missing before this one. "
-                "One of the mandatory elements from this section is missing or in the wrong sequence."
+                f"The element '{name}' is not expected at this position. Either it is not allowed here or a mandatory field is missing before it.",
+                f"Check the ISO 20022 schema for the correct field sequence. Often this happens when you skip a mandatory field."
             )
 
         # ── 7. MISSING MANDATORY CHILD FIELD ─────────────────────────────
@@ -713,29 +705,18 @@ class Layer2Mixin:
             if not m:
                 m = re.search(r"Element '([^']+)':.*'([^']+)' fails to occur", msg)
             if m:
-                parent        = m.group(1)
+                parent        = m.group(1).split('}')[-1]
                 missing_all   = m.group(2)
-                all_missing   = [t.strip().strip('()') for t in missing_all.split(',')]
-                first_missing = None
-                for candidate in all_missing:
-                    if tag_mandatory(candidate):
-                        first_missing = candidate
-                        break
-                if not first_missing:
-                    first_missing = all_missing[0]
+                all_missing = [t.strip().strip('()').split('}')[-1] for t in missing_all.split(',')]
+                expected_list = "'" + ", ".join(all_missing) + "'"
                 
-                parent_label  = tag_label(parent)
-                missing_label = tag_label(first_missing)
                 return (
-                    f"❌ Mandatory tag <{first_missing}> is missing inside <{parent}>.",
-                    f"The required tag <{missing_label}> was not found inside <{parent_label}>. "
-                    f"Add <{first_missing}>...</{first_missing}> to complete this section. "
-                    f"All expected tags in this section: {missing_all}."
+                    f"One or more mandatory elements are missing inside '{parent}'. One of the following elements is expected : {expected_list}",
+                    f"The parent element '{parent}' requires specific child elements to be valid. Please add {expected_list} inside your '{parent}' block."
                 )
             return (
-                "❌ A required tag is missing from this section.",
-                "One or more mandatory tags are absent. "
-                "Check the ISO 20022 schema to identify which tags must be present."
+                "One or more mandatory elements are missing. Review the schema for required fields.",
+                "Mandatory elements (child tags) are absent from a container. Check the ISO 20022 standard for which fields are required in this section."
             )
 
         # ── 8. DATE FORMAT ────────────────────────────────────────────────
