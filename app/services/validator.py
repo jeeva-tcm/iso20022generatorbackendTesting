@@ -165,9 +165,10 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         for filename in os.listdir(self.codelists_path):
             if filename.endswith(".json"):
                 try:
-                    with open(os.path.join(self.codelists_path, filename), 'r') as f:
+                    with open(os.path.join(self.codelists_path, filename), 'r', encoding='utf-8-sig') as f:
                         lists[filename.replace(".json", "").lower()] = json.load(f)
-                except:
+                except Exception as e:
+                    print(f"Error loading codelist {filename}: {e}")
                     continue
         return lists
 
@@ -303,6 +304,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
             # STEP 4.16: CHARACTER SET VALIDATION (Nm, AdrLine, StrtNm, TwnNm, etc.)
             self._validate_charsets_in_xml(xml_content, report)
+
+            # STEP 4.17: DUPLICATE IDENTIFIER VALIDATION
+            self._validate_duplicate_ids(xml_content, report)
+
+            # STEP 4.18: DUPLICATE TAG VALIDATION (Layer 3 Business Rules)
+            self._validate_duplicate_tags(xml_content, report, detected_type)
 
             if mode != "Layer 1 only":
                 try:
@@ -512,7 +519,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
                 report.add_issue(ValidationIssue(
                     "ERROR",
-                    3,
+                    2,
                     "PAST_DATE_ERROR",
                     str(line_num),
                     f"Date cannot be in the past. "
@@ -572,7 +579,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
                 report.add_issue(ValidationIssue(
                     "ERROR",
-                    3,
+                    2,
                     "ID_LENGTH_ERROR",
                     str(line_num),
                     f"Invalid length in element <{tag_name}> at line {line_num}: "
@@ -639,7 +646,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
                 report.add_issue(ValidationIssue(
                     "ERROR",
-                    3,
+                    2,
                     "UETR_FORMAT_ERROR",
                     str(line_num),
                     f"Invalid UETR in element <{tag_name}> at line {line_num}: "
@@ -1246,11 +1253,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
                 if iban_elem is None and othr_elem is None:
                     report.add_issue(ValidationIssue(
-                        "ERROR", 3, "ACCT_MISSING_ID", str(line_num),
+                        "ERROR", 2, "ACCT_MISSING_ID", str(line_num),
                         f"Invalid account identifier in element <{container}> at line {line_num}: "
-                        f"Failed IBAN/BBAN validation. "
-                        f"Neither <IBAN> nor <Othr> is present inside <Id>. "
-                        f"Exactly one account identification method must be provided.",
+                        f"Neither <IBAN> nor <Othr> is present inside <Id>. ",
                         "Provide an account identification: either <IBAN> for international accounts, "
                         "or <Othr><SchmeNm><Cd>BBAN</Cd></SchmeNm></Othr> for domestic accounts."
                     ))
@@ -1273,7 +1278,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         # Rule 6: SEPA — BBAN not allowed
                         if is_sepa:
                             report.add_issue(ValidationIssue(
-                                "ERROR", 3, "SEPA_BBAN_NOT_ALLOWED", str(line_num),
+                                "ERROR", 2, "SEPA_BBAN_NOT_ALLOWED", str(line_num),
                                 f"Invalid account identifier in element <{container}> at line {line_num}: "
                                 f"BBAN account identification is not permitted in SEPA payments. IBAN is mandatory.",
                                 "Replace the <Othr><Id>BBAN</Id> block with a valid <IBAN> element for SEPA transactions."
@@ -1288,7 +1293,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
                             for msg, fix in _validate_bban(othr_id or '', container, line_num, bban_country):
                                 report.add_issue(ValidationIssue(
-                                    "ERROR", 3, "BBAN_VALIDATION_ERROR", str(line_num), msg, fix
+                                    "ERROR", 2, "BBAN_VALIDATION_ERROR", str(line_num), msg, fix
                                 ))
 
             # ── Amount Validation (strictly positive) ────────────────────────
@@ -1297,7 +1302,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 if amount_val:
                     for msg, fix in _validate_positive_amount(amount_val, tag_name, line_num):
                         report.add_issue(ValidationIssue(
-                            "ERROR", 3, "NON_POSITIVE_AMOUNT", str(line_num), msg, fix
+                            "ERROR", 2, "NON_POSITIVE_AMOUNT", str(line_num), msg, fix
                         ))
 
     def _validate_nboftxs(self, xml_content: str, report: ValidationReport) -> None:
@@ -1329,11 +1334,41 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 line_num = "Unknown"
 
             report.add_issue(ValidationIssue(
-                "ERROR", 3, "NBOFTXS_MISMATCH", str(line_num),
+                "ERROR", 2, "NBOFTXS_MISMATCH", str(line_num),
                 f"NbOfTxs declares {declared_count} transaction(s) but the message "
                 f"actually contains {actual_count}.",
                 f"Update <NbOfTxs> to {actual_count} to match the actual number of transactions."
             ))
+
+    def _validate_duplicate_ids(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.17 — Duplicate Identification Validation
+        Scans for unique identifiers that should be unique within the message 
+        (UETR, EndToEndId, InstrId, TxId).
+        """
+        id_tags = ['UETR', 'EndToEndId', 'InstrId', 'TxId', 'MsgId', 'BizMsgIdr']
+        
+        for tag in id_tags:
+            # Pattern to find all values for a specific tag
+            pattern = re.compile(rf'<{tag}>\s*([^<]+?)\s*</{tag}>', re.IGNORECASE)
+            seen = {} # value -> first_line
+            
+            for m in pattern.finditer(xml_content):
+                val = m.group(1).strip()
+                if not val: continue
+                
+                line_num = xml_content.count('\n', 0, m.start()) + 1
+                
+                if val in seen:
+                    prev_line = seen[val]
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "DUPLICATE_ID_VALUE", str(line_num),
+                        f"Duplicate value '{val}' found for tag <{tag}>.",
+                        f"The ID '{val}' appears at line {line_num} but was already used at line {prev_line}. "
+                        f"Each {tag} must be unique within the message file."
+                    ))
+                else:
+                    seen[val] = line_num
 
     def _validate_swift_charset(self, xml_content: str, report: ValidationReport) -> None:
         """
@@ -2112,3 +2147,103 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                     f"Remove or replace {inv_display} in <{tag_name}>. "
                     f"Allowed characters: letters, digits, space, and: / - ? : ( ) . , ' + ! # $ % & * = ^ _ ` {{{{ | }}}} ~ \" ; < > @ [ \\ ]."
                 ))
+
+    def _get_xpath_for_element(self, element) -> str:
+        """Helper to build a simple non-indexed XPath for an lxml element"""
+        path = []
+        curr = element
+        while curr is not None:
+            if isinstance(curr.tag, str):
+                tag = curr.tag.split('}')[-1] if '}' in curr.tag else curr.tag
+                path.append(tag)
+            curr = curr.getparent()
+        return '/' + '/'.join(reversed(path))
+
+    def _build_tag_info_from_xsd(self, xsd_path: str) -> dict:
+        """Parses XSD to extract element occurrences (maxOccurs)"""
+        try:
+            tree = etree.parse(xsd_path)
+            root = tree.getroot()
+            ns = {'xs': 'http://www.w3.org/2001/XMLSchema'}
+            
+            tag_info = {}
+            for elem in root.xpath('//xs:element', namespaces=ns):
+                name = elem.get('name')
+                if not name:
+                    continue
+                
+                max_occ = elem.get('maxOccurs', '1')
+                tag_info[name] = {'max': max_occ}
+            return tag_info
+        except Exception as e:
+            print(f"DEBUG: Error building tag info from XSD: {e}")
+            return {}
+
+    def _validate_duplicate_tags(self, xml_content: str, report: ValidationReport, message_type: str) -> None:
+        """
+        Step 4.18 — Duplicate Tag Validation
+        Checks for tags that appear more than maxOccurs allowed by the schema.
+        Reports as Layer 3 Business Rule as requested.
+        """
+        try:
+            # 1. Get XSD tag info to know maxOccurs
+            xsd_path = self._get_xsd_path(message_type)
+            if not xsd_path:
+                return
+            
+            tag_info = self._build_tag_info_from_xsd(xsd_path)
+            if not tag_info:
+                return
+
+            # 2. Parse XML
+            parser = etree.XMLParser(recover=True, remove_blank_text=True)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+
+            # 3. Traverse and check counts for children of each element
+            for elem in root.iter():
+                if not isinstance(elem.tag, str):
+                    continue
+                
+                # Filter out non-element children
+                children = [c for c in elem if isinstance(c.tag, str)]
+                if not children:
+                    continue
+                    
+                tag_counts = {}
+                for child in children:
+                    t = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                    tag_counts[t] = tag_counts.get(t, 0) + 1
+                
+                for tag, count in tag_counts.items():
+                    info = tag_info.get(tag)
+                    if not info:
+                        continue
+                    
+                    max_allowed = info.get('max', '1')
+                    if max_allowed == 'unbounded':
+                        continue
+                        
+                    try:
+                        max_val = int(max_allowed)
+                    except:
+                        max_val = 1
+                        
+                    if count > max_val:
+                        # Find the first child that exceeds the limit (max_val indexed instance)
+                        instances = [c for c in children if (c.tag.split('}')[-1] if '}' in c.tag else c.tag) == tag]
+                        offending_child = instances[max_val] if len(instances) > max_val else instances[-1]
+                        line = offending_child.sourceline or elem.sourceline or 1
+                        
+                        parent_xpath = self._get_xpath_for_element(elem)
+                        tag_xpath = f"{parent_xpath}/{tag}" if parent_xpath != "/" else f"/{tag}"
+                        
+                        report.add_issue(ValidationIssue(
+                            "ERROR",
+                            3, # Layer 3 Business Rules as requested
+                            "DUPLICATE_TAG",
+                            str(line),
+                            "Duplicate tag detected",
+                            f"Tag: {tag}\nLocation: {tag_xpath}\nFound: {count}\nAllowed: {max_val}"
+                        ))
+        except Exception as e:
+            print(f"DEBUG: Duplicate Tag Validation Error: {e}")

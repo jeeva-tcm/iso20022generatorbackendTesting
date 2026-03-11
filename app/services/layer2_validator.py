@@ -190,7 +190,7 @@ class Layer2Mixin:
                         pass
                     # ─────────────────────────────────────────────────────────
 
-                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info)
+                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info, xml_content=xml_content)
                     issues.append(ValidationIssue("ERROR", 2, "SCHEMA_VAL", str(real_line), friendly_msg, suggestion))
 
             # Step 11 — Mandatory Header Logic (head.001)
@@ -230,7 +230,7 @@ class Layer2Mixin:
                             # Map relative line back to absolute line
                             h_real_line = h_line_offset + error.line - 1
                             # Use h_tag_info (head.001) — NOT payload tag_info
-                            friendly_msg, suggestion = self._simplify_error_message(error.message, h_tag_info)
+                            friendly_msg, suggestion = self._simplify_error_message(error.message, h_tag_info, xml_content=xml_content)
                             issues.append(ValidationIssue("ERROR", 2, "HEADER_VAL", str(h_real_line), friendly_msg, suggestion))
                     except Exception as eh:
                          issues.append(ValidationIssue("WARNING", 2, "HEADER_ERR", "/", f"AppHdr Warning: {str(eh)}"))
@@ -326,7 +326,7 @@ class Layer2Mixin:
         new_elem.tail = element.tail
         return new_elem
 
-    def _simplify_error_message(self, message: str, tag_info: dict = None) -> tuple:
+    def _simplify_error_message(self, message: str, tag_info: dict = None, xml_content: str = None) -> tuple:
         """
         Dynamic Translation Engine: Converts technical XSD/lxml jargon into
         clear, human-readable, actionable English for end users.
@@ -536,35 +536,44 @@ class Layer2Mixin:
 
         def tag_mandatory(tag: str) -> bool:
             """Returns True if the XSD says this tag is mandatory."""
-            return tag_info.get(tag, {}).get('mandatory', True)  # default: assume mandatory
+            clean = tag.split('}')[-1] if '}' in tag else tag
+            return tag_info.get(clean, {}).get('mandatory', True)
 
         def tag_repeatable(tag: str) -> bool:
-
             """Returns True if the XSD allows this tag to repeat."""
-            return tag_info.get(tag, {}).get('repeatable', False)
-
+            clean = tag.split('}')[-1] if '}' in tag else tag
+            return tag_info.get(clean, {}).get('repeatable', False)
 
         # ── Helper: extract element name ──────────────────────────────────
         def elem_name(default="A field"):
             m = re.search(r"Element '([^']+)'", msg)
-            return m.group(1).split('}')[-1] if m else default
+            if not m: return default
+            raw = m.group(1)
+            return raw.split('}')[-1] if '}' in raw else raw
 
         def attr_name(default="attribute"):
             m = re.search(r"[Aa]ttribute '([^']+)'", msg)
-            return m.group(1).split('}')[-1] if m else default
+            if not m: return default
+            raw = m.group(1)
+            return raw.split('}')[-1] if '}' in raw else raw
 
         def bad_value(default=""):
-            m = re.search(r"[Vv]alue '([^']*)'", msg)
+            # 1. Standard lxml: "... value 'xxx' ..."
+            m = re.search(r"[Vv]alue\s+'([^']*)'", msg)
+            if m: return m.group(1)
+            # 2. Pattern/Facet lxml: "Element 'X': 'xxx' is not a valid value..."
+            m = re.search(r"Element\s+'[^']+':\s*'([^']*)'", msg)
+            if m: return m.group(1)
+            # 3. Fallback: any single-quoted string after a colon
+            m = re.search(r":\s*'([^']*)'", msg)
             return m.group(1) if m else default
 
         # ── 1. EMPTY MANDATORY FIELD ──────────────────────────────────────
-        # Only trigger when lxml literally reported value='' in the message.
-        # Do NOT use `val == ""` as that would fire when bad_value() returns its
-        # empty-string default (i.e. when there is no value at all in the message).
-        if "value ''" in msg.lower() or 'value ""' in msg.lower():
+        raw_val = bad_value(default="___NOT_EMPTY___")
+        if raw_val == "" or "''" in msg or '""' in msg:
             name = elem_name("A required field")
             return (
-                f"❌ Mandatory field '{name}' is empty.",
+                f"❌ Empty elements found in '{name}'",
                 f"The field '{name}' cannot be left blank. Please enter a valid value before submitting."
             )
 
@@ -641,20 +650,33 @@ class Layer2Mixin:
             )
 
         # ── 6. MISSING TAG or WRONG ORDER ─────────────────────────────────
-        # lxml says "Element 'X' is not expected. Expected is (Y)." in two cases:
-        #   a) Y ≠ X  →  Y is MISSING — X appeared in its place (most common)
-        #   b) Y = X  →  X is a DUPLICATE
         if "is not expected" in msg:
-            m = re.search(
-                r"Element '([^']+)': This element is not expected\. Expected is(?: one of)? \(([^)]+)\)\.", msg
-            )
-            if m:
-                found_elem_full = m.group(1)
-                found_elem = found_elem_full.split('}')[-1] if '}' in found_elem_full else found_elem_full
-                expected_str = m.group(2)
+            # 1. Resolve 'found' element (the one that triggered the error)
+            found_elem = elem_name("field")
 
-                # --- Duplicate: the found element IS in the expected list ---
-                if found_elem in expected_str:
+            # 2. Extract 'expected' list (e.g. "Expected is (TagA, TagB)")
+            expected_str = None
+            # Look for "Expected is ( ... )" or similar
+            m_exp = re.search(r"expected(?: is)?(?: one of)?\s*\(([^)]+)\)", msg, re.IGNORECASE)
+            if not m_exp:
+                 # Look for any tag-like word after "expected is"
+                 m_exp = re.search(r"expected(?: is)?(?: one of)?\s+['\"]?([\w:]+)['\"]?", msg, re.IGNORECASE)
+            
+            if m_exp:
+                expected_str = m_exp.group(1).strip()
+
+            if expected_str:
+                # Possible separators: ',' for sequence, '|' for choice
+                all_expected = [t.strip().strip('()').split('}')[-1] for t in re.split(r'[,|]', expected_str)]
+                
+                # Check for duplication (X found where X was expected)
+                is_dupe = found_elem in all_expected
+                if not is_dupe and xml_content:
+                    tag_pattern = re.compile(f'<{re.escape(found_elem)}[\\s/>]', re.IGNORECASE)
+                    if len(tag_pattern.findall(xml_content)) > 1:
+                        is_dupe = True
+
+                if is_dupe:
                     label = tag_label(found_elem)
                     return (
                         f"❌ Tag <{found_elem}> is duplicated.",
@@ -662,52 +684,30 @@ class Layer2Mixin:
                         f"Remove the extra copy and keep only one."
                     )
 
-                # --- Missing: a completely different element was expected ---
-                # lxml reports the FIRST tag in the sequence as expected — but it may be
-                # OPTIONAL (e.g. CharSet in head.001). Walk through all expected candidates
-                # to find the first MANDATORY one from the XSD.
-                all_expected = [t.strip().strip('()') for t in expected_str.split(',')]
-
-                # Find the first truly mandatory expected tag
+                # Find the first mandatory candidate for the suggestion
                 mandatory_missing = None
                 for candidate in all_expected:
-                    if tag_mandatory(candidate):   # uses live XSD info
+                    if tag_mandatory(candidate):
                         mandatory_missing = candidate
                         break
-
-                # If all candidates are optional (unlikely but possible), fall back to first
+                
                 first_expected = mandatory_missing or all_expected[0]
-                missing_label  = tag_label(first_expected)
-                found_label    = tag_label(found_elem)
-
-                # If the reported-expected tag was optional but we found a mandatory one, note it
-                originally_reported = all_expected[0]
-                if mandatory_missing and mandatory_missing != originally_reported:
-                    optional_note = (
-                        f"Note: <{tag_label(originally_reported)}> is optional and was skipped; "
-                        f"the required element is <{missing_label}>. "
-                    )
-                else:
-                    optional_note = ""
-
+                
+                # Move the detailed info into the MAIN message (first string)
                 return (
-                    f"❌ Missing mandatory tag <{first_expected}>.",
-                    f"The tag <{missing_label}> is required here but was not found in the XML. "
-                    f"Instead, <{found_label}> was encountered at this position. "
-                    f"{optional_note}"
-                    f"Add <{first_expected}>...</{first_expected}> before <{found_elem}> to fix this error."
+                    f"❌ Mandatory field missing or out of sequence. Found '<{found_elem}>', but schema expected '<{first_expected}>' at this position.",
+                    f"The element '{found_elem}' is out of order. At this position, the ISO 20022 specification requires '{first_expected}'."
                 )
 
-            # No match for the structured pattern — generic fallback
-            name = elem_name("field")
+            # FALLBACK
             return (
-                f"❌ Tag <{name}> is not expected at this position.",
-                f"<{name}> cannot appear at this location in the message. "
-                "Check the ISO 20022 schema for the correct field sequence."
+                f"❌ The element '{found_elem}' is not expected here.",
+                f"The element '{found_elem}' is not expected here. Either it is not allowed in this specification, "
+                f"or another mandatory element is missing before this one. "
+                "One of the mandatory elements from this section is missing or in the wrong sequence."
             )
 
         # ── 7. MISSING MANDATORY CHILD FIELD ─────────────────────────────
-        # lxml: "Element 'GrpHdr': Missing child element(s). Expected is (NbOfTxs)."
         if any(x in msg for x in ["Missing child element", "content is incomplete", "fails to occur"]):
             m = re.search(r"Element '([^']+)':.*Expected is(?: one of)? \(([^)]+)\)\.", msg)
             if not m:
@@ -715,7 +715,15 @@ class Layer2Mixin:
             if m:
                 parent        = m.group(1)
                 missing_all   = m.group(2)
-                first_missing = missing_all.split(',')[0].strip().strip('()')
+                all_missing   = [t.strip().strip('()') for t in missing_all.split(',')]
+                first_missing = None
+                for candidate in all_missing:
+                    if tag_mandatory(candidate):
+                        first_missing = candidate
+                        break
+                if not first_missing:
+                    first_missing = all_missing[0]
+                
                 parent_label  = tag_label(parent)
                 missing_label = tag_label(first_missing)
                 return (
@@ -805,6 +813,11 @@ class Layer2Mixin:
         if "length" in msg.lower() and ("maxlength" in msg.lower() or "minlength" in msg.lower() or "facet" in msg.lower()):
             name = elem_name()
             lv = bad_value()
+            if lv == "" or not lv.strip():
+                return (
+                    f"❌ Empty elements found in '{name}'",
+                    f"The field '{name}' cannot be left blank. Please enter a valid value before submitting."
+                )
             return (
                 f"❌ Field '{name}' has an invalid length: '{lv}'.",
                 f"The value '{lv}' is either too long or too short for '{name}'. "
@@ -821,7 +834,6 @@ class Layer2Mixin:
             )
 
         # ── 15. SMART FALLBACK ────────────────────────────────────────────
-        # Strip remaining raw lxml patterns to produce a readable fallback
         clean = msg
         clean = re.sub(r"Element '([^']+)':", r"Field '\1':", clean)
         clean = re.sub(r"\[facet '[^']+'\]\s*", "", clean)

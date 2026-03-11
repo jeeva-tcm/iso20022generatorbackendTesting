@@ -15,7 +15,7 @@ class Layer3Mixin:
             for name in ["algorithms", "fields", "message_definitions"]:
                 path = os.path.join(self.rules_path, f"{name}.json")
                 if os.path.exists(path):
-                    with open(path, "r") as f:
+                    with open(path, "r", encoding='utf-8-sig') as f:
                         data = json.load(f)
                         if name == "message_definitions":
                             config["messages"] = data.get("messages", {})
@@ -35,9 +35,10 @@ class Layer3Mixin:
         global_file = os.path.join(self.rules_path, "global.json")
         if os.path.exists(global_file):
             try:
-                with open(global_file, "r") as f:
+                with open(global_file, "r", encoding='utf-8-sig') as f:
                     rules.extend(json.load(f))
-            except: pass
+            except Exception as e: 
+                print(f"Error loading global rules: {e}")
 
         parts = message_type.split(".")
         
@@ -47,9 +48,10 @@ class Layer3Mixin:
             family_file = os.path.join(self.rules_path, f"{family}.json")
             if os.path.exists(family_file):
                 try:
-                    with open(family_file, "r") as f:
+                    with open(family_file, "r", encoding='utf-8-sig') as f:
                         rules.extend(json.load(f))
-                except: pass
+                except Exception as e: 
+                    print(f"Error loading family rules: {e}")
 
         # 3. Load Message Specific (e.g., pacs.008.json)
         # Try pacs.008 first
@@ -62,9 +64,10 @@ class Layer3Mixin:
 
         if os.path.exists(specific_file):
             try:
-                with open(specific_file, "r") as f:
+                with open(specific_file, "r", encoding='utf-8-sig') as f:
                     rules.extend(json.load(f))
-            except: pass
+            except Exception as e: 
+                print(f"Error loading specific rules: {e}")
             
         return rules
 
