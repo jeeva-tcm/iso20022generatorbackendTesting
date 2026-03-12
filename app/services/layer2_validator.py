@@ -1,6 +1,7 @@
 import time
 import re
 import os
+import copy
 from lxml import etree
 from typing import Optional
 from .models import ValidationIssue, ValidationReport
@@ -45,9 +46,9 @@ class Layer2Mixin:
             main_node = target_node[0]
             line_offset = main_node.sourceline or 1
             
-            # CRITICAL: Re-parse node to its own document to clear parent context 
-            main_str = etree.tostring(main_node, encoding='utf-8')
-            main_cleaned = etree.fromstring(main_str, parser)
+            # CRITICAL: Use deepcopy to preserve original sourcelines for exact error mapping.
+            # Re-parsing via tostring/fromstring was shifting lines by 1 and losing blank lines.
+            validation_doc = copy.deepcopy(main_node)
 
             xsd_doc = etree.parse(xsd_full_path)
             schema = etree.XMLSchema(xsd_doc)
@@ -56,7 +57,7 @@ class Layer2Mixin:
             tag_info = self._build_tag_info_from_xsd(xsd_full_path)
             
             # Extract namespacing carefully
-            xml_ns = etree.QName(main_cleaned).namespace or ""
+            xml_ns = etree.QName(validation_doc).namespace or ""
             # Robust XSD Namespace Detection
             xsd_ns = xsd_doc.getroot().get("targetNamespace")
             if not xsd_ns:
@@ -67,130 +68,102 @@ class Layer2Mixin:
             # Step 3 to 9 — Automated Structural Validation
             try:
                 # To support line-exactness while fixing namespace mismatches:
-                # We validate a 'cleaned' version for errors, then map lines back to the original.
-                validation_doc = main_cleaned
+                # We validate the deep-copied version which allows us to mask namespaces 
+                # in-place without destroying the original document's source line metadata.
                 if xsd_ns and xml_ns != xsd_ns:
-                    validation_doc = self._mask_namespace(main_cleaned, xsd_ns)
+                    self._mask_namespace_in_place(validation_doc, xsd_ns)
                 
                 schema.assertValid(validation_doc)
             except etree.DocumentInvalid as e:
                 for error in e.error_log:
-                    # Map the relative error line back to the absolute line in the full document
+                    # 1. Simplify the message FIRST so we know the context (tag name, empty vs invalid value)
+                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info, xml_content=xml_content)
+
+                    # 2. Calculate initial absolute line (estimate)
+                    # lxml reports lines relative to the start of the fragment (1-indexed)
+                    # line_offset is the line of the <Document> or <BusMsg> tag in the file
                     real_line = line_offset + error.line - 1
                     
-                    # Smart Line Correction:
-                    # If we can identify the specific invalid value and tag, let's find the EXACT line in the original tree.
-                    # This fixes issues where re-parsing destroys line numbers.
+                    # 3. HIGH-PRECISION LINE CORRECTION
+                    # We use the friendly message context to find the EXACT line in the original XML
                     try:
-                        # Extract Tag and Value from error message
-                        # Typical lxml format:
-                        #   Element 'ChrgBr': [facet 'enumeration'] The value 'JEEC'...
-                        #   Element 'IntrBkSttlmAmt', attribute 'Ccy': [facet 'pattern'] The value 'USDDD'...
-                        tag_match = re.search(r"Element '([^']+)'", error.message)
-                        # Case-insensitive, matches both "attribute '...'" and "Attribute '...'"
-                        attr_match = re.search(r"[Aa]ttribute '([^']+)'", error.message)
-                        val_match  = re.search(r"[Vv]alue '([^']*)'" , error.message)
-
+                        # Extract components from error
+                        tag_match  = re.search(r"Element '([^']+)'", error.message)
+                        val_match  = re.search(r"[Vv]alue '([^']*)'", error.message)
+                        
                         found_line = None
-
-                        # ── CASE A: ATTRIBUTE ERROR (e.g. Ccy="USDDD") ──
-                        # lxml: "Element 'IntrBkSttlmAmt', attribute 'Ccy': ... value 'USDDD'..."
-                        if attr_match and val_match:
-                            attr_name    = attr_match.group(1).split('}')[-1]
-                            bad_attr_val = val_match.group(1)
-
-                            if bad_attr_val.strip():
-                                # Raw-text scan: find AttrName="BadValue" in the original XML
-                                escaped_name = re.escape(attr_name)
-                                escaped_val  = re.escape(bad_attr_val)
-                                attr_pattern = re.compile(
-                                    escaped_name + r'\s*=\s*["\']' + escaped_val + r'["\']'
-                                )
-                                attr_text_match = attr_pattern.search(xml_content)
-                                if attr_text_match:
-                                    found_line = xml_content.count('\n', 0, attr_text_match.start()) + 1
-
-                            # Fallback: use sourceline of the parent element from main_node
-                            if not found_line and tag_match:
-                                parent_tag  = tag_match.group(1).split('}')[-1]
-                                parent_nodes = main_node.xpath(
-                                    f"descendant-or-self::*[local-name()='{parent_tag}']"
-                                )
-                                if parent_nodes:
-                                    found_line = parent_nodes[0].sourceline
-
-                        # ── CASE B: ELEMENT VALUE / STRUCTURE ERROR ──
-                        elif tag_match:
-                            tag_full = tag_match.group(1)
-                            tag_name = tag_full.split('}')[-1] if '}' in tag_full else tag_full
-
-                            candidates = main_node.xpath(
-                                f"descendant-or-self::*[local-name()='{tag_name}']"
+                        
+                        if tag_match:
+                            raw_tag = tag_match.group(1)
+                            tag_name = raw_tag.split('}')[-1] if '}' in raw_tag else raw_tag
+                            
+                            # CRITICAL: Detect Empty Error from multiple signals
+                            # lxml error log: ... [facet 'minLength'] The value '' has a length of '0' ...
+                            is_empty_err = (
+                                "Empty" in friendly_msg or 
+                                "minLength" in error.message or 
+                                "facet 'pattern'The value ''" in error.message.replace(" ","") or
+                                (val_match and val_match.group(1).strip() == "")
                             )
-                            estimate = real_line
+                            
+                            # Strategy A: XPath Search in the original full document
+                            candidates = main_node.xpath(f"descendant-or-self::*[local-name()='{tag_name}']")
+                            if candidates:
+                                if is_empty_err:
+                                    # STRIKE 1: Only consider nodes that are REALLY empty in the original tree
+                                    candidates = [c for c in candidates if not (c.text or "").strip()]
+                                elif val_match:
+                                    bad_val = val_match.group(1)
+                                    val_c = [c for c in candidates if (c.text or "").strip() == bad_val]
+                                    if val_c: candidates = val_c
+                                
+                                # Pick the one closest to our estimate (real_line)
+                                if candidates:
+                                    best_node = min(candidates, key=lambda c: abs((c.sourceline or 0) - real_line))
+                                    found_line = best_node.sourceline
 
-                            if val_match:
-                                # High-Precision: match element text
-                                bad_val = val_match.group(1)
-                                best_match_line = None
-                                min_dist = float('inf')
-                                for c in candidates:
-                                    if (c.text or "").strip() == bad_val:
-                                        dist = abs((c.sourceline or 0) - estimate)
-                                        if dist < min_dist:
-                                            min_dist = dist
-                                            best_match_line = c.sourceline
-                                found_line = best_match_line
-
-                                # Raw-text fallback: <Tag>BadVal</Tag>
-                                if not found_line and bad_val.strip():
-                                    elem_pattern = re.compile(
-                                        '<' + tag_name + r'[^>]*>\s*' +
-                                        re.escape(bad_val) +
-                                        r'\s*</' + tag_name + '>'
-                                    )
-                                    elem_match = elem_pattern.search(xml_content)
-                                    if elem_match:
-                                        found_line = xml_content.count('\n', 0, elem_match.start()) + 1
-
-                            elif candidates:
-                                # Structure error: pick closest candidate to estimate
-                                best_match_line = None
-                                min_dist = float('inf')
-                                for c in candidates:
-                                    dist = abs((c.sourceline or 0) - estimate)
-                                    if dist < min_dist:
-                                        min_dist = dist
-                                        best_match_line = c.sourceline
-                                found_line = best_match_line
+                            # Strategy B: Regex fallback (Regex is often more reliable for empty tags like <Nm/>)
+                            if not found_line or (is_empty_err and abs(found_line - real_line) > 1):
+                                search_pattern = None
+                                if is_empty_err:
+                                    # Matches <Nm/> or <Nm>  </Nm>
+                                    search_pattern = re.compile(f'<{tag_name}[^>]*/>|<{tag_name}[^>]*>\s*</{tag_name}>')
+                                elif val_match:
+                                    bad_val = val_match.group(1)
+                                    search_pattern = re.compile(f'<{tag_name}[^>]*>\s*{re.escape(bad_val)}\s*</{tag_name}>')
+                                
+                                if search_pattern:
+                                    matches = list(search_pattern.finditer(xml_content))
+                                    if matches:
+                                        # Pick the match closest to estimated line
+                                        est_off = 0
+                                        xml_lns = xml_content.splitlines(keepends=True)
+                                        for i in range(min(len(xml_lns), int(real_line)-1)):
+                                            est_off += len(xml_lns[i])
+                                        
+                                        best_m = min(matches, key=lambda m: abs(m.start() - est_off))
+                                        found_line = xml_content.count('\n', 0, best_m.start()) + 1
 
                         if found_line:
                             real_line = found_line
 
                     except Exception as _ex:
-                        print(f"[DEBUG L2 LINE-CORRECTION EXCEPTION] {_ex}")
-                        pass  # Fallback to calculated line
+                        # Fallback to estimate if correction fails
+                        pass
 
-                    # ── Blank-line guard ──────────────────────────────────────
-                    # If real_line lands on a blank/whitespace-only line in the
-                    # original XML (common with pretty-printed messages), walk
-                    # backwards to find the closest non-empty line so the
-                    # editor highlights an actual tag instead of empty space.
+                    # 4. Blank-line guard (Editor highlight helper)
                     try:
                         xml_lines = xml_content.splitlines()
-                        ln = int(real_line) - 1  # 0-indexed
+                        ln = int(real_line) - 1
                         if 0 <= ln < len(xml_lines) and not xml_lines[ln].strip():
-                            # Search backwards for the nearest non-blank line
                             for offset in range(1, 10):
                                 prev = ln - offset
                                 if prev >= 0 and xml_lines[prev].strip():
-                                    real_line = prev + 1  # back to 1-indexed
+                                    real_line = prev + 1
                                     break
                     except Exception:
                         pass
-                    # ─────────────────────────────────────────────────────────
 
-                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info, xml_content=xml_content)
                     issues.append(ValidationIssue("ERROR", 2, "SCHEMA_VAL", str(real_line), friendly_msg, suggestion))
 
             # Step 11 — Mandatory Header Logic (head.001)
@@ -207,9 +180,8 @@ class Layer2Mixin:
                 h_path = self._get_xsd_path(h_type)
                 if h_path:
                     try:
-                        # 1. Prepare clean header for validation
-                        h_str = etree.tostring(app_hdr_node, encoding='utf-8')
-                        h_clean = etree.fromstring(h_str, parser)
+                        # 1. Prepare clean header for validation (Deepcopy to keep lines)
+                        h_val_doc = copy.deepcopy(app_hdr_node)
                         
                         h_xsd_raw = etree.parse(h_path)
                         h_schema = etree.XMLSchema(h_xsd_raw)
@@ -219,18 +191,42 @@ class Layer2Mixin:
                         # This ensures CharSet is seen as optional and Fr as mandatory
                         h_tag_info = self._build_tag_info_from_xsd(h_path)
                         
-                        h_val_doc = h_clean
                         if h_xsd_ns and h_ns != h_xsd_ns:
-                            h_val_doc = self._mask_namespace(h_clean, h_xsd_ns)
+                            self._mask_namespace_in_place(h_val_doc, h_xsd_ns)
 
                         # 2. Validate
                         h_schema.assertValid(h_val_doc)
                     except etree.DocumentInvalid as deh:
                         for error in deh.error_log:
-                            # Map relative line back to absolute line
-                            h_real_line = h_line_offset + error.line - 1
-                            # Use h_tag_info (head.001) — NOT payload tag_info
+                            # 1. Simplify
                             friendly_msg, suggestion = self._simplify_error_message(error.message, h_tag_info, xml_content=xml_content)
+                            
+                            # 2. Estimate
+                            h_real_line = h_line_offset + error.line - 1
+                            
+                            # 3. High-Precision correction for AppHdr
+                            try:
+                                tag_m = re.search(r"Element '([^']+)'", error.message)
+                                val_m = re.search(r"[Vv]alue '([^']*)'", error.message)
+                                
+                                if tag_m:
+                                    t_full = tag_m.group(1)
+                                    t_name = t_full.split('}')[-1] if '}' in t_full else t_full
+                                    
+                                    is_empty_h = "Empty" in friendly_msg or "minLength" in error.message
+                                    
+                                    # Find in AppHdr specifically
+                                    h_candidates = app_hdr_node.xpath(f"descendant-or-self::*[local-name()='{t_name}']")
+                                    if h_candidates:
+                                        if is_empty_h:
+                                            h_candidates = [c for c in h_candidates if not (c.text or "").strip()]
+                                            
+                                        if h_candidates:
+                                            best_n = min(h_candidates, key=lambda c: abs((c.sourceline or 0) - h_real_line))
+                                            h_real_line = best_n.sourceline
+                            except:
+                                pass
+
                             issues.append(ValidationIssue("ERROR", 2, "HEADER_VAL", str(h_real_line), friendly_msg, suggestion))
                     except Exception as eh:
                          issues.append(ValidationIssue("WARNING", 2, "HEADER_ERR", "/", f"AppHdr Warning: {str(eh)}"))
@@ -295,7 +291,7 @@ class Layer2Mixin:
                 # that is referenced by this element — more descriptive than the tag alone
                 label = self._camel_to_words(type_nm) if type_nm else self._camel_to_words(name)
 
-                if name not in tag_info:  # keep first (most specific) definition
+                if name not in tag_info:  # initialize
                     tag_info[name] = {
                         'label':      label,
                         'mandatory':  is_mandatory,
@@ -303,28 +299,32 @@ class Layer2Mixin:
                         'min':        min_occ,
                         'max':        max_occ,
                     }
-
+                else:
+                    # If this tag appears elsewhere in the XSD with a higher maxOccurs,
+                    # we must respect the highest limit to avoid false-positive duplicate errors
+                    # in our flat dictionary lookup.
+                    curr_max = tag_info[name]['max']
+                    if curr_max != 'unbounded':
+                        if max_occ == 'unbounded':
+                            tag_info[name]['max'] = 'unbounded'
+                            tag_info[name]['repeatable'] = True
+                        elif max_occ.isdigit() and curr_max.isdigit() and int(max_occ) > int(curr_max):
+                            tag_info[name]['max'] = max_occ
+                            tag_info[name]['repeatable'] = True
         except Exception as ex:
             print(f'[DEBUG] XSD tag parse failed: {ex}')
 
         Layer2Mixin._xsd_tag_cache[xsd_path] = tag_info
         return tag_info
 
-    def _mask_namespace(self, element, new_ns: str):
-        # Guard: lxml Comment/PI nodes have .tag = etree.Comment (a Cython function)
-        # which is NOT a string. We must copy them as-is to avoid QName crash.
+    def _mask_namespace_in_place(self, element, new_ns: str):
+        """Recursively updates the tag of an element and its children to use a new namespace."""
         if not isinstance(element.tag, str):
-            return element  # Return comment/PI as-is (lxml will deep-copy it safely)
-        attribs = {}
-        for k, v in element.attrib.items():
-            attribs[k] = v
-        new_tag = f"{{{new_ns}}}{etree.QName(element).localname}"
-        new_elem = etree.Element(new_tag, attrib=attribs)
-        new_elem.text = element.text
+            return
+        local = etree.QName(element).localname
+        element.tag = f"{{{new_ns}}}{local}"
         for child in element:
-            new_elem.append(self._mask_namespace(child, new_ns))
-        new_elem.tail = element.tail
-        return new_elem
+            self._mask_namespace_in_place(child, new_ns)
 
     def _simplify_error_message(self, message: str, tag_info: dict = None, xml_content: str = None) -> tuple:
         """
@@ -516,7 +516,7 @@ class Layer2Mixin:
             1. Live XSD-derived label  2. Static dict  3. CamelCase split"""
             # 1. Live XSD info (most accurate — derived from the actual validated XSD)
             if tag in tag_info:
-                lbl = tag_info[tag]['label']
+                lbl = tag_info[tag].get('label')
                 # Only use it if it adds value (not just the tag name itself)
                 if lbl and lbl.strip().lower() != tag.strip().lower():
                     return f"{tag} ({lbl})"
@@ -695,7 +695,7 @@ class Layer2Mixin:
 
             # FALLBACK
             return (
-                f"The element '{name}' is not expected at this position. Either it is not allowed here or a mandatory field is missing before it.",
+                f"The element '{found_elem}' is not expected at this position. Either it is not allowed here or a mandatory field is missing before it.",
                 f"Check the ISO 20022 schema for the correct field sequence. Often this happens when you skip a mandatory field."
             )
 
@@ -790,7 +790,7 @@ class Layer2Mixin:
                 "Check the standard for the list of allowed values (e.g. SLEV, SHAR, CRED, DEBT for ChrgBr)."
             )
 
-        # ── 13. LENGTH CONSTRAINT ─────────────────────────────────────────
+        # ── 13. LENGTH CONSTRAINT ───────────────────────-─────────────────
         if "length" in msg.lower() and ("maxlength" in msg.lower() or "minlength" in msg.lower() or "facet" in msg.lower()):
             name = elem_name()
             lv = bad_value()
