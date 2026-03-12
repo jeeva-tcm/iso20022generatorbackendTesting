@@ -642,7 +642,6 @@ class Layer2Mixin:
 
         # ── 1. EMPTY MANDATORY FIELD ──────────────────────────────────────
         raw_val = bad_value(default="___NOT_EMPTY___")
-<<<<<<< HEAD
         is_truly_empty = (
             raw_val == "" or 
             "The value ''" in msg or 
@@ -652,9 +651,6 @@ class Layer2Mixin:
         )
         
         if is_truly_empty:
-=======
-        if (raw_val == "" or "''" in msg or '""' in msg) and not any(x in msg.lower() for x in ["length", "pattern", "enumeration", "type", "decimal"]):
->>>>>>> 9a52f772aac6fc61dac56bf7ded9f36ab037ea38
             name = elem_name("A required field")
             # Specific hint for scheme names inside this block too
             if name == "Cd" and ("SchmeNm" in msg or "Othr" in msg or "OrgId" in msg or "Id" in msg.upper()):
