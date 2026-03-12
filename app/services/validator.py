@@ -2234,25 +2234,6 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             curr = curr.getparent()
         return '/' + '/'.join(reversed(path))
 
-    def _build_tag_info_from_xsd(self, xsd_path: str) -> dict:
-        """Parses XSD to extract element occurrences (maxOccurs)"""
-        try:
-            tree = etree.parse(xsd_path)
-            root = tree.getroot()
-            ns = {'xs': 'http://www.w3.org/2001/XMLSchema'}
-            
-            tag_info = {}
-            for elem in root.xpath('//xs:element', namespaces=ns):
-                name = elem.get('name')
-                if not name:
-                    continue
-                
-                max_occ = elem.get('maxOccurs', '1')
-                tag_info[name] = {'max': max_occ}
-            return tag_info
-        except Exception as e:
-            print(f"DEBUG: Error building tag info from XSD: {e}")
-            return {}
 
     def _validate_duplicate_tags(self, xml_content: str, report: ValidationReport, message_type: str) -> None:
         """
@@ -2270,8 +2251,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             if not tag_info:
                 return
 
-            # 2. Parse XML
-            parser = etree.XMLParser(recover=True, remove_blank_text=True)
+            # 2. Parse XML (CRITICAL: remove_blank_text must be False to preserve accurate line numbers)
+            parser = etree.XMLParser(recover=True, remove_blank_text=False)
             root = etree.fromstring(xml_content.encode('utf-8'), parser)
 
             # 3. Traverse and check counts for children of each element
@@ -2314,11 +2295,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         
                         report.add_issue(ValidationIssue(
                             "ERROR",
-                            3, # Layer 3 Business Rules as requested
+                            2, # Layer 2 Schema Validation
                             "DUPLICATE_TAG",
                             str(line),
-                            "Duplicate tag detected",
-                            f"Tag: {tag}\nLocation: {tag_xpath}\nFound: {count}\nAllowed: {max_val}"
+                            f"Duplicate tag detected: <{tag}>",
+                            f"The tag <{tag}> appears {count} times, but only {max_val} is allowed at this location ({tag_xpath})."
                         ))
         except Exception as e:
             print(f"DEBUG: Duplicate Tag Validation Error: {e}")
