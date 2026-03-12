@@ -570,7 +570,7 @@ class Layer2Mixin:
 
         # ── 1. EMPTY MANDATORY FIELD ──────────────────────────────────────
         raw_val = bad_value(default="___NOT_EMPTY___")
-        if raw_val == "" or "''" in msg or '""' in msg:
+        if (raw_val == "" or "''" in msg or '""' in msg) and not any(x in msg.lower() for x in ["length", "pattern", "enumeration", "type", "decimal"]):
             name = elem_name("A required field")
             return (
                 f"❌ Empty elements found in '{name}'",

@@ -2002,10 +2002,85 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         return "Unknown"
 
     def _finalize_report(self, report: ValidationReport, start_time: float) -> ValidationReport:
+        # 0. Deduplicate issues across layers for better UX
+        self._deduplicate_issues(report)
+
         # Calculate total time as the sum of all layer times to ensure consistency in UI
         total_layers = sum(l.get("time", 0) for l in report.layer_status.values())
         report.total_time_ms = total_layers
         return report
+
+    def _deduplicate_issues(self, report: ValidationReport):
+        """
+        Removes redundant Layer 2 (Schema) errors when a more specific Layer 3 
+        (Business) error exists for the SAME line and SAME field/tag.
+        
+        Example: L2 says "Empty AdrLine" (due to some XSD quirk) but L3 says 
+        "AdrLine exceeds 70 characters". We keep L3 and drop L2.
+        """
+        if not report.issues:
+            return
+
+        # 1. Identify which lines have Layer 3 errors and what tags they refer to
+        # Key: (line_str, tag_name)
+        l3_signatures = set()
+        l3_lines = set()
+
+        for i in report.issues:
+            if i.get("layer") == 3 and i.get("severity") == "ERROR":
+                line = i.get("path")
+                l3_lines.add(line)
+                
+                msg = i.get("message", "")
+                # Extract tag from typical L3 messages: "Field 'Nm'...", "AdrLine in ...", etc.
+                tag_match = re.search(r"[']([^']+)[']|(\b[A-Z][a-zA-Z0-9]{2,}\b)", msg)
+                if tag_match:
+                    tag = tag_match.group(1) or tag_match.group(2)
+                    l3_signatures.add((line, tag))
+
+        if not l3_lines:
+            return
+
+        # 2. Filter report.issues and update counts
+        new_issues = []
+        original_count = len(report.issues)
+        
+        for i in report.issues:
+            # Check if this Layer 2 issue is redundant
+            if i.get("layer") == 2 and i.get("severity") == "ERROR":
+                line = i.get("path")
+                msg = i.get("message", "")
+                
+                # Extract tag from L2 message
+                tag_match = re.search(r"[']([^']+)[']", msg)
+                tag = tag_match.group(1) if tag_match else None
+                
+                # REJECTION CRITERIA:
+                # 1. Specific match: same line AND same tag found in L3
+                is_specific_dupe = (line, tag) in l3_signatures
+                
+                # 2. General match: same line AND L2 is generic (Empty) while L3 is specific
+                is_generic_dupe = "Empty elements found" in msg and line in l3_lines
+                
+                if is_specific_dupe or is_generic_dupe:
+                    # Drop this L2 issue
+                    report.errors -= 1
+                    continue
+            
+            new_issues.append(i)
+
+        report.issues = new_issues
+        
+        # 3. If Layer 2 errors were all dropped, update Layer 2 status to green
+        if len(new_issues) < original_count:
+            has_l2_errors = any(i.get("layer") == 2 and i.get("severity") == "ERROR" for i in new_issues)
+            if not has_l2_errors and "2" in report.layer_status:
+                report.layer_status["2"]["status"] = "✅"
+            
+            # Update overall report status if errors reached 0
+            if report.errors <= 0:
+                report.status = "PASS"
+                report.errors = 0
 
     def _get_xsd_path(self, message_type: str) -> Optional[str]:
         """
