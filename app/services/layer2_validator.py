@@ -77,12 +77,13 @@ class Layer2Mixin:
             except etree.DocumentInvalid as e:
                 for error in e.error_log:
                     # 1. Simplify the message FIRST so we know the context (tag name, empty vs invalid value)
-                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info, xml_content=xml_content)
+                    friendly_msg, suggestion = self._simplify_error_message(error.message, tag_info, xml_content=xml_content, error_line=error.line)
 
                     # 2. Calculate initial absolute line (estimate)
-                    # lxml reports lines relative to the start of the fragment (1-indexed)
-                    # line_offset is the line of the <Document> or <BusMsg> tag in the file
-                    real_line = line_offset + error.line - 1
+                    # lxml reports lines in its error log. Since we use deepcopy on main_node,
+                    # which preserves absolute sourcelines, error.line is already absolute.
+                    # We no longer add line_offset to avoid double-counting.
+                    real_line = error.line
                     
                     # 3. HIGH-PRECISION LINE CORRECTION
                     # We use the friendly message context to find the EXACT line in the original XML
@@ -99,8 +100,14 @@ class Layer2Mixin:
                             
                             # CRITICAL: Detect Empty Error from multiple signals
                             # lxml error log: ... [facet 'minLength'] The value '' has a length of '0' ...
+                            # Or missing child element errors which point to an incomplete parent.
                             is_empty_err = (
                                 "Empty" in friendly_msg or 
+                                "mandatory elements are missing" in friendly_msg or
+                                "missing" in friendly_msg.lower() or
+                                "missing mandatory" in friendly_msg.lower() or
+                                "content is incomplete" in error.message or
+                                "fails to occur" in error.message or
                                 "minLength" in error.message or 
                                 "facet 'pattern'The value ''" in error.message.replace(" ","") or
                                 (val_match and val_match.group(1).strip() == "")
@@ -326,7 +333,7 @@ class Layer2Mixin:
         for child in element:
             self._mask_namespace_in_place(child, new_ns)
 
-    def _simplify_error_message(self, message: str, tag_info: dict = None, xml_content: str = None) -> tuple:
+    def _simplify_error_message(self, message: str, tag_info: dict = None, xml_content: str = None, error_line: int = None) -> tuple:
         """
         Dynamic Translation Engine: Converts technical XSD/lxml jargon into
         clear, human-readable, actionable English for end users.
@@ -558,20 +565,100 @@ class Layer2Mixin:
             return raw.split('}')[-1] if '}' in raw else raw
 
         def bad_value(default=""):
-            # 1. Standard lxml: "... value 'xxx' ..."
-            m = re.search(r"[Vv]alue\s+'([^']*)'", msg)
-            if m: return m.group(1)
-            # 2. Pattern/Facet lxml: "Element 'X': 'xxx' is not a valid value..."
-            m = re.search(r"Element\s+'[^']+':\s*'([^']*)'", msg)
-            if m: return m.group(1)
-            # 3. Fallback: any single-quoted string after a colon
+            m = re.search(r"(?:[Vv]alue|The\s+value)\s+'([^']*)'", msg)
+            if m:
+                val = m.group(1)
+                # If the matched value is a small digit and there are other quotes, keep searching.
+                # BUT if it's alphanumeric and matches 'AAA' or 'ID123', return it immediately!
+                if not (val.isdigit() and len(val) < 4):
+                     return val
+            
+            # 1b. Enhanced: Look for "'...' is not" pattern
+            m2 = re.search(r"'([^']*)' (?:is not valid|is not a valid value|is either too|exceeds|fails to occur)", msg, re.IGNORECASE)
+            if m2: return m2.group(1)
+
+            # 2. Secondary: Advanced Quote Filtering (PRIORITIZE USER DATA)
+            quotes = re.findall(r"'([^']*)'", msg)
+            if quotes:
+                tn_m = re.search(r"Element '([^']+)'", msg)
+                tag_name = tn_m.group(1).split('}')[-1] if tn_m else ""
+                
+                # Technical metadata to ignore
+                technical = {
+                    'facet', 'enumeration', 'maxLength', 'minLength', 'pattern', 'base', 'type', 
+                    'atomic', 'element', 'attribute', 'length', 'exceeds', 'allowed', 
+                    'maximum', 'Identifier', 'value', 'data', 'tag', 'field', tag_name
+                }
+                
+                candidates = []
+                for q in quotes:
+                    clean = q.split('}')[-1] if '}' in q else q
+                    if clean not in technical and clean.lower() not in technical:
+                        candidates.append(q)
+                
+                if candidates:
+                    # Prefer strings containing letters (user data) over purely numeric ones (facets)
+                    words = [c for c in candidates if any(x.isalpha() for x in c)]
+                    if words:
+                         # Filter out known lxml words that might be quoted in some versions
+                         filtered_words = [w for w in words if w.lower() not in technical]
+                         
+                         # NEW: If we are in a 'Cd' context, ignore the standard valid codes!
+                         # This prevents picking up 'LEI' or 'CUST' from the "Expected" list in the error msg.
+                         if tag_name == "Cd":
+                             standard_valid = {"LEI", "CUST", "BANK", "TXID", "COID", "TXNR", "DUNS", "GIIN"}
+                             best_bad = [w for w in filtered_words if w.upper() not in standard_valid]
+                             if best_bad:
+                                 # Pick the one that appears EARLIEST in the msg - the bad value is usually first
+                                 best_bad.sort(key=lambda x: msg.find(f"'{x}'"))
+                                 return best_bad[0]
+
+                         if filtered_words:
+                             # Still prefer earlier occurrences
+                             filtered_words.sort(key=lambda x: msg.find(f"'{x}'"))
+                             return filtered_words[0]
+                    
+                    # --- LINE-AWARE XML FALLBACK ---
+                    # If extraction is failing (e.g. only numbers found), use the error line to get the value
+                    if tag_name == "Cd" and xml_content and error_line:
+                        lines = xml_content.splitlines()
+                        # Adjust for 0-indexing and search slightly around the line (lxml lines can be +/- 1)
+                        for idx in [error_line-1, error_line, error_line-2]:
+                            if 0 <= idx < len(lines):
+                                line_text = lines[idx]
+                                # Match <Cd>Passport</Cd> or <Cd>Passport  </Cd>
+                                xml_m = re.search(f"<{tag_name}[^>]*>([^<]+)</{tag_name}>", line_text)
+                                if xml_m:
+                                    val = xml_m.group(1).strip()
+                                    if val: return val
+
+                    return max(candidates, key=len)
+
+            # 3. Fallback: first quote after a colon
             m = re.search(r":\s*'([^']*)'", msg)
-            return m.group(1) if m else default
+            if m: return m.group(1)
+            
+            return default
 
         # ── 1. EMPTY MANDATORY FIELD ──────────────────────────────────────
         raw_val = bad_value(default="___NOT_EMPTY___")
-        if raw_val == "" or "''" in msg or '""' in msg:
+        is_truly_empty = (
+            raw_val == "" or 
+            "The value ''" in msg or 
+            'The value ""' in msg or 
+            "value '' is not accepted" in msg or
+            "value is ''" in msg
+        )
+        
+        if is_truly_empty:
             name = elem_name("A required field")
+            # Specific hint for scheme names inside this block too
+            if name == "Cd" and ("SchmeNm" in msg or "Othr" in msg or "OrgId" in msg or "Id" in msg.upper()):
+                 return (
+                    f"❌ Missing or empty identifier code in <{name}>.",
+                    "This tag is required. Please provide a valid code such as 'LEI', 'CUST', or 'BANK'."
+                 )
+
             return (
                 f"❌ Empty elements found in '{name}'",
                 f"The field '{name}' cannot be left blank. Please enter a valid value before submitting."
@@ -688,6 +775,13 @@ class Layer2Mixin:
                 all_expected = [t.strip().strip('()').split('}')[-1] for t in expected_str.split(',')]
                 expected_list = "'" + ", ".join(all_expected) + "'"
                 
+                # Special Conflict: SchmeNm Cd vs Prtry
+                if found_elem in ["Cd", "Prtry"] and ("Cd" in all_expected or "Prtry" in all_expected):
+                     return (
+                         "❌ /OrgId/Othr → Mutually exclusive elements conflict",
+                         "You cannot provide both <Cd> and <Prtry> in the same <SchmeNm> block. Please remove one. ISO rules require either a standardized code OR a proprietary name, never both."
+                     )
+
                 return (
                     f"The element '{found_elem}' is not expected here. Either it is not allowed in this specification, or another mandatory element is missing before this one. One of the following elements is expected : {expected_list}",
                     f"To fix this, ensure that one of the following elements is present before '{found_elem}': {expected_list}. Review the ISO 20022 schema sequence requirements for this message type."
@@ -710,6 +804,13 @@ class Layer2Mixin:
                 all_missing = [t.strip().strip('()').split('}')[-1] for t in missing_all.split(',')]
                 expected_list = "'" + ", ".join(all_missing) + "'"
                 
+                # Special Case: SchmeNm must have a child
+                if parent == "SchmeNm":
+                     return (
+                         "❌ /OrgId/Othr → <SchmeNm> must contain either <Cd> or <Prtry>",
+                         "The <SchmeNm> block is incomplete. It must contain exactly one sub-element: <Cd> for ISO codes or <Prtry> for local identifiers."
+                     )
+
                 return (
                     f"One or more mandatory elements are missing inside '{parent}'. One of the following elements is expected : {expected_list}",
                     f"The parent element '{parent}' requires specific child elements to be valid. Please add {expected_list} inside your '{parent}' block."
@@ -749,11 +850,51 @@ class Layer2Mixin:
             tn_m = re.search(r"atomic type '([^']+)'", msg)
             tn = tn_m.group(1).split('}')[-1] if tn_m else None
             name = elem_name()
+            
+            # Special case for Scheme Code (Cd)
+            if name == "Cd":
+                lv = tv
+                if lv.isdigit() and len(lv) < 3:
+                     # Re-scan for alpha strings
+                     qs = re.findall(r"'([^']*)'", msg)
+                     ignore = {name, tn, 'maxLength', 'minLength', 'facet', 'length', 'type', 'atomic'}
+                     alts = [q for q in qs if any(x.isalpha() for x in q) and q not in ignore and q.lower() not in ignore]
+                     if alts: lv = max(alts, key=len)
+                
+                valid_codes = ["LEI", "CUST", "BANK", "TXID", "COID", "TXNR", "DUNS", "GIIN"]
+                invalid_reason = None
+                invalid_fix = None
+                
+                if hasattr(self, 'codelists') and 'schme_nm' in self.codelists:
+                    cfg = self.codelists['schme_nm'].get('schmeNm_validation', {})
+                    valid_list = cfg.get('valid_cd_codes', [])
+                    if valid_list: valid_codes = [c['code'] for c in valid_list]
+                    for item in cfg.get('invalid_cd_codes', []):
+                        if item['code'].upper() == str(lv).upper():
+                            invalid_reason = item['reason']
+                            invalid_fix = item.get('fix')
+                            break
+                
+                codes_str = ", ".join(valid_codes)
+                if invalid_reason:
+                    f_msg = f"The code '{lv}' is not valid for this field because it is {invalid_reason.lower()}."
+                    if invalid_fix: f_msg += f" {invalid_fix}."
+                    f_msg += f" Recommended codes: {codes_str}."
+                    return (f"❌ Invalid data '{lv}' for <{name}>.", f_msg)
+
+                return (
+                    f"❌ Invalid data '{lv}' for <{name}>.",
+                    f"For this tag, only these approved ISO codes are valid: {codes_str}. "
+                    f"Any other value, including '{lv}', is strictly invalid and will cause rejection. "
+                    "Ensure the value matches the required data format."
+                )
+
             if tn:
                 return (
                     f"❌ Field '{name}' has an invalid value: '{tv}'.",
                     f"This field requires type '{tn}'. Please verify the value '{tv}' matches the expected format."
                 )
+            
             return (
                 f"❌ Invalid value '{tv}' in field '{name}'.",
                 "The value does not match the required data type for this field. "
@@ -780,9 +921,41 @@ class Layer2Mixin:
             )
 
         # ── 12. ENUMERATION (code not in allowed set) ─────────────────────
-        if "enumeration" in msg.lower() or "is not an element of the set" in msg.lower():
+        if "enumeration" in msg.lower() or "is not an element of the set" in msg.lower() or "not a valid value of the atomic type" in msg.lower():
             ev = bad_value()
             name = elem_name()
+            
+            # Special case for Scheme Name (SchmeNm)
+            if name == "Cd":
+                valid_codes = ["LEI", "CUST", "BANK", "TXID", "COID", "TXNR", "DUNS", "GIIN"]
+                invalid_reason = None
+                invalid_fix = None
+                
+                # Try to load from codelist
+                if hasattr(self, 'codelists') and 'schme_nm' in self.codelists:
+                    cfg = self.codelists['schme_nm'].get('schmeNm_validation', {})
+                    valid_list = cfg.get('valid_cd_codes', [])
+                    if valid_list:
+                         valid_codes = [c['code'] for c in valid_list]
+                    for item in cfg.get('invalid_cd_codes', []):
+                        if item['code'].upper() == str(ev).upper():
+                            invalid_reason = item['reason']
+                            invalid_fix = item.get('fix')
+                            break
+                
+                codes_str = ", ".join(valid_codes)
+                if invalid_reason:
+                    f_msg = f"The code '{ev}' is not valid for this field because it is {invalid_reason.lower()}."
+                    if invalid_fix: f_msg += f" {invalid_fix}."
+                    f_msg += f" Recommended codes: {codes_str}."
+                    return (f"❌ Invalid code '{ev}' in <{name}>.", f_msg)
+                    
+                return (
+                    f"❌ Invalid code '{ev}' in <{name}>.",
+                    f"The data '{ev}' is not an approved identifier code. Only the following are valid: {codes_str}. "
+                    "Everything else is strictly invalid."
+                )
+
             return (
                 f"❌ Invalid code '{ev}' for field '{name}'.",
                 f"'{ev}' is not a valid code for '{name}'. "
@@ -794,6 +967,56 @@ class Layer2Mixin:
         if "length" in msg.lower() and ("maxlength" in msg.lower() or "minlength" in msg.lower() or "facet" in msg.lower()):
             name = elem_name()
             lv = bad_value()
+            
+            # Double check for Cd fields: verify 'lv' isn't just the numeric facet '8' or '4'
+            if name == "Cd" and (lv.isdigit() and len(lv) < 3):
+                # 1. Re-scan for alpha strings in message
+                qs = re.findall(r"'([^']*)'", msg)
+                technical = {name, 'maxLength', 'minLength', 'facet', 'length', 'maximum', 'exceeds', 'allowed', 'value'}
+                alts = [q for q in qs if any(x.isalpha() for x in q) and q not in technical and q.lower() not in technical]
+                if alts:
+                     lv = max(alts, key=len)
+                
+                # 2. If still a digit, check the XML line directly! (High-Precision Fallback)
+                if lv.isdigit() and xml_content and error_line:
+                    lines = xml_content.splitlines()
+                    for idx in [error_line-1, error_line, error_line-2]:
+                        if 0 <= idx < len(lines):
+                            xml_m = re.search(f"<{name}[^>]*>([^<]+)</{name}>", lines[idx])
+                            if xml_m:
+                                lv = xml_m.group(1).strip()
+                                break
+
+            # Special case for Scheme Name (Cd) - even length errors should show recommended codes
+            if name == "Cd":
+                valid_codes = ["LEI", "CUST", "BANK", "TXID", "COID", "TXNR", "DUNS", "GIIN"]
+                invalid_reason = None
+                invalid_fix = None
+                
+                if hasattr(self, 'codelists') and 'schme_nm' in self.codelists:
+                    cfg = self.codelists['schme_nm'].get('schmeNm_validation', {})
+                    valid_list = cfg.get('valid_cd_codes', [])
+                    if valid_list: valid_codes = [c['code'] for c in valid_list]
+                    for item in cfg.get('invalid_cd_codes', []):
+                        if item['code'].upper() == str(lv).upper():
+                            invalid_reason = item['reason']
+                            invalid_fix = item.get('fix')
+                            break
+                
+                codes_str = ", ".join(valid_codes)
+                if invalid_reason:
+                    f_msg = f"The code '{lv}' is not valid for this field because it is {invalid_reason.lower()}."
+                    if invalid_fix: f_msg += f" {invalid_fix}."
+                    f_msg += f" Recommended codes: {codes_str}."
+                    return (f"❌ Invalid data '{lv}' for <{name}>.", f_msg)
+
+                return (
+                    f"❌ Invalid data '{lv}' for <{name}>.",
+                    f"Only the following ISO codes are accepted: {codes_str}. "
+                    f"The value '{lv}' is strictly invalid. "
+                    "Ensure the code length is within the 4-character limit and exists in the approved list."
+                )
+
             if lv == "" or not lv.strip():
                 return (
                     f"❌ Empty elements found in '{name}'",

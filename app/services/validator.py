@@ -311,6 +311,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 4.18: DUPLICATE TAG VALIDATION (Layer 3 Business Rules)
             self._validate_duplicate_tags(xml_content, report, detected_type)
 
+            # STEP 4.19: SCHEME NAME ALLOWLIST VALIDATION (Strict Policy)
+            self._validate_schme_nm_in_xml(xml_content, report)
+
             if mode != "Layer 1 only":
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
@@ -2002,17 +2005,79 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         return "Unknown"
 
     def _finalize_report(self, report: ValidationReport, start_time: float) -> ValidationReport:
-        # Check all issues and update layer statuses appropriately 
-        # (This catches errors that were added to a layer before that layer's specific _run loop finished)
+        # 1. Deduplicate issues
+        unique_issues = []
+        seen_keys = set()
+        
+        # High-priority manual checks often have codes that we want to keep over generic XSD errors
+        # Manual check codes: INVALID_SCHEME_CODE, SCHEME_CONFLICT, SCHEME_MISSING_CHILD, etc.
+        
+        for issue in report.issues:
+            severity = issue.get("severity")
+            line = str(issue.get("path"))
+            msg = issue.get("message", "")
+            code = issue.get("code", "")
+            
+            # Key for deduplication
+            key = (severity, line, msg)
+            if key in seen_keys:
+                self._decrement_counters(report, issue)
+                continue
+            
+            # Semantic deduplication for Scheme Name errors at the same line
+            is_schme_err = any(x in msg for x in ["SchmeNm", "<Cd>", "<Prtry>", "scheme code"])
+            is_dupe_err = "duplicate" in msg.lower() or "is duplicated" in msg.lower()
+
+            if is_schme_err or is_dupe_err:
+                duplicate_found = False
+                for existing in unique_issues:
+                    if str(existing.get("path")) == line:
+                        ex_msg = existing.get("message", "").lower()
+                        
+                        # Case A: Both are scheme errors
+                        if is_schme_err and any(x in ex_msg for x in ["schmenm", "<cd>", "<prtry>", "scheme code"]):
+                             duplicate_found = True
+                             break
+                             
+                        # Case B: Both are duplication errors
+                        if is_dupe_err and ("duplicate" in ex_msg or "is duplicated" in ex_msg):
+                             duplicate_found = True
+                             break
+                
+                if duplicate_found:
+                    self._decrement_counters(report, issue)
+                    continue
+
+            unique_issues.append(issue)
+            seen_keys.add(key)
+        
+        report.issues = unique_issues
+
+        # 2. Check all issues and update layer statuses appropriately 
         for layer_str in ["1", "2", "3"]:
             layer_errors = [i for i in report.issues if str(i.get("layer", "")) == layer_str and i.get("severity") == "ERROR"]
             if layer_errors and layer_str in report.layer_status:
                 report.layer_status[layer_str]["status"] = "❌"
+            elif layer_str in report.layer_status:
+                 report.layer_status[layer_str]["status"] = "✅"
 
-        # Calculate total time as the sum of all layer times to ensure consistency in UI
+        # 3. Update global report status
+        if report.errors == 0:
+            report.status = "PASS"
+        else:
+            report.status = "FAIL"
+
+        # 4. Calculate total time
         total_layers = sum(l.get("time", 0) for l in report.layer_status.values())
         report.total_time_ms = total_layers
         return report
+
+    def _decrement_counters(self, report, issue):
+        """Helper to adjust counters when removing a duplicate issue."""
+        if issue.get("severity") == "ERROR":
+            report.errors = max(0, report.errors - 1)
+        elif issue.get("severity") == "WARNING":
+            report.warnings = max(0, report.warnings - 1)
 
     def _get_xsd_path(self, message_type: str) -> Optional[str]:
         """
@@ -2235,3 +2300,258 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         ))
         except Exception as e:
             print(f"DEBUG: Duplicate Tag Validation Error: {e}")
+    def _check_lei(self, lei: str) -> str:
+        """
+        Validates Legal Entity Identifier (LEI) using ISO 7064 MOD 97-10.
+        Returns "OK" or an error code.
+        """
+        lei = lei.strip().upper()
+        
+        # 1. Correct Length
+        if not lei or len(lei) != 20: 
+            return "INVALID_LENGTH"
+            
+        # 2. Character Set
+        if not re.match(r'^[A-Z0-9]{20}$', lei): 
+            return "INVALID_CHARACTERS"
+            
+        # 3. All Zeros check
+        if lei == "0" * 20:
+            return "ALL_ZEROS_INVALID"
+            
+        # 4. Reserved Check Digits (00, 01)
+        check_digits = lei[-2:]
+        if check_digits in ["00", "01"]:
+            return "INVALID_CHECK_DIGITS_RESERVED"
+        
+        # 5. MOD 97 Checksum
+        # Letters A-Z -> 10-35
+        numeric_str = ""
+        for char in lei:
+            if '0' <= char <= '9':
+                numeric_str += char
+            else:
+                numeric_str += str(ord(char) - 55)
+        
+        try:
+            val = int(numeric_str)
+            if val % 97 == 1:
+                return "OK"
+            else:
+                return "CHECKSUM_MISMATCH"
+        except Exception:
+            return "CHECKSUM_MISMATCH"
+
+    def _validate_schme_nm_in_xml(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.19 — Scheme Name Validation (Strict Policy + Structural Rules + LEI Checksum)
+        Enforces:
+          1. CD Allowlist ("EXCEPT VALID EVERYTHING INVALID")
+          2. Mutual Exclusivity (<Cd> vs <Prtry>)
+          3. Presence check (One of them must be present)
+          4. Missing SchmeNm check inside Othr
+          5. LEI format & checksum validation
+        """
+        # Default fallback lists
+        valid_codes = {"LEI": "", "TXID": "", "BANK": "", "CUST": "", "COID": "", "TXNR": "", "DUNS": "", "GIIN": ""}
+        invalid_map = {}
+        error_labels = {
+            "invalid_scheme": "Invalid scheme code in <Cd>",
+            "both_cd_and_prtry": "Mutually exclusive elements conflict",
+            "missing_element": "<SchmeNm> must contain either <Cd> or <Prtry>",
+            "empty_prtry": "<Prtry> value must not be empty",
+            "missing_schmenm": "<SchmeNm> is required when <Othr> is present"
+        }
+        
+        # 0. Path detection to differentiate Account vs Org identifiers
+        acct_othr_lines = set()
+        path_map = {} # line -> path
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            tree_root = etree.fromstring(xml_content.encode('utf-8'), parser)
+            for othr in tree_root.xpath("//*[local-name()='Othr']"):
+                path = self._get_xpath_for_element(othr)
+                ln = othr.sourceline
+                if ln:
+                    if "/Acct/" in path:
+                        acct_othr_lines.add(ln)
+                    path_map[ln] = path
+        except:
+            pass
+
+        # Try to load from dynamic codelists
+        if hasattr(self, 'codelists') and 'schme_nm' in self.codelists:
+            cfg = self.codelists['schme_nm'].get('schmeNm_validation', {})
+            vc = {item['code'].upper(): item.get('usage', '') for item in cfg.get('valid_cd_codes', [])}
+            if vc: valid_codes = vc
+            
+            im = {item['code'].upper(): {"reason": item['reason'], "fix": item.get('fix')} 
+                  for item in cfg.get('invalid_cd_codes', [])}
+            if im: invalid_map = im
+            
+            labels = cfg.get('errors', {})
+            for k, v in labels.items():
+                if v: error_labels[k] = f"❌ {v}"
+
+        # Stage 1: Find <Othr> blocks
+        othr_patt = re.compile(r'<Othr[^>]*>([\s\S]*?)</Othr>', re.IGNORECASE)
+        # Stage 2: Sub-patterns
+        id_patt = re.compile(r'<Id[^>]*>\s*([^<]*?)\s*</Id>', re.IGNORECASE)
+        schme_patt = re.compile(r'<SchmeNm[^>]*>([\s\S]*?)</SchmeNm>', re.IGNORECASE)
+        cd_patt = re.compile(r'<Cd[^>]*>\s*([^<]*?)\s*</Cd>', re.IGNORECASE)
+        prtry_patt = re.compile(r'<Prtry[^>]*>\s*([^<]*?)\s*</Prtry>', re.IGNORECASE)
+        
+        codes_str = ", ".join(valid_codes.keys())
+        
+        for m_othr in othr_patt.finditer(xml_content):
+            inner_othr = m_othr.group(1)
+            othr_pos = m_othr.start()
+            try:
+                othr_line = xml_content.count('\n', 0, othr_pos) + 1
+            except:
+                othr_line = "Unknown"
+
+            # 1. Identification (<Id>)
+            m_id = id_patt.search(inner_othr)
+            id_val = m_id.group(1).strip() if m_id else ""
+            
+            # 2. Scheme Name (<SchmeNm>)
+            m_schme = schme_patt.search(inner_othr)
+            
+            # Use detected path for clearer error messages
+            curr_path = path_map.get(othr_line, "/Othr")
+            
+            # Implementation of rules from User Step 1992
+            is_forbidden_path = any(f in curr_path for f in ["/DbtrAcct/", "/CdtrAcct/"])
+            is_mandatory_path = any(m in curr_path for m in [
+                "/Dbtr/Id/OrgId/", "/Dbtr/Id/PrvtId/",
+                "/Cdtr/Id/OrgId/", "/Cdtr/Id/PrvtId/"
+            ])
+
+            if is_forbidden_path:
+                # RULE: SchmeNm is NOT Allowed for Acct identifiers
+                if m_schme:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "SCHEME_NOT_ALLOWED", str(othr_line),
+                        f"❌ {curr_path} → {error_labels.get('not_supported', '<SchmeNm> is not allowed for this identifier type.')}",
+                        "Remove the <SchmeNm> block. For accounts, provide only the <Id> within <Othr>."
+                    ))
+                    continue
+                else:
+                    # Valid: Account Othr with no SchmeNm
+                    continue
+            
+            elif is_mandatory_path:
+                # RULE: SchmeNm is Mandatory for Dbtr/Cdtr Org/Prvt identifiers
+                if not m_schme:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "SCHEME_MISSING", str(othr_line),
+                        f"❌ {curr_path} → {error_labels['missing_schmenm']}",
+                        "Identify the ID type using <SchmeNm>. For example: <SchmeNm><Cd>LEI</Cd></SchmeNm>."
+                    ))
+                    continue
+            else:
+                # For any other Othr blocks not specified by the user, we skip strict existence check
+                # but if SchmeNm IS present, we will continue to validate its contents (Cd vs Prtry)
+                if not m_schme:
+                    continue
+
+            inner_schme = m_schme.group(1)
+            # Recalculate schme_pos more accurately
+            schme_pos = othr_pos + m_othr.group(0).find(m_schme.group(0))
+            try:
+                schme_line = xml_content.count('\n', 0, schme_pos) + 1
+            except:
+                schme_line = "Unknown"
+            
+            cds = list(cd_patt.finditer(inner_schme))
+            ptys = list(prtry_patt.finditer(inner_schme))
+            
+            # RULE 1: Mutual Exclusivity
+            if len(cds) > 0 and len(ptys) > 0:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 2, "SCHEME_CONFLICT", str(schme_line),
+                    f"❌ {curr_path} → {error_labels['both_cd_and_prtry']}",
+                    "You cannot provide both <Cd> and <Prtry> in the same <SchmeNm> block. Use either a standardized code OR a proprietary name."
+                ))
+                continue
+            
+            # RULE 2: Presence Check
+            if len(cds) == 0 and len(ptys) == 0:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 2, "SCHEME_MISSING_CHILD", str(schme_line),
+                    f"❌ {curr_path} → {error_labels['missing_element']}",
+                    "The <SchmeNm> block must contain either <Cd> or <Prtry>."
+                ))
+                continue
+            
+            # RULE 3: Valid <Cd> Allowlist & Identifier Validation (LEI)
+            for m_cd in cds:
+                val = m_cd.group(1).strip()
+                val_upper = val.upper()
+                
+                if not val:
+                     report.add_issue(ValidationIssue(
+                        "ERROR", 2, "SCHEME_EMPTY_CD", str(schme_line),
+                        "❌ Missing or empty identifier code in <Cd>.",
+                        f"Please provide a valid code such as: {codes_str}."
+                    ))
+                     continue
+
+                if val_upper not in valid_codes:
+                    cd_match_pos = schme_pos + m_schme.group(0).find(m_cd.group(0))
+                    try:
+                        line_num = xml_content.count('\n', 0, cd_match_pos) + 1
+                    except:
+                        line_num = "Unknown"
+                    
+                    if val_upper in invalid_map:
+                        reason = invalid_map[val_upper]["reason"]
+                        fix = invalid_map[val_upper]["fix"]
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 2, "INVALID_SCHEME_CODE", str(line_num),
+                            f"❌ {curr_path} → {error_labels['invalid_scheme']}: '{val}'. This code is invalid because it {reason.lower()}.",
+                            f"{fix} Recommended codes: {codes_str}."
+                        ))
+                    else:
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 2, "INVALID_SCHEME_CODE", str(line_num),
+                            f"❌ {curr_path} → {error_labels['invalid_scheme']}: '{val}'.",
+                            f"Only the following are valid: {codes_str}. Everything else is strictly invalid."
+                        ))
+                else:
+                    # Cd is VALID. Now check identifier format if it's LEI
+                    if val_upper == "LEI" and id_val:
+                        lei_status = self._check_lei(id_val)
+                        if lei_status != "OK":
+                            id_match_pos = othr_pos + m_othr.group(0).find(m_id.group(0))
+                            try:
+                                id_line = xml_content.count('\n', 0, id_match_pos) + 1
+                            except:
+                                id_line = "Unknown"
+                            
+                            error_map = {
+                                "INVALID_LENGTH": ("LEI must be exactly 20 characters.", "Correct the LEI to full 20-character length."),
+                                "INVALID_CHARACTERS": ("Special characters found — only A-Z and 0-9 allowed.", "Replace special characters with valid alphanumeric characters."),
+                                "ALL_ZEROS_INVALID": ("All-zero LEI is not a valid GLEIF-registered identifier.", "Use a real GLEIF-registered LEI."),
+                                "INVALID_CHECK_DIGITS_RESERVED": ("Check digits '00' or '01' are reserved and not allowed.", "Valid check digit range is 02–97 only."),
+                                "CHECKSUM_MISMATCH": ("Invalid LEI checksum (MOD 97 remainder is not 1).", "Ensure the LEI follows ISO 7064 MOD 97-10 rules. The last two digits must be correct check digits.")
+                            }
+                            msg, fix = error_map.get(lei_status, ("Invalid LEI format.", "Check the LEI structure."))
+                            
+                            report.add_issue(ValidationIssue(
+                                "ERROR", 2, f"LEI_{lei_status}", str(id_line),
+                                f"❌ {msg} ('{id_val}')",
+                                fix
+                            ))
+
+            # RULE 4: <Prtry> not empty
+            for m_pty in ptys:
+                val = m_pty.group(1).strip()
+                if not val:
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "EMPTY_PRTRY", str(schme_line),
+                        f"❌ {curr_path} → {error_labels['empty_prtry']}",
+                        "The <Prtry> tag cannot be empty. Provide a proprietary scheme description or code."
+                    ))
+
