@@ -1,8 +1,8 @@
 {
     "source_mt": "210",
-    "target_mx": "camt.057.001.06",
+    "target_mx": "camt.057.001.08",
     "xml_namespaces": {
-        "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.057.001.06"
+        "xmlns": "urn:iso:std:iso:20022:tech:xsd:camt.057.001.08"
     },
     "root_element": "Document",
     "mappings": [

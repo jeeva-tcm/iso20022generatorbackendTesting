@@ -2353,7 +2353,7 @@
         },
         "MT210": {
             "description": "Notice to Receive",
-            "target_mx": "camt.057.001.06",
+            "target_mx": "camt.057.001.08",
             "mx_xml_root": "Document/NtfctnToRcv",
             "mt_fields": {
                 "required": {
