@@ -1663,6 +1663,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                             "Allowed characters: letters, digits, space, and: / - ? : ( ) . , ' + ! # $ % & * = ^ _ ` {{ | }} ~ \" ; < > @ [ \\ ]."
                         ))
 
+                    # Leading/Trailing space check
+                    if val != val.strip():
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_ADRLINE_WHITESPACE", str(adr_line_num),
+                            f"AdrLine in {parent_name} contains leading or trailing spaces: '{val}'.",
+                            "Remove leading and trailing whitespace from the address line. Use the 'Trim' function if necessary."
+                        ))
+
                     # Control characters
                     if self._CONTROL_CHAR_RE.search(val):
                         report.add_issue(ValidationIssue(
@@ -1673,10 +1681,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
             # Check structured fields for length and content
             has_structured = False
+            has_ctry = False
             for child in addr:
                 if not isinstance(child.tag, str):
                     continue
                 child_local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+
+                if child_local == 'Ctry':
+                    has_ctry = True
 
                 if child_local in FIELD_MAX_LENGTHS and child.text:
                     has_structured = True
@@ -1700,6 +1712,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                             f"Provide a valid {child_local} value or remove the empty element."
                         ))
 
+                    # Leading/Trailing space check
+                    if val != val.strip():
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "ADDR_FIELD_WHITESPACE", str(child_line),
+                            f"Address field '{child_local}' in {parent_name} contains leading or trailing spaces: '{val}'.",
+                            f"Remove leading and trailing whitespace from the {child_local} field."
+                        ))
+
                     # Control characters
                     if self._CONTROL_CHAR_RE.search(val):
                         report.add_issue(ValidationIssue(
@@ -1707,6 +1727,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                             f"{child_local} in {parent_name} contains control characters.",
                             f"Remove hidden control characters from {child_local}."
                         ))
+
+            # CBPR+ — Country (Ctry) is mandatory in PstlAdr
+            if not has_ctry:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "ADDR_CTRY_MISSING", str(line),
+                    f"Country <Ctry> is missing in {parent_name} address.",
+                    "Add a valid 2-character ISO country code (e.g., <Ctry>US</Ctry>) to the address block."
+                ))
 
             # Structured preferred over unstructured (advisory)
             if len(adr_lines) > 0 and not has_structured:
@@ -2202,14 +2230,28 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         seen = set()
         for m in patt.finditer(xml_content):
             tag_name = m.group(1)
-            raw_value = m.group(2).strip()
+            raw_value = m.group(2) # Don't strip here yet, we need to check for spaces
             key = (tag_name, raw_value)
             if key in seen or not raw_value:
                 continue
             seen.add(key)
 
-            if not SAFE.match(raw_value):
-                inv = sorted(set(c for c in raw_value if not _re.match(r'[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]', c)))
+            # 1. Leading/Trailing space check
+            if raw_value != raw_value.strip():
+                try:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                except Exception:
+                    line_num = 'Unknown'
+                report.add_issue(_VI(
+                    "ERROR", 3, "WHITESPACE_ERROR", str(line_num),
+                    f"Field <{tag_name}> contains leading or trailing spaces: '{raw_value}'.",
+                    f"Remove leading/trailing spaces from the <{tag_name}> element. These are not permitted in ISO 20022 MX messages."
+                ))
+
+            # 2. Charset check (strip for this check specifically)
+            val_to_check = raw_value.strip()
+            if val_to_check and not SAFE.match(val_to_check):
+                inv = sorted(set(c for c in val_to_check if not _re.match(r'[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]', c)))
                 inv_display = ' '.join(repr(c) for c in inv)
                 try:
                     line_num = xml_content.count('\n', 0, m.start()) + 1
