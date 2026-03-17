@@ -179,10 +179,10 @@
     },
     {
         "rule_id": "L3_SETTLEMENT_METHOD",
-        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, CLRG, COVE.",
+        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, INGA",
         "type": "expression",
         "selector": ".*SttlmMtd$",
-        "expression": "VALUE in ['INDA', 'CLRG', 'COVE', 'COV']",
+        "expression": "VALUE in ['INDA', 'INGA']",
         "severity": "ERROR",
         "layer": 3
     },
@@ -221,4 +221,4 @@
         "fix": "Ensure all party blocks <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> are included in the transaction."
     }
 ]
-
+
