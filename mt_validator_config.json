@@ -179,7 +179,7 @@
         },
         "MT210": {
             "description": "Notice to Receive",
-            "mx_mapping": "camt.057.001.06",
+            "mx_mapping": "camt.057.001.08",
             "fields": [
                 {
                     "tag": "20",
