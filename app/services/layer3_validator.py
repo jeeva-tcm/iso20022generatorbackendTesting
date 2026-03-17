@@ -89,7 +89,7 @@ class Layer3Mixin:
         # Assessment for layer dashboard
         success = not any(i['layer'] == layer_id and i['severity'] == "ERROR" for i in report.issues)
         report.layer_status[str(layer_id)] = {
-            "status": "✅" if success else "❌", 
+            "status": "PASS" if success else "FAIL", 
             "time": round((time.time() - start) * 1000, 2)
         }
 
@@ -288,8 +288,11 @@ class Layer3Mixin:
                 
                 elif rule_type == "expression":
                     rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
+                    error_msg = rule.get("errorMessage", desc)
+                    fix_suggestion = rule.get("fix", "")
+                    
                     if not self._evaluate_expression(rule.get("expression", "True"), data, line_map, value, key, rule_meta, codelists, report):
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), desc))
+                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), error_msg, fix_suggestion))
 
         # 2. Logic Based Rules
         else:
@@ -297,15 +300,18 @@ class Layer3Mixin:
             if not self._evaluate_expression(condition, data, line_map, codelists=codelists, report=report):
                 return
 
+            error_msg = rule.get("errorMessage", desc)
+            fix_suggestion = rule.get("fix", "")
+
             for field in rule.get("mandatory_fields", []):
                 if not self._evaluate_expression(f"exists({field})", data, line_map, codelists=codelists, report=report):
-                    report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(field), desc))
+                    report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(field), error_msg, fix_suggestion))
 
             expr = rule.get("expression")
             if expr:
                 rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
                 if not self._evaluate_expression(expr, data, line_map, KEY="", rule_meta=rule_meta, codelists=codelists, report=report):
-                     report.add_issue(ValidationIssue(severity, layer, rule_id, "/", desc))
+                     report.add_issue(ValidationIssue(severity, layer, rule_id, "/", error_msg, fix_suggestion))
 
     def _evaluate_expression(self, expr: str, data: Dict[str, Any], line_map: Dict[str, int] = None, VALUE: Any = None, KEY: str = "", rule_meta: Dict[str, Any] = None, codelists: Dict[str, Any] = None, report: ValidationReport = None) -> bool:
         """
@@ -316,8 +322,13 @@ class Layer3Mixin:
         if codelists is None:
             codelists = {}
         def exists_sub(match):
-            path = match.group(1).replace("[", "\\[").replace("]", "\\]")
-            return "True" if any(re.match(f"^{path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
+            path_expr = match.group(1).strip()
+            # Only statically replace if it's a literal path string (no variables or quotes)
+            if re.match(r'^[A-Za-z0-9._\[\]]+$', path_expr):
+                path = path_expr.replace("[", "\\[").replace("]", "\\]")
+                return "True" if any(re.match(f"^{path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
+            # Return original string to be handled by the 'exists' lambda in eval()
+            return match.group(0)
 
         def _gl(key):
              if not line_map: return "/"
@@ -490,7 +501,7 @@ class Layer3Mixin:
 
             ctx = {
                 "float": float, "int": int, "str": str, "len": len, "datetime": datetime,
-                "True": True, "False": False, "None": None,
+                "True": True, "False": False, "None": None, "any": any, "all": all,
                 "VALUE": VALUE, "KEY": KEY, "DATA": data,
                 "check_address": lambda p: check_address(p, data, report, 
                                                         rule_meta.get("severity", "ERROR"), 
@@ -587,4 +598,28 @@ class Layer3Mixin:
             return True # Suppress generic error
 
         return True
+    def validate_entity_mismatch(self, xml_content: str, report: ValidationReport):
+        """
+        Special early check for Entity Mismatch (L3-BIZ-PARTY-NAME-ENTITY-MATCH).
+        Used to bring this rule forward to the very start of Step 5.
+        """
+        try:
+            # We need normalized data to run these rules efficiently
+            data, line_map = self._normalize_message(xml_content)
+            all_rules = self._load_all_rules(report.message_type)
+            # Filter specifically for these matching rules and scheme codes
+            priority_rules = [
+                r for r in all_rules 
+                if r.get("rule_id") in [
+                    "L3-BIZ-PARTY-NAME-ENTITY-MATCH-ORG", 
+                    "L3-BIZ-PARTY-NAME-ENTITY-MATCH-PRVT",
+                    "L3_ORG_SCHEME_VALIDATION",
+                    "L3_PRVT_SCHEME_VALIDATION"
+                ]
+            ]
+            
+            for rule in priority_rules:
+                self._execute_rule_logic(rule, data, line_map, self.codelists, report)
+        except Exception as e:
+            print(f"DEBUG: Early Entity mismatch check failed: {e}")
 

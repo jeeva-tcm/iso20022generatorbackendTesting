@@ -1,0 +1,10 @@
+[
+    {
+        "rule_id": "CAMT029_001",
+        "description": "Resolution of Investigation: Debtor should identify with Name and/or ID.",
+        "condition": "exists(Document.RsltnOfInvstgtn.CxlDetails.OrgnlGrpInfAndSts.Dbtr)",
+        "expression": "exists(Document.RsltnOfInvstgtn.CxlDetails.OrgnlGrpInfAndSts.Dbtr.Nm) or exists(Document.RsltnOfInvstgtn.CxlDetails.OrgnlGrpInfAndSts.Dbtr.Id)",
+        "severity": "WARNING",
+        "layer": 3
+    }
+]

@@ -1,0 +1,38 @@
+[
+    {
+        "rule_id": "PACS009_001",
+        "description": "Financial Institution Credit Transfer: Debtor must identify as a Financial Institution (FinInstnId). customer elements like Nm, OrgId, PrvtId are not allowed.",
+        "condition": "exists(Document.FICdtTrf)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Dbtr.Nm') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Dbtr.Id.OrgId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Dbtr.Id.PrvtId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_002",
+        "description": "Financial Institution Credit Transfer: Creditor must identify as a Financial Institution (FinInstnId). customer elements like Nm, OrgId, PrvtId are not allowed.",
+        "condition": "exists(Document.FICdtTrf)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Cdtr.Nm') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Cdtr.Id.OrgId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.Cdtr.Id.PrvtId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_003",
+        "description": "Financial Institution Credit Transfer: Instructing Agent must be a Financial Institution Identification.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.InstgAgt)",
+        "mandatory_fields": [
+            "Document.FICdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_004",
+        "description": "Financial Institution Credit Transfer: Instructed Agent must be a Financial Institution Identification.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.InstdAgt)",
+        "mandatory_fields": [
+            "Document.FICdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    }
+]

@@ -37,7 +37,7 @@ class ValidationReport:
 
     def add_issue(self, issue: ValidationIssue):
         self.issues.append(issue.to_dict())
-        if issue.severity == "ERROR":
+        if issue.severity in ["ERROR", "CRITICAL"]:
             self.errors += 1
             self.status = "FAIL"
         elif issue.severity == "WARNING":

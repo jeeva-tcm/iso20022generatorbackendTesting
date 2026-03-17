@@ -1,40 +1,56 @@
-
 import os
+import glob
 import shutil
-import time
 
-files_to_remove = [
+def remove_file(filepath):
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+            print(f"Deleted file: {filepath}")
+        except Exception as e:
+            print(f"Error deleting {filepath}: {e}")
+
+# Relative paths from backend root
+backend_patterns = [
+    "test_*.py",
+    "temp_test_*.py",
+    "tmp_test_*.py",
+    "debug_*.py",
+    "check_*.py",
+    "diag_*.py",
+    "reproduce_err.py",
+    "verify_fix.py",
+    "final_line_test.py",
+    "run_test.bat",
+    "run_mt942.bat",
     "check_server.bat",
-    "fix_deps.bat",
-    "fix_deps_py.bat",
-    "fix_log.txt",
-    "fix_log_py.txt",
-    "server_status.txt",
+    "package-lock.json",
     "startup_error.txt",
-    "cleanup.py"
+    "schme_test_results.json",
+    "'", "')", "'))"
 ]
 
-dirs_to_remove = [
-    "__pycache__",
-    "app/__pycache__"
+specific_files = [
+    "app/services/run_schme_test.py",
+    "../iso20022generatorfrontend/build_err.txt",
+    "../iso20022generatorfrontend/build_err2.txt",
+    "../startup_error.txt"
 ]
 
 print("Starting cleanup...")
 
-for d in dirs_to_remove:
-    if os.path.exists(d):
-        try:
-            shutil.rmtree(d)
-            print(f"Removed directory: {d}")
-        except Exception as e:
-            print(f"Failed to remove {d}: {e}")
+for pattern in backend_patterns:
+    for f in glob.glob(pattern):
+        remove_file(f)
 
-for f in files_to_remove:
-    if os.path.exists(f):
-        try:
-            os.remove(f)
-            print(f"Removed file: {f}")
-        except Exception as e:
-            print(f"Failed to remove {f}: {e}")
+for f in specific_files:
+    remove_file(f)
+
+# Also clean __pycache__
+for root, dirs, files in os.walk("."):
+    for d in dirs:
+        if d == "__pycache__":
+            shutil.rmtree(os.path.join(root, d))
+            print(f"Removed cache: {os.path.join(root, d)}")
 
 print("Cleanup finished.")

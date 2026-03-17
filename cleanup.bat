@@ -1,26 +1,34 @@
 @echo off
-cd "c:\Users\HP\Desktop\iso20022 Validator - Copy\backend"
-del /f /q check_db_count.py
-del /f /q check_server.bat
-del /f /q check_sqlite.py
-del /f /q cleanup.py
-del /f /q debug_zip.py
-del /f /q diag_extract.py
-del /f /q extract_v2.py
-del /f /q extract_xsds.py
-del /f /q fix_deps.bat
-del /f /q fix_deps_py.bat
-del /f /q fix_log.txt
-del /f /q fix_log_py.txt
-del /f /q force_extract.py
-del /f /q force_setup.py
-del /f /q iso_validator.db
-del /f /q list_camt.py
-del /f /q list_zip.py
-del /f /q run.py
-del /f /q server_status.txt
-del /f /q setup_xsds.py
-del /f /q start_backend.bat
-del /f /q startup_error.txt
-rmdir /s /q app\models
-echo Cleanup complete.
+cd /d "%~dp0"
+echo Cleaning up unwanted test and temporary files...
+
+del /f /q "test_*.py" 2>nul
+del /f /q "temp_test_*.py" 2>nul
+del /f /q "tmp_test_*.py" 2>nul
+del /f /q "debug_*.py" 2>nul
+del /f /q "check_*.py" 2>nul
+del /f /q "diag_*.py" 2>nul
+del /f /q "reproduce_err.py" 2>nul
+del /f /q "verify_fix.py" 2>nul
+del /f /q "final_line_test.py" 2>nul
+del /f /q "run_test.bat" 2>nul
+del /f /q "run_mt942.bat" 2>nul
+del /f /q "check_server.bat" 2>nul
+del /f /q "package-lock.json" 2>nul
+del /f /q "startup_error.txt" 2>nul
+del /f /q "schme_test_results.json" 2>nul
+del /f /q "app\services\run_schme_test.py" 2>nul
+del /f /q "')" 2>nul
+del /f /q "'))" 2>nul
+del /f /q "'" 2>nul
+
+echo Cleaning up frontend temporary files...
+del /f /q "..\iso20022generatorfrontend\build_err*.txt" 2>nul
+
+echo Root cleanup...
+del /f /q "..\startup_error.txt" 2>nul
+del /f /q "..\final_cleanup_script.py" 2>nul
+del /f /q "..\debug_cleanup.py" 2>nul
+
+echo Cleanup complete!
+pause

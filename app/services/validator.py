@@ -314,6 +314,10 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 4.19: SCHEME NAME ALLOWLIST VALIDATION (Strict Policy)
             self._validate_schme_nm_in_xml(xml_content, report)
 
+            # Step 4.20: PRIORITY ENTITY MISMATCH CHECK (Layer 3 rule moved forward)
+            # This allows the business rule to appear before Schema (Layer 2) errors.
+            self.validate_entity_mismatch(xml_content, report)
+
             if mode != "Layer 1 only":
                 try:
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
@@ -362,8 +366,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                         break
             
             if any(i['code'] == 'SANCTIONS_BLOCKED' for i in report.issues):
-                 # Fail fast, skip further L3 rules
-                 report.layer_status['3'] = {"status": "❌", "time": round((time.time() - start_time) * 1000, 2)}
+                 report.layer_status['3'] = {"status": "FAIL", "time": round((time.time() - start_time) * 1000, 2)}
                  return self._finalize_report(report, start_time)
 
             # STEP 6-9: Dynamic Rule Engine (Layers 1-3)
@@ -2433,7 +2436,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             
             labels = cfg.get('errors', {})
             for k, v in labels.items():
-                if v: error_labels[k] = f"❌ {v}"
+                if v: error_labels[k] = v
 
         # Stage 1: Find <Othr> blocks
         othr_patt = re.compile(r'<Othr[^>]*>([\s\S]*?)</Othr>', re.IGNORECASE)
@@ -2474,8 +2477,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 # RULE: SchmeNm is NOT Allowed for Acct identifiers
                 if m_schme:
                     report.add_issue(ValidationIssue(
-                        "ERROR", 2, "SCHEME_NOT_ALLOWED", str(othr_line),
-                        f"❌ {curr_path} → {error_labels.get('not_supported', '<SchmeNm> is not allowed for this identifier type.')}",
+                        "ERROR", 3, "SCHEME_NOT_ALLOWED", str(othr_line),
+                        f"{curr_path} → {error_labels.get('not_supported', '<SchmeNm> is not allowed for this identifier type.')}",
                         "Remove the <SchmeNm> block. For accounts, provide only the <Id> within <Othr>."
                     ))
                     continue
@@ -2487,8 +2490,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 # RULE: SchmeNm is Mandatory for Dbtr/Cdtr Org/Prvt identifiers
                 if not m_schme:
                     report.add_issue(ValidationIssue(
-                        "ERROR", 2, "SCHEME_MISSING", str(othr_line),
-                        f"❌ {curr_path} → {error_labels['missing_schmenm']}",
+                        "ERROR", 3, "SCHEME_MISSING", str(othr_line),
+                        f"{curr_path} → {error_labels['missing_schmenm']}",
                         "Identify the ID type using <SchmeNm>. For example: <SchmeNm><Cd>LEI</Cd></SchmeNm>."
                     ))
                     continue
@@ -2512,8 +2515,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # RULE 1: Mutual Exclusivity
             if len(cds) > 0 and len(ptys) > 0:
                 report.add_issue(ValidationIssue(
-                    "ERROR", 2, "SCHEME_CONFLICT", str(schme_line),
-                    f"❌ {curr_path} → {error_labels['both_cd_and_prtry']}",
+                    "ERROR", 3, "SCHEME_CONFLICT", str(schme_line),
+                    f"{curr_path} → {error_labels['both_cd_and_prtry']}",
                     "You cannot provide both <Cd> and <Prtry> in the same <SchmeNm> block. Use either a standardized code OR a proprietary name."
                 ))
                 continue
@@ -2521,8 +2524,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # RULE 2: Presence Check
             if len(cds) == 0 and len(ptys) == 0:
                 report.add_issue(ValidationIssue(
-                    "ERROR", 2, "SCHEME_MISSING_CHILD", str(schme_line),
-                    f"❌ {curr_path} → {error_labels['missing_element']}",
+                    "ERROR", 3, "SCHEME_MISSING_CHILD", str(schme_line),
+                    f"{curr_path} → {error_labels['missing_element']}",
                     "The <SchmeNm> block must contain either <Cd> or <Prtry>."
                 ))
                 continue
@@ -2534,66 +2537,45 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 
                 if not val:
                      report.add_issue(ValidationIssue(
-                        "ERROR", 2, "SCHEME_EMPTY_CD", str(schme_line),
-                        "❌ Missing or empty identifier code in <Cd>.",
+                        "ERROR", 3, "SCHEME_EMPTY_CD", str(schme_line),
+                        "Missing or empty identifier code in <Cd>.",
                         f"Please provide a valid code such as: {codes_str}."
                     ))
                      continue
 
-                if val_upper not in valid_codes:
-                    cd_match_pos = schme_pos + m_schme.group(0).find(m_cd.group(0))
-                    try:
-                        line_num = xml_content.count('\n', 0, cd_match_pos) + 1
-                    except:
-                        line_num = "Unknown"
-                    
-                    if val_upper in invalid_map:
-                        reason = invalid_map[val_upper]["reason"]
-                        fix = invalid_map[val_upper]["fix"]
+                # Skip the allowlist check here to let global.json handle it with descriptive messages
+                # Valid codes and invalid map are still used for context but we won't add ERROR issues here for simple allowlist failures
+                if val_upper == "LEI" and id_val:
+                    lei_status = self._check_lei(id_val)
+                    if lei_status != "OK":
+                        id_match_pos = othr_pos + m_othr.group(0).find(m_id.group(0))
+                        try:
+                            id_line = xml_content.count('\n', 0, id_match_pos) + 1
+                        except:
+                            id_line = "Unknown"
+                        
+                        error_map = {
+                            "INVALID_LENGTH": ("LEI must be exactly 20 characters.", "Correct the LEI to full 20-character length."),
+                            "INVALID_CHARACTERS": ("Special characters found — only A-Z and 0-9 allowed.", "Replace special characters with valid alphanumeric characters."),
+                            "ALL_ZEROS_INVALID": ("All-zero LEI is not a valid GLEIF-registered identifier.", "Use a real GLEIF-registered LEI."),
+                            "INVALID_CHECK_DIGITS_RESERVED": ("Check digits '00' or '01' are reserved and not allowed.", "Valid check digit range is 02–97 only."),
+                            "CHECKSUM_MISMATCH": ("Invalid LEI checksum (MOD 97 remainder is not 1).", "Ensure the LEI follows ISO 7064 MOD 97-10 rules. The last two digits must be correct check digits.")
+                        }
+                        msg, fix = error_map.get(lei_status, ("Invalid LEI format.", "Check the LEI structure."))
+                        
                         report.add_issue(ValidationIssue(
-                            "ERROR", 2, "INVALID_SCHEME_CODE", str(line_num),
-                            f"❌ {curr_path} → {error_labels['invalid_scheme']}: '{val}'. This code is invalid because it {reason.lower()}.",
-                            f"{fix} Recommended codes: {codes_str}."
+                            "ERROR", 3, f"LEI_{lei_status}", str(id_line),
+                            f"{msg} ('{id_val}')",
+                            fix
                         ))
-                    else:
-                        report.add_issue(ValidationIssue(
-                            "ERROR", 2, "INVALID_SCHEME_CODE", str(line_num),
-                            f"❌ {curr_path} → {error_labels['invalid_scheme']}: '{val}'.",
-                            f"Only the following are valid: {codes_str}. Everything else is strictly invalid."
-                        ))
-                else:
-                    # Cd is VALID. Now check identifier format if it's LEI
-                    if val_upper == "LEI" and id_val:
-                        lei_status = self._check_lei(id_val)
-                        if lei_status != "OK":
-                            id_match_pos = othr_pos + m_othr.group(0).find(m_id.group(0))
-                            try:
-                                id_line = xml_content.count('\n', 0, id_match_pos) + 1
-                            except:
-                                id_line = "Unknown"
-                            
-                            error_map = {
-                                "INVALID_LENGTH": ("LEI must be exactly 20 characters.", "Correct the LEI to full 20-character length."),
-                                "INVALID_CHARACTERS": ("Special characters found — only A-Z and 0-9 allowed.", "Replace special characters with valid alphanumeric characters."),
-                                "ALL_ZEROS_INVALID": ("All-zero LEI is not a valid GLEIF-registered identifier.", "Use a real GLEIF-registered LEI."),
-                                "INVALID_CHECK_DIGITS_RESERVED": ("Check digits '00' or '01' are reserved and not allowed.", "Valid check digit range is 02–97 only."),
-                                "CHECKSUM_MISMATCH": ("Invalid LEI checksum (MOD 97 remainder is not 1).", "Ensure the LEI follows ISO 7064 MOD 97-10 rules. The last two digits must be correct check digits.")
-                            }
-                            msg, fix = error_map.get(lei_status, ("Invalid LEI format.", "Check the LEI structure."))
-                            
-                            report.add_issue(ValidationIssue(
-                                "ERROR", 2, f"LEI_{lei_status}", str(id_line),
-                                f"❌ {msg} ('{id_val}')",
-                                fix
-                            ))
 
             # RULE 4: <Prtry> not empty
             for m_pty in ptys:
                 val = m_pty.group(1).strip()
                 if not val:
                     report.add_issue(ValidationIssue(
-                        "ERROR", 2, "EMPTY_PRTRY", str(schme_line),
-                        f"❌ {curr_path} → {error_labels['empty_prtry']}",
+                        "ERROR", 3, "EMPTY_PRTRY", str(schme_line),
+                        f"{curr_path} → {error_labels['empty_prtry']}",
                         "The <Prtry> tag cannot be empty. Provide a proprietary scheme description or code."
                     ))
 

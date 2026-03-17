@@ -1,0 +1,10 @@
+[
+    {
+        "rule_id": "CAMT053_001",
+        "description": "Bank Statement: Account Owner identification must include Name, Postal Address, or ID.",
+        "condition": "exists(Document.BkToCstmrStmt.Stmt.Acct.Ownr)",
+        "expression": "exists(Document.BkToCstmrStmt.Stmt.Acct.Ownr.Nm) or exists(Document.BkToCstmrStmt.Stmt.Acct.Ownr.PstlAdr) or exists(Document.BkToCstmrStmt.Stmt.Acct.Ownr.Id)",
+        "severity": "ERROR",
+        "layer": 3
+    }
+]

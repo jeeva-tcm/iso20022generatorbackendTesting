@@ -1,0 +1,10 @@
+[
+    {
+        "rule_id": "PACS004_001",
+        "description": "Payment Return: Debtor identification should follow standard Party rules (Name, Address, or ID).",
+        "condition": "exists(Document.PmtRtr.TxInf.OrgnlTxRef.Dbtr)",
+        "expression": "exists(Document.PmtRtr.TxInf.OrgnlTxRef.Dbtr.Nm) or exists(Document.PmtRtr.TxInf.OrgnlTxRef.Dbtr.PstlAdr) or exists(Document.PmtRtr.TxInf.OrgnlTxRef.Dbtr.Id)",
+        "severity": "WARNING",
+        "layer": 3
+    }
+]

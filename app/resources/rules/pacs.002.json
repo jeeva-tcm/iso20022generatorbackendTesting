@@ -1,0 +1,22 @@
+[
+    {
+        "rule_id": "PACS002_001",
+        "description": "Payment Status Report: Instructing Agent must be a Financial Institution Identification.",
+        "condition": "exists(Document.FIToFIPmtStsRpt.GrpHdr.InstgAgt)",
+        "mandatory_fields": [
+            "Document.FIToFIPmtStsRpt.GrpHdr.InstgAgt.FinInstnId"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS002_002",
+        "description": "Payment Status Report: Instructed Agent must be a Financial Institution Identification.",
+        "condition": "exists(Document.FIToFIPmtStsRpt.GrpHdr.InstdAgt)",
+        "mandatory_fields": [
+            "Document.FIToFIPmtStsRpt.GrpHdr.InstdAgt.FinInstnId"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    }
+]

@@ -1,0 +1,10 @@
+[
+    {
+        "rule_id": "CAMT054_001",
+        "description": "Debit/Credit Notification: Debtor/Creditor should identify with Name and/or ID.",
+        "condition": "exists(Document.BkToCstmrDbtCdtNtfctn.Ntfctn.Ntry)",
+        "expression": "all(exists(k + '.RltdPties.Dbtr.Nm') or exists(k + '.RltdPties.Dbtr.Id') for k in DATA.keys() if k.endswith('.Ntry'))",
+        "severity": "WARNING",
+        "layer": 3
+    }
+]

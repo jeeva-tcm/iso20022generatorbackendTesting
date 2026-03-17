@@ -23,7 +23,7 @@ class Layer2Mixin:
             xsd_full_path = self._get_xsd_path(message_type)
             if not xsd_full_path or not os.path.exists(xsd_full_path):
                 report.add_issue(ValidationIssue("ERROR", 2, "Schema Not Found", "Missing Validation Template", f"Cannot find the validation template for message type '{message_type}'.", "The schema file (.xsd) for this message type is not available in the system. Contact support if this message type should be supported."))
-                report.layer_status["2"] = {"status": "❌", "time": 0}
+                report.layer_status["2"] = {"status": "FAIL", "time": 0}
                 return False
 
             # IMPORTANT: remove_blank_text MUST be False to preserve user's original line numbers
@@ -40,7 +40,7 @@ class Layer2Mixin:
             
             if not target_node:
                 report.add_issue(ValidationIssue("ERROR", 2, "Missing Document", "No Root Element", "Cannot find the main <Document> or <BusMsg> container in your XML.", "Your message structure is incorrect. ISO 20022 messages must have a <Document> wrapper element."))
-                report.layer_status["2"] = {"status": "❌", "time": (time.time() - start) * 1000}
+                report.layer_status["2"] = {"status": "", "time": (time.time() - start) * 1000}
                 return False
 
             main_node = target_node[0]
@@ -171,7 +171,12 @@ class Layer2Mixin:
                     except Exception:
                         pass
 
-                    issues.append(ValidationIssue("ERROR", 2, "SCHEMA_VAL", str(real_line), friendly_msg, suggestion))
+                    effective_layer = 2
+                    # If this is a scheme identifier error, treat it as Layer 3 Business Rule
+                    if "SchmeNm" in error.message or "Invalid data" in friendly_msg or "<Cd>" in friendly_msg:
+                        effective_layer = 3
+                    
+                    issues.append(ValidationIssue("ERROR", effective_layer, "SCHEMA_VAL", str(real_line), friendly_msg.strip(), suggestion))
 
             # Step 11 — Mandatory Header Logic (head.001)
             app_hdr_node = full_xml_doc.find(".//{*}AppHdr")
@@ -194,7 +199,7 @@ class Layer2Mixin:
                         h_schema = etree.XMLSchema(h_xsd_raw)
                         h_xsd_ns = h_xsd_raw.getroot().get("targetNamespace")
 
-                        # ✅ Build tag_info from the HEAD.001 XSD (NOT payload XSD)
+                        #  Build tag_info from the HEAD.001 XSD (NOT payload XSD)
                         # This ensures CharSet is seen as optional and Fr as mandatory
                         h_tag_info = self._build_tag_info_from_xsd(h_path)
                         
@@ -248,7 +253,7 @@ class Layer2Mixin:
             report.add_issue(issue)
 
         success = not any(i.severity == "ERROR" for i in issues)
-        report.layer_status["2"] = {"status": "✅" if success else "❌", "time": round((time.time() - start) * 1000, 2)}
+        report.layer_status["2"] = {"status": "PASS" if success else "FAIL", "time": round((time.time() - start) * 1000, 2)}
         return success
 
     # ──────────────────────────────────────────────────────────────────────────
@@ -655,12 +660,12 @@ class Layer2Mixin:
             # Specific hint for scheme names inside this block too
             if name == "Cd" and ("SchmeNm" in msg or "Othr" in msg or "OrgId" in msg or "Id" in msg.upper()):
                  return (
-                    f"❌ Missing or empty identifier code in <{name}>.",
+                    f"Missing or empty identifier code in <{name}>.",
                     "This tag is required. Please provide a valid code such as 'LEI', 'CUST', or 'BANK'."
                  )
 
             return (
-                f"❌ Empty elements found in '{name}'",
+                f" Empty elements found in '{name}'",
                 f"The field '{name}' cannot be left blank. Please enter a valid value before submitting."
             )
 
@@ -670,24 +675,24 @@ class Layer2Mixin:
             if "pattern" in msg.lower() or "facet" in msg.lower():
                 if bic_val and len(bic_val) >= 6 and not (bic_val[4].isalpha() and bic_val[5].isalpha()):
                     return (
-                        f"❌ Invalid BIC — bad country code: '{bic_val[4:6]}'.",
+                        f"Invalid BIC — bad country code: '{bic_val[4:6]}'.",
                         f"Characters 5–6 of a BIC must be a valid 2-letter ISO country code (e.g. 'GB', 'US', 'DE'). "
                         f"Found '{bic_val[4:6]}' in BIC '{bic_val}'. Correct this before resubmitting."
                     )
                 if bic_val and len(bic_val) not in (8, 11):
                     return (
-                        f"❌ BIC '{bic_val}' has wrong length ({len(bic_val)} chars).",
+                        f"BIC '{bic_val}' has wrong length ({len(bic_val)} chars).",
                         "A valid BIC must be exactly 8 or 11 characters: "
                         "4-char Bank Code + 2-letter Country + 2-char Location + optional 3-char Branch (e.g. BNKGB2LXXX)."
                     )
                 return (
-                    f"❌ Invalid BIC code format: '{bic_val}'.",
+                    f"Invalid BIC code format: '{bic_val}'.",
                     "The BIC must follow ISO 9362: 4-letter bank code, 2-letter country code, 2-char location code, "
                     "and optional 3-char branch code. Example: 'BNKGB2LXXX'."
                 )
             if "length" in msg.lower() or "atomic type" in msg.lower():
                 return (
-                    "❌ BIC has incorrect length.",
+                    "BIC has incorrect length.",
                     "A BIC (Bank Identifier Code) must be exactly 8 or 11 characters long."
                 )
 
@@ -697,12 +702,12 @@ class Layer2Mixin:
             ccy_val = bad_value()
             if ccy_val:
                 return (
-                    f"❌ Invalid currency code '{ccy_val}'.",
+                    f"Invalid currency code '{ccy_val}'.",
                     f"'{ccy_val}' is not a recognised ISO 4217 currency code. "
                     f"Use a standard 3-letter code such as 'USD', 'EUR', 'GBP', 'JPY', 'INR', 'AED', etc."
                 )
             return (
-                "❌ Missing currency code (Ccy attribute).",
+                "Missing currency code (Ccy attribute).",
                 "Add a valid ISO 4217 3-letter currency code as an attribute, e.g. Ccy=\"USD\"."
             )
 
@@ -712,18 +717,18 @@ class Layer2Mixin:
             aval  = bad_value()
             if aname and aval:
                 return (
-                    f"❌ Invalid value '{aval}' for attribute '{aname}'.",
+                    f"Invalid value '{aval}' for attribute '{aname}'.",
                     f"The attribute '{aname}' does not accept the value '{aval}'. "
                     f"Check the ISO 20022 standard for the list of allowed values for this attribute."
                 )
             if aname:
                 return (
-                    f"❌ Missing required attribute '{aname}'.",
+                    f"Missing required attribute '{aname}'.",
                     f"The attribute '{aname}' is required but not present in this element. "
                     f"For currency amounts, add Ccy=\"USD\" (or the appropriate currency code)."
                 )
             return (
-                "❌ A required attribute is missing or invalid.",
+                "A required attribute is missing or invalid.",
                 "One or more required attributes (such as Ccy for amount fields) are missing or contain an invalid value."
             )
 
@@ -731,7 +736,7 @@ class Layer2Mixin:
         if "occurs more than allowed" in msg:
             name = elem_name("A field")
             return (
-                f"❌ Duplicate field '{name}'.",
+                f"Duplicate field '{name}'.",
                 f"The field '{name}' appears more than once in this section, which is not allowed. "
                 f"Remove the extra copy and keep only one."
             )
@@ -766,7 +771,7 @@ class Layer2Mixin:
                 if is_dupe:
                     label = tag_label(found_elem)
                     return (
-                        f"❌ Tag <{found_elem}> is duplicated.",
+                        f"Tag <{found_elem}> is duplicated.",
                         f"The tag <{label}> appears more than once in this section. "
                         f"Remove the extra copy and keep only one."
                     )
@@ -778,7 +783,7 @@ class Layer2Mixin:
                 # Special Conflict: SchmeNm Cd vs Prtry
                 if found_elem in ["Cd", "Prtry"] and ("Cd" in all_expected or "Prtry" in all_expected):
                      return (
-                         "❌ /OrgId/Othr → Mutually exclusive elements conflict",
+                         "/OrgId/Othr → Mutually exclusive elements conflict",
                          "You cannot provide both <Cd> and <Prtry> in the same <SchmeNm> block. Please remove one. ISO rules require either a standardized code OR a proprietary name, never both."
                      )
 
@@ -807,7 +812,7 @@ class Layer2Mixin:
                 # Special Case: SchmeNm must have a child
                 if parent == "SchmeNm":
                      return (
-                         "❌ /OrgId/Othr → <SchmeNm> must contain either <Cd> or <Prtry>",
+                         "/OrgId/Othr → <SchmeNm> must contain either <Cd> or <Prtry>",
                          "The <SchmeNm> block is incomplete. It must contain exactly one sub-element: <Cd> for ISO codes or <Prtry> for local identifiers."
                      )
 
@@ -825,12 +830,12 @@ class Layer2Mixin:
             dv = bad_value()
             if "datetime" in msg.lower():
                 return (
-                    f"❌ Invalid date/time value: '{dv}'.",
+                    f"Invalid date/time value: '{dv}'.",
                     "Date-time fields must use the format YYYY-MM-DDThh:mm:ss (e.g. 2026-11-20T14:30:00). "
                     "Ensure there is no trailing space and the 'T' separator is present."
                 )
             return (
-                f"❌ Invalid date value: '{dv}'.",
+                f"Invalid date value: '{dv}'.",
                 "Date fields must use the format YYYY-MM-DD (e.g. 2026-11-20). "
                 "Do not include time or timezone information in plain date fields."
             )
@@ -839,7 +844,7 @@ class Layer2Mixin:
         if "decimal" in msg.lower() or ("amount" in msg.lower() and "is not a valid" in msg.lower()):
             av = bad_value()
             return (
-                f"❌ Invalid amount value: '{av}'.",
+                f"Invalid amount value: '{av}'.",
                 "Amount fields must contain a plain decimal number without currency symbols or commas "
                 "(e.g. 1500.00). Do not add 'USD' or ',' inside the amount tag."
             )
@@ -880,10 +885,10 @@ class Layer2Mixin:
                     f_msg = f"The code '{lv}' is not valid for this field because it is {invalid_reason.lower()}."
                     if invalid_fix: f_msg += f" {invalid_fix}."
                     f_msg += f" Recommended codes: {codes_str}."
-                    return (f"❌ Invalid data '{lv}' for <{name}>.", f_msg)
+                    return (f" Invalid data '{lv}' for <{name}>.", f_msg)
 
                 return (
-                    f"❌ Invalid data '{lv}' for <{name}>.",
+                    f" Invalid data '{lv}' for <{name}>.",
                     f"For this tag, only these approved ISO codes are valid: {codes_str}. "
                     f"Any other value, including '{lv}', is strictly invalid and will cause rejection. "
                     "Ensure the value matches the required data format."
@@ -891,12 +896,12 @@ class Layer2Mixin:
 
             if tn:
                 return (
-                    f"❌ Field '{name}' has an invalid value: '{tv}'.",
+                    f"Field '{name}' has an invalid value: '{tv}'.",
                     f"This field requires type '{tn}'. Please verify the value '{tv}' matches the expected format."
                 )
             
             return (
-                f"❌ Invalid value '{tv}' in field '{name}'.",
+                f"Invalid value '{tv}' in field '{name}'.",
                 "The value does not match the required data type for this field. "
                 "Check for extra spaces, wrong number format, or unsupported characters."
             )
@@ -910,12 +915,13 @@ class Layer2Mixin:
                 "MIC":  "A MIC (Market Identifier Code) must be exactly 4 uppercase letters (e.g. XLON).",
                 "LEI":  "An LEI must be exactly 20 alphanumeric characters.",
                 "ISIN": "An ISIN must be exactly 12 alphanumeric characters starting with a 2-letter country code.",
+                "CBPR_DateTime": "CBPR+ requires a full timezone offset (e.g., +05:30) instead of 'Z'. Use the format: YYYY-MM-DDThh:mm:ss+hh:mm."
             }
             for key, hint in field_hints.items():
                 if key in name.upper() or key in msg.upper():
-                    return (f"❌ Invalid {key} format: '{pv}'.", hint)
+                    return (f"Invalid {key} format: '{pv}'.", hint)
             return (
-                f"❌ Invalid format for field '{name}': '{pv}'.",
+                f"Invalid format for field '{name}': '{pv}'.",
                 f"The value '{pv}' does not match the required format for '{name}'. "
                 "Check for illegal characters, wrong length, or an unsupported pattern."
             )
@@ -948,16 +954,16 @@ class Layer2Mixin:
                     f_msg = f"The code '{ev}' is not valid for this field because it is {invalid_reason.lower()}."
                     if invalid_fix: f_msg += f" {invalid_fix}."
                     f_msg += f" Recommended codes: {codes_str}."
-                    return (f"❌ Invalid code '{ev}' in <{name}>.", f_msg)
+                    return (f"Invalid code '{ev}' in <{name}>.", f_msg)
                     
                 return (
-                    f"❌ Invalid code '{ev}' in <{name}>.",
+                    f"Invalid code '{ev}' in <{name}>.",
                     f"The data '{ev}' is not an approved identifier code. Only the following are valid: {codes_str}. "
                     "Everything else is strictly invalid."
                 )
 
             return (
-                f"❌ Invalid code '{ev}' for field '{name}'.",
+                f"Invalid code '{ev}' for field '{name}'.",
                 f"'{ev}' is not a valid code for '{name}'. "
                 "This field only accepts specific ISO 20022 codes. "
                 "Check the standard for the list of allowed values (e.g. SLEV, SHAR, CRED, DEBT for ChrgBr)."
@@ -1008,10 +1014,10 @@ class Layer2Mixin:
                     f_msg = f"The code '{lv}' is not valid for this field because it is {invalid_reason.lower()}."
                     if invalid_fix: f_msg += f" {invalid_fix}."
                     f_msg += f" Recommended codes: {codes_str}."
-                    return (f"❌ Invalid data '{lv}' for <{name}>.", f_msg)
+                    return (f" Invalid data '{lv}' for <{name}>.", f_msg)
 
                 return (
-                    f"❌ Invalid data '{lv}' for <{name}>.",
+                    f" Invalid data '{lv}' for <{name}>.",
                     f"Only the following ISO codes are accepted: {codes_str}. "
                     f"The value '{lv}' is strictly invalid. "
                     "Ensure the code length is within the 4-character limit and exists in the approved list."
@@ -1019,11 +1025,11 @@ class Layer2Mixin:
 
             if lv == "" or not lv.strip():
                 return (
-                    f"❌ Empty elements found in '{name}'",
+                    f" Empty elements found in '{name}'",
                     f"The field '{name}' cannot be left blank. Please enter a valid value before submitting."
                 )
             return (
-                f"❌ Field '{name}' has an invalid length: '{lv}'.",
+                f"Field '{name}' has an invalid length: '{lv}'.",
                 f"The value '{lv}' is either too long or too short for '{name}'. "
                 "Check the maximum and minimum character length allowed by the schema."
             )
@@ -1032,7 +1038,7 @@ class Layer2Mixin:
         if "not allowed here" in msg or "not permitted" in msg.lower():
             name = elem_name()
             return (
-                f"❌ Field '{name}' is not allowed in this location.",
+                f"Field '{name}' is not allowed in this location.",
                 f"'{name}' cannot appear at this position in the message. "
                 "Remove it or move it to the correct parent element as per the ISO 20022 schema."
             )
@@ -1047,7 +1053,7 @@ class Layer2Mixin:
         clean = clean.strip()
 
         return (
-            f"❌ Validation error: {clean}",
+            f"Validation error: {clean}",
             "Please review this field. Ensure the value follows the ISO 20022 standard format, "
             "uses allowed codes, and does not contain unsupported characters."
         )

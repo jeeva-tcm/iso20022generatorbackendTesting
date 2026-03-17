@@ -127,5 +127,87 @@
         "expression": "exists(Document..GrpHdr.SttlmInf.ClrSys) or exists(Document..CdtTrfTxInf.SttlmInf.ClrSys)",
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "L3_PARTY_EXCLUSIVITY",
+        "description": "Party Identification: Organization ID (/OrgId) and Private ID (/PrvtId) are mutually exclusive. Both cannot be present.",
+        "type": "expression",
+        "selector": ".*\\.Pty\\.Id$|.*\\.Dbtr\\.Id$|.*\\.Cdtr\\.Id$|.*\\.UltmtDbtr\\.Id$|.*\\.UltmtCdtr\\.Id$",
+        "expression": "not (exists(KEY + '.OrgId') and exists(KEY + '.PrvtId'))",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_FININSTNID_COMPLETENESS",
+        "description": "Financial Institution Identification: Must contain either a BICFI or a Clearing System Member identification.",
+        "type": "expression",
+        "selector": ".*FinInstnId$",
+        "expression": "exists(KEY + '.BICFI') or exists(KEY + '.ClrSysMmbId')",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_NAME_FOR_ID",
+        "description": "Party Identification: When an ID (Organisation /OrgId or Private /PrvtId) is provided, the Name field (/Nm) should also be included for reference.",
+        "type": "expression",
+        "selector": ".*\\.Pty$|.*\\.Dbtr$|.*\\.Cdtr$|.*\\.UltmtDbtr$|.*\\.UltmtCdtr$",
+        "expression": "not exists(KEY + '.Id') or exists(KEY + '.Nm')",
+        "severity": "WARNING",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_ORG_SCHEME_VALIDATION",
+        "description": "Validation of scheme code for Organisation Identification. Allowed: LEI, DUNS, VAT, TXID, GIIN, CRN.",
+        "errorMessage": "Validation of scheme code for Organisation Identification. Allowed: LEI, DUNS, VAT, TXID, GIIN, CRN.",
+        "fix": "Use a valid Organisation scheme code like 'LEI' or 'DUNS'.",
+        "type": "expression",
+        "selector": ".*\\.OrgId\\.Othr\\.SchmeNm\\.Cd$",
+        "expression": "VALUE in ['LEI', 'DUNS', 'VAT', 'TXID', 'GIIN', 'CRN']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_PRVT_SCHEME_VALIDATION",
+        "description": "Validation of scheme code for Private Identification. Allowed: CCPT, DRLC, NIDN, SSSN, PASSPORT, NATIONALID.",
+        "errorMessage": "Validation of scheme code for Private Identification. Allowed: CCPT, DRLC, NIDN, SSSN, PASSPORT, NATIONALID.",
+        "fix": "Use a valid Private scheme code like 'CCPT' (Passport) or 'NIDN'.",
+        "type": "expression",
+        "selector": ".*\\.PrvtId\\.Othr\\.SchmeNm\\.Cd$",
+        "expression": "VALUE in ['CCPT', 'DRLC', 'NIDN', 'SSSN', 'PASSPORT', 'NATIONALID']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3_SETTLEMENT_METHOD",
+        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, CLRG, COVE.",
+        "type": "expression",
+        "selector": ".*SttlmMtd$",
+        "expression": "VALUE in ['INDA', 'CLRG', 'COVE', 'COV']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3-BIZ-PARTY-NAME-ENTITY-MATCH-ORG",
+        "description": "Organisation identification cannot accompany personal name and vice versa (ENTITY_MISMATCH).",
+        "errorMessage": "ENTITY_MISMATCH: Organisation identification (OrgId) found with a non-corporate name. A corporate keyword (e.g., LTD, INC) is expected.",
+        "fix": "Ensure the <Nm> tag includes a corporate indicator like 'Ltd', 'Corp', or 'Inc', or use <PrvtId> if this is an individual.",
+        "type": "expression",
+        "selector": ".*\\.Dbtr$|.*\\.Cdtr$|.*\\.UltmtDbtr$|.*\\.UltmtCdtr$|.*\\.InitgPty$|.*\\.RltdPties$",
+        "condition": "exists(KEY + '.Id.OrgId')",
+        "expression": "not exists(KEY + '.Nm') or any(kw in str(DATA.get(KEY + '.Nm', '')).upper() for kw in ['LTD', 'LIMITED', 'PVT', 'PRIVATE', 'INC', 'CORP', 'BANK', 'PLC', 'COMPANY', 'GROUP', 'HOLDINGS'])",
+        "severity": "CRITICAL",
+        "layer": 3
+    },
+    {
+        "rule_id": "L3-BIZ-PARTY-NAME-ENTITY-MATCH-PRVT",
+        "description": "Organisation identification cannot accompany personal name and vice versa (ENTITY_MISMATCH).",
+        "errorMessage": "ENTITY_MISMATCH: Private identification (PrvtId) found with a corporate name keyword.",
+        "fix": "Remove corporate keywords (e.g., 'Ltd', 'Corp') from the <Nm> field, or use <OrgId> if this is a company identification.",
+        "type": "expression",
+        "selector": ".*\\.Dbtr$|.*\\.Cdtr$|.*\\.UltmtDbtr$|.*\\.UltmtCdtr$|.*\\.InitgPty$|.*\\.RltdPties$",
+        "condition": "exists(KEY + '.Id.PrvtId')",
+        "expression": "not exists(KEY + '.Nm') or not any(kw in str(DATA.get(KEY + '.Nm', '')).upper() for kw in ['LTD', 'LIMITED', 'PVT', 'PRIVATE', 'INC', 'CORP', 'BANK', 'PLC', 'COMPANY', 'GROUP', 'HOLDINGS'])",
+        "severity": "CRITICAL",
+        "layer": 3
     }
-]
+]

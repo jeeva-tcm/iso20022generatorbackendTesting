@@ -1,0 +1,12 @@
+[
+    {
+        "rule_id": "CAMT057_001",
+        "description": "Notification to Receive: Financial Institution identification must be a FinInstnId.",
+        "condition": "exists(Document.NtfctnToRcv.Ntfctn.Agt)",
+        "mandatory_fields": [
+            "Document.NtfctnToRcv.Ntfctn.Agt.FinInstnId"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    }
+]
