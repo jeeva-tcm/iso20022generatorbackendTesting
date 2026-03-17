@@ -1,0 +1,12 @@
+[
+    {
+        "rule_id": "L3-PAIN-MANDATORY-PARTIES",
+        "description": "Debtor, Creditor, Debtor Agent, and Creditor Agent are mandatory for PAIN messages (e.g. pain.001).",
+        "layer": 3,
+        "severity": "ERROR",
+        "condition": "True",
+        "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())",
+        "errorMessage": "Mandatory Parties Missing: Debtor, Creditor, Debtor Agent, and Creditor Agent must be provided in the message.",
+        "fix": "Ensure that the message contains <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> blocks as required bypayment standards."
+    }
+]

@@ -209,5 +209,16 @@
         "expression": "not exists(KEY + '.Nm') or not any(kw in str(DATA.get(KEY + '.Nm', '')).upper() for kw in ['LTD', 'LIMITED', 'PVT', 'PRIVATE', 'INC', 'CORP', 'BANK', 'PLC', 'COMPANY', 'GROUP', 'HOLDINGS'])",
         "severity": "CRITICAL",
         "layer": 3
+    },
+    {
+        "rule_id": "L3-MANDATORY-PAYMENT-PARTIES",
+        "description": "Debtor, Creditor, Debtor Agent, and Creditor Agent are mandatory for all payment messages (PACS/PAIN).",
+        "layer": 3,
+        "severity": "ERROR",
+        "condition": "any(k.startswith('Document.FIToFI') or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
+        "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())",
+        "errorMessage": "Mandatory Parties Missing: Debtor, Creditor, Debtor Agent, and Creditor Agent must be provided.",
+        "fix": "Ensure all party blocks <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> are included in the transaction."
     }
-]
+]
+
