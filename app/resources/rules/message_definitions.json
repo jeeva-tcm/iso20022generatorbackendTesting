@@ -30,6 +30,11 @@
             ]
         },
         "pacs.009": {
+            "AppHdr": [
+                "BizMsgIdr",
+                "CreDtTm",
+                "BICFI"
+            ],
             "GrpHdr": [
                 "MsgId",
                 "CreDtTm",
@@ -43,6 +48,11 @@
             ]
         },
         "pacs.009.cov": {
+            "AppHdr": [
+                "BizMsgIdr",
+                "CreDtTm",
+                "BICFI"
+            ],
             "GrpHdr": [
                 "MsgId",
                 "CreDtTm"
@@ -60,16 +70,23 @@
             ]
         },
         "camt.057": {
-            "GrpHdr": [
-                "MsgId",
+            "AppHdr": [
+                "BizMsgIdr",
                 "CreDtTm"
             ],
-            "OrgnlGrpInf": [
-                "MsgId"
+            "GrpHdr": [
+                "MsgId",
+                "CreDtTm",
+                "NbOfNtfctns"
             ],
-            "CxlRsnInf": [
-                "Nm",
-                "Country"
+            "Ntfctn": [
+                "Id",
+                "CreDtTm",
+                "Dbtr",
+                "dbtrOrgAnyBIC",
+                "dbtrOrgLEI",
+                "dbtrOrgClrSysCd",
+                "dbtrOrgClrSysMmbId"
             ]
         }
     }
