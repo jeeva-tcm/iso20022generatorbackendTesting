@@ -149,7 +149,7 @@ async def convert_mt_to_mx(request: schemas.MTConversionRequest):
         raise
 
 @app.get("/history", response_model=List[schemas.HistorySummary])
-def get_history(skip: int = 0, limit: int = 100):
+def get_history(skip: int = 0, limit: int = 5000):
     return history_service.get_history(skip, limit)
 
 @app.get("/dashboard/stats", response_model=schemas.DashboardStats)

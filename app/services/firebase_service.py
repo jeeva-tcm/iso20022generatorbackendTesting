@@ -117,7 +117,7 @@ class FirebaseHistoryService:
         doc_ref.set(record)
         return record["validation_id"]
 
-    def get_history(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_history(self, skip: int = 0, limit: int = 5000) -> List[Dict[str, Any]]:
         """Retrieves history records from Firestore"""
         if not self.enabled:
             return []
