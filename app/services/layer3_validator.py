@@ -7,6 +7,11 @@ from typing import Dict, Any, List
 from .models import ValidationIssue, ValidationReport
 
 class Layer3Mixin:
+    rules_path: str
+    codelists: Dict[str, list]
+    config: Dict[str, Any]
+    supported_bics: List[str]
+    def _normalize_message(self, xml_content: str) -> tuple[Dict[str, Any], Dict[str, int]]: ...
 
     def _load_generic_config(self):
         """Loads the new global algorithms and field library."""
@@ -87,7 +92,10 @@ class Layer3Mixin:
             self._execute_rule_logic(rule, data, line_map, codelists, report)
         
         # Assessment for layer dashboard
-        success = not any(i['layer'] == layer_id and i['severity'] == "ERROR" for i in report.issues)
+        success = not any(
+            isinstance(i, dict) and i.get('layer') == layer_id and i.get('severity') == "ERROR"
+            for i in report.issues
+        )
         report.layer_status[str(layer_id)] = {
             "status": "PASS" if success else "FAIL", 
             "time": round((time.time() - start) * 1000, 2)
@@ -143,13 +151,21 @@ class Layer3Mixin:
                         
                     value = data[key]
                     algo_name = field_cfg.get("regex")
-                    regex_pattern = algorithms.get(algo_name, algo_name) # Fallback if it's a literal regex
+                    algo_cfg = algorithms.get(algo_name, algo_name)
+                    
+                    # Extract pattern and message if it's a dictionary configuration
+                    if isinstance(algo_cfg, dict):
+                        regex_pattern = str(algo_cfg.get("pattern", ""))
+                        error_msg = algo_cfg.get("message", f"Field '{field_name}' has invalid format: '{value}'.")
+                    else:
+                        regex_pattern = str(algo_cfg) if algo_cfg else ""
+                        error_msg = f"Field '{field_name}' has invalid format: '{value}'."
 
                     # 1. Regex Validation
                     if regex_pattern and not re.match(regex_pattern, str(value)):
                         report.add_issue(ValidationIssue(
                             "ERROR", 3, "INVALID_FIELD_FORMAT", str(line_map.get(key, "/")),
-                            f"Field '{field_name}' has invalid format: '{value}'.",
+                            error_msg,
                             f"Value must match pattern for '{algo_name}': {regex_pattern}"
                         ))
 
@@ -158,7 +174,14 @@ class Layer3Mixin:
                     for attr_name, attr_algo in attrs_cfg.items():
                         attr_key = f"{key}@{attr_name}"
                         attr_val = data.get(attr_key)
-                        attr_regex = algorithms.get(attr_algo, attr_algo)
+                        attr_algo_cfg = algorithms.get(attr_algo, attr_algo)
+                        
+                        if isinstance(attr_algo_cfg, dict):
+                            attr_regex = str(attr_algo_cfg.get("pattern", ""))
+                            attr_error = attr_algo_cfg.get("message", f"Attribute '{attr_name}' for '{field_name}' has invalid format: '{attr_val}'.")
+                        else:
+                            attr_regex = str(attr_algo_cfg) if attr_algo_cfg else ""
+                            attr_error = f"Attribute '{attr_name}' for '{field_name}' has invalid format: '{attr_val}'."
                         
                         if not attr_val:
                              report.add_issue(ValidationIssue(
@@ -169,7 +192,7 @@ class Layer3Mixin:
                         elif attr_regex and not re.match(attr_regex, str(attr_val)):
                              report.add_issue(ValidationIssue(
                                 "ERROR", 3, "INVALID_ATTRIBUTE_FORMAT", str(line_map.get(attr_key, "/")),
-                                f"Attribute '{attr_name}' for '{field_name}' has invalid format: '{attr_val}'.",
+                                attr_error,
                                 f"Value must match pattern for '{attr_algo}': {attr_regex}"
                             ))
 
@@ -282,8 +305,19 @@ class Layer3Mixin:
                                 ))
 
                 elif rule_type == "regex":
-                    pattern = rule.get("pattern", ".*")
-                    if not re.match(pattern, str(value)):
+                    pattern_cfg = rule.get("pattern", ".*")
+                    # Patterns in rules might be strings or potentially names of algorithms
+                    if isinstance(pattern_cfg, str) and pattern_cfg in codelists.get("algorithms", {}):
+                        # Use algorithms from codelists if relevant (though codelists here is different from config[algorithms])
+                        # Actually, looking at the code, codelists doesn't contain algorithms.
+                        # But let's stay robust: extract pattern if it's a dict.
+                        regex_to_use = pattern_cfg
+                    elif isinstance(pattern_cfg, dict):
+                        regex_to_use = pattern_cfg.get("pattern", ".*")
+                    else:
+                        regex_to_use = pattern_cfg
+
+                    if not re.match(str(regex_to_use), str(value)):
                         report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Value '{value}' is invalid format."))
                 
                 elif rule_type == "expression":
@@ -520,17 +554,25 @@ class Layer3Mixin:
                 pattern = r'\b' + re.escape(key) + r'\b'
                 if re.search(pattern, temp_expr) and key not in reserved:
                     val = data[key]
+                    # Only substitute primitive types — dict/list values are NOT
+                    # safe to inline into expressions (causes unhashable type errors)
                     if isinstance(val, str):
                         escaped_val = val.replace("'", "\\'")
                         val_str = f"'{escaped_val}'"
-                    else:
+                    elif isinstance(val, bool):
+                        val_str = "True" if val else "False"
+                    elif isinstance(val, (int, float)):
                         val_str = str(val)
+                    else:
+                        # Skip substitution for dict/list — accessible via DATA[key]
+                        continue
                     
                     # Use lambda to avoid backslash issues in re.sub
                     temp_expr = re.sub(pattern, lambda m: val_str, temp_expr)
             
             return eval(temp_expr, {"__builtins__": None}, ctx)
         except Exception as e:
+            print(f"DEBUG _evaluate_expression error for expr '{expr[:80]}': {e}")
             return False
 
     def _check_iban_currency(self, iban_key, iban_val, data, report, _gl, codelists):
