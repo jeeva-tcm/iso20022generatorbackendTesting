@@ -219,6 +219,15 @@
         "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())",
         "errorMessage": "Mandatory Parties Missing: Debtor, Creditor, Debtor Agent, and Creditor Agent must be provided.",
         "fix": "Ensure all party blocks <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> are included in the transaction."
+    },
+    {
+        "rule_id": "L3_APPHDR_PRTY_001",
+        "description": "AppHdr Priority Validation (HIGH, NORM, LOW)",
+        "type": "expression",
+        "selector": ".*AppHdr\\.Prty$",
+        "expression": "VALUE in ['HIGH', 'NORM', 'LOW']",
+        "severity": "ERROR",
+        "layer": 3
     }
 ]
 

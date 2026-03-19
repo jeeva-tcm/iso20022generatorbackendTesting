@@ -34,5 +34,196 @@
         ],
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "PACS009_005",
+        "description": "Instructing Agent (InstgAgt): Elements 'Nm', 'PstlAdr', 'Othr', 'BrnchId' are not allowed as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.InstgAgt)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.Nm') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.PstlAdr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.Othr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.BrnchId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstgAgt.BrnchId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_006",
+        "description": "Instructed Agent (InstdAgt): Elements 'Nm', 'PstlAdr', 'Othr', 'BrnchId' are not allowed as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.InstdAgt)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.Nm') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.PstlAdr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.Othr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.BrnchId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.InstdAgt.BrnchId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_007",
+        "description": "Intermediary Agent 1 (IntrmyAgt1): Elements 'Othr' and 'BrnchId' are not allowed inside FinInstnId as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt1)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt1.FinInstnId.Othr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt1.FinInstnId.BrnchId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt1.BrnchId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_008",
+        "description": "Intermediary Agent 2 (IntrmyAgt2): Elements 'Othr' and 'BrnchId' are not allowed inside FinInstnId as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt2)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt2.FinInstnId.Othr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt2.FinInstnId.BrnchId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt2.BrnchId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_009",
+        "description": "Intermediary Agent 3 (IntrmyAgt3): Elements 'Othr' and 'BrnchId' are not allowed inside FinInstnId as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt3)",
+        "expression": "all(not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt3.FinInstnId.Othr') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt3.FinInstnId.BrnchId') and not k.startswith('Document.FICdtTrf.CdtTrfTxInf.IntrmyAgt3.BrnchId') for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_010",
+        "description": "Ultimate Debtor (UltmtDbtr): Element is not allowed as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf)",
+        "expression": "all('.UltmtDbtr' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_011",
+        "description": "Ultimate Creditor (UltmtCdtr): Element is not allowed as per MyStandards.",
+        "condition": "exists(Document.FICdtTrf)",
+        "expression": "all('.UltmtCdtr' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_012",
+        "description": "Debtor (Dbtr): Elements 'ClrSysId/Prtry', 'Othr', and 'BrnchId' are not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.Dbtr)",
+        "expression": "all('.Dbtr.FinInstnId.ClrSysMmbId.ClrSysId.Prtry' not in k and '.Dbtr.FinInstnId.Othr' not in k and '.Dbtr.FinInstnId.BrnchId' not in k and '.Dbtr.BrnchId' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_013",
+        "description": "Debtor Agent (DbtrAgt): Elements 'ClrSysId/Prtry', 'Othr', and 'BrnchId' are not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.DbtrAgt)",
+        "expression": "all('.DbtrAgt.FinInstnId.ClrSysMmbId.ClrSysId.Prtry' not in k and '.DbtrAgt.FinInstnId.Othr' not in k and '.DbtrAgt.FinInstnId.BrnchId' not in k and '.DbtrAgt.BrnchId' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_014",
+        "description": "Creditor Agent (CdtrAgt): Elements 'ClrSysId/Prtry', 'Othr', and 'BrnchId' are not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.CdtrAgt)",
+        "expression": "all('.CdtrAgt.FinInstnId.ClrSysMmbId.ClrSysId.Prtry' not in k and '.CdtrAgt.FinInstnId.Othr' not in k and '.CdtrAgt.FinInstnId.BrnchId' not in k and '.CdtrAgt.BrnchId' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_015",
+        "description": "Creditor (Cdtr): Elements 'ClrSysId/Prtry', 'Othr', and 'BrnchId' are not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf.Cdtr)",
+        "expression": "all('.Cdtr.FinInstnId.ClrSysMmbId.ClrSysId.Prtry' not in k and '.Cdtr.FinInstnId.Othr' not in k and '.Cdtr.FinInstnId.BrnchId' not in k and '.Cdtr.BrnchId' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_016",
+        "description": "Instruction For Next Agent (InstrForNxtAgt): Element 'Cd' (Instruction Code) is not allowed as per MyStandards for pacs.009. Only 'InstrInf' should be used.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf)",
+        "expression": "all('.InstrForNxtAgt.Cd' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_017",
+        "description": "Underlying Customer Credit Transfer (UndrlygCstmrCdtTrf): Element is not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf)",
+        "expression": "all('.UndrlygCstmrCdtTrf' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_018",
+        "description": "Supplementary Data (SplmtryData): Element is not allowed as per MyStandards for pacs.009.",
+        "condition": "exists(Document.FICdtTrf)",
+        "expression": "all('.SplmtryData' not in k for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_019",
+        "description": "Settlement Method (SttlmMtd): Invalid value. Allowed: INDA, INGA, CLRG, COVE.",
+        "selector": ".*\\.SttlmMtd$",
+        "expression": "VALUE in ['INDA', 'INGA', 'CLRG', 'COVE']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_020",
+        "description": "Instruction Priority (InstrPrty): Invalid value. Allowed: HIGH, NORM.",
+        "selector": ".*\\.InstrPrty$",
+        "expression": "VALUE in ['HIGH', 'NORM']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_021",
+        "description": "Clearing Channel (ClrChanl): Invalid value. Allowed: RTGS.",
+        "selector": ".*\\.ClrChanl$",
+        "expression": "VALUE == 'RTGS'",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_022",
+        "description": "Charge Bearer (ChrgBr): Invalid value. Allowed: DEBT, CRED, SHAR, SLEV.",
+        "selector": ".*\\.ChrgBr$",
+        "expression": "VALUE in ['DEBT', 'CRED', 'SHAR', 'SLEV']",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_023",
+        "description": "Duplicate Transaction ID (TxId) detected.",
+        "selector": ".*\\.TxId$",
+        "expression": "len([k for k in DATA.keys() if k.endswith('.TxId') and DATA[k] == VALUE]) == 1",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_024",
+        "description": "Duplicate UETR detected.",
+        "selector": ".*\\.UETR$",
+        "expression": "len([k for k in DATA.keys() if k.endswith('.UETR') and DATA[k] == VALUE]) == 1",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_025",
+        "description": "Clearing System T2: Settlement currency must be EUR.",
+        "condition": "any(k.endswith('.ClrSysId.Cd') and DATA[k] == 'T2' for k in DATA.keys())",
+        "expression": "all(DATA[k] == 'EUR' for k in DATA.keys() if k.endswith('@Ccy') and ('IntrBkSttlmAmt' in k or 'InstdAmt' in k))",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_026",
+        "description": "Clearing System CHIPS: Settlement currency must be USD.",
+        "condition": "any(k.endswith('.ClrSysId.Cd') and DATA[k] == 'CHIPS' for k in DATA.keys())",
+        "expression": "all(DATA[k] == 'USD' for k in DATA.keys() if k.endswith('@Ccy') and ('IntrBkSttlmAmt' in k or 'InstdAmt' in k))",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_027",
+        "description": "Clearing System FED: Settlement currency must be USD.",
+        "condition": "any(k.endswith('.ClrSysId.Cd') and DATA[k] == 'FED' for k in DATA.keys())",
+        "expression": "all(DATA[k] == 'USD' for k in DATA.keys() if k.endswith('@Ccy') and ('IntrBkSttlmAmt' in k or 'InstdAmt' in k))",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS009_028",
+        "description": "Empty tags or whitespace-only elements are not allowed.",
+        "expression": "all(DATA[k].strip() != '' for k in DATA.keys() if isinstance(DATA[k], str) and not k.endswith('@Ccy'))",
+        "severity": "ERROR",
+        "layer": 3
     }
 ]
