@@ -356,13 +356,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                     str_val = str(value).strip().lower()
                     # Check ISO code (in Ctry tags)
                     if 'Ctry' in path and value in sanctioned_codes:
-                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", path, f"Fail-fast: Party from sanctioned country code '{value}' detected.", "Transaction rejected due to sanctions compliance."))
+                        line_num = str(line_map.get(path, "/"))
+                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", line_num, f"Fail-fast: Party from sanctioned country code '{value}' detected.", "Transaction rejected due to sanctions compliance."))
                         break
                     # Check names in address/name fields
                     if any(name in str_val for name in sanctioned_names):
                         # Simple keyword hit
                         hit = next(name for name in sanctioned_names if name in str_val)
-                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", path, f"Fail-fast: Party from sanctioned country '{hit.title()}' detected.", "Transaction rejected due to sanctions compliance."))
+                        line_num = str(line_map.get(path, "/"))
+                        report.add_issue(ValidationIssue("ERROR", 3, "SANCTIONS_BLOCKED", line_num, f"Fail-fast: Party from sanctioned country '{hit.title()}' detected.", "Transaction rejected due to sanctions compliance."))
                         break
             
             if any(i['code'] == 'SANCTIONS_BLOCKED' for i in report.issues):

@@ -30,7 +30,7 @@ class ValidationResponse(BaseModel):
     validation_id: str
     timestamp: str
     status: str
-    schema: str
+    xsd_schema: str = Field(alias="schema")
     message: str
     errors: int
     warnings: int
@@ -39,6 +39,9 @@ class ValidationResponse(BaseModel):
     details: List[IssueSchema]
     file_id: Optional[str] = None
     batch_id: Optional[str] = None
+
+    class Config:
+        allow_population_by_field_name = True
 
 class HistorySummary(BaseModel):
     validation_id: str

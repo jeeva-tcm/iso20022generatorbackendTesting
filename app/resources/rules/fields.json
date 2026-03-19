@@ -2,112 +2,151 @@
     "fields": {
         "BICFI": {
             "regex": "BICFI",
+            "message": "Valid 8 or 11-char BIC required.",
             "min": 1,
             "max": 1
         },
-        "MsgId": {
-            "regex": "Max35Text",
+        "AnyBIC": {
+            "regex": "AnyBIC",
+            "message": "Valid 8 or 11-char BIC required.",
             "min": 1,
             "max": 1
         },
-        "BizMsgIdr": {
+        "dbtrOrgAnyBIC": {
+            "regex": "AnyBIC",
+            "message": "Valid 8 or 11-char BIC required.",
+            "min": 1,
+            "max": 1
+        },
+        "dbtrOrgLEI": {
+            "regex": "LEI",
+            "message": "Valid 20-char LEI required.",
+            "min": 0,
+            "max": 1
+        },
+        "dbtrOrgClrSysCd": {
             "regex": "Max35Text",
+            "message": "Invalid Clearing System Code.",
+            "min": 0,
+            "max": 1
+        },
+        "dbtrOrgClrSysMmbId": {
+            "regex": "Max35Text",
+            "message": "Invalid Member ID.",
+            "min": 0,
+            "max": 1
+        },
+        "Fr": {
+            "regex": "BICFI",
+            "message": "Valid 8 or 11-char BIC required.",
+            "min": 1,
+            "max": 1
+        },
+        "To": {
+            "regex": "BICFI",
+            "message": "Valid 8 or 11-char BIC required.",
+            "min": 1,
+            "max": 1
+        },
+        "SenderBIC": {
+            "regex": "BICFI",
+            "message": "Valid 8 or 11-char BIC required.",
+            "min": 1,
+            "max": 1
+        },
+        "ReceiverBIC": {
+            "regex": "BICFI",
+            "message": "Valid 8 or 11-char BIC required.",
             "min": 1,
             "max": 1
         },
         "CreDtTm": {
             "regex": "DateTime",
+            "message": "Invalid Timestamp. Format: YYYY-MM-DDTHH:MM:SSZ",
+            "min": 1,
+            "max": 1
+        },
+        "BizMsgIdr": {
+            "regex": "Max35Text",
+            "message": "Invalid ID. Max 35 characters allowed.",
+            "min": 1,
+            "max": 1
+        },
+        "MsgId": {
+            "regex": "Max35Text",
+            "message": "Invalid ID. Max 35 characters allowed.",
+            "min": 1,
+            "max": 1
+        },
+        "BizSvc": {
+            "regex": "Max35Text",
+            "message": "Invalid Service Name. Max 35 characters.",
+            "min": 1,
+            "max": 1
+        },
+        "Ccy": {
+            "regex": "Currency",
+            "message": "Invalid Currency. 3 uppercase letters required (e.g. USD).",
+            "min": 1,
+            "max": 1
+        },
+        "Amt": {
+            "regex": "Amount",
+            "message": "Invalid Amount. Up to 13 digits and 5 decimals.",
+            "min": 1,
+            "max": 1
+        },
+        "IBAN": {
+            "regex": "IBAN",
+            "message": "Invalid IBAN format.",
+            "min": 1,
+            "max": 1
+        },
+        "LEI": {
+            "regex": "LEI",
+            "message": "Invalid LEI. 20 characters required.",
+            "min": 1,
+            "max": 1
+        },
+        "NbOfTxs": {
+            "regex": "Numeric15",
+            "message": "Must be a numeric value.",
             "min": 1,
             "max": 1
         },
         "IntrBkSttlmDt": {
             "regex": "Date",
+            "message": "Invalid Date. Format: YYYY-MM-DD",
             "min": 1,
             "max": 1
         },
-        "IntrBkSttlmAmt": {
-            "regex": "Amount",
-            "attributes": {
-                "Ccy": "Currency"
-            },
-            "min": 1,
-            "max": 1
-        },
-        "InstdAmt": {
-            "regex": "Amount",
-            "attributes": {
-                "Ccy": "Currency"
-            },
-            "min": 0,
-            "max": 1
-        },
-        "NbOfTxs": {
-            "regex": "Numeric15",
-            "min": 1,
-            "max": 1
-        },
-        "InstrId": {
-            "regex": "Max35Text",
-            "min": 1,
-            "max": 1
-        },
-        "EndToEndId": {
-            "regex": "Max35Text",
+        "SttlmDt": {
+            "regex": "Date",
+            "message": "Invalid Date. Format: YYYY-MM-DD",
             "min": 1,
             "max": 1
         },
         "TxId": {
             "regex": "Max35Text",
-            "min": 0,
+            "message": "Invalid Transaction ID. Max 35 characters.",
+            "min": 1,
+            "max": 1
+        },
+        "EndToEndId": {
+            "regex": "Max35Text",
+            "message": "Invalid End-to-End ID. Max 35 characters.",
+            "min": 1,
             "max": 1
         },
         "UETR": {
             "regex": "UUID",
-            "min": 0,
-            "max": 1
-        },
-        "ChrgBr": {
-            "regex": "^(CRED|DEBT|SHAR)$",
+            "message": "Invalid UETR. Must be a valid UUID.",
             "min": 1,
-            "max": 1
-        },
-        "InstrPrty": {
-            "regex": "^(HIGH|NORM)$",
-            "min": 0,
-            "max": 1
-        },
-        "SttlmPrty": {
-            "regex": "^(HIGH|NORM|URGT)$",
-            "min": 0,
-            "max": 1
-        },
-        "ClrChanl": {
-            "regex": "^(RTNS|RTGS|MPNS)$",
-            "min": 0,
-            "max": 1
-        },
-        "Nm": {
-            "regex": "Max140Text",
-            "min": 0,
             "max": 1
         },
         "Ustrd": {
             "regex": "Max140Text",
-            "min": 0,
-            "max": 1
-        },
-        "Country": {
-            "regex": "Country",
-            "min": 0,
-            "max": 1
-        },
-        "IBAN": {
-            "regex": "IBAN",
-            "min": 0,
-            "max": 1
-        },
-        "LEI": {
-            "regex": "LEI",
+            "message": "Message exceeds 140 characters.",
             "min": 0,
             "max": 1
         }
