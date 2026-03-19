@@ -39,7 +39,8 @@
                 "TxId",
                 "IntrBkSttlmAmt",
                 "IntrBkSttlmDt",
-                "BICFI"
+                "BICFI",
+                "ClrSysRef"
             ]
         },
         "pacs.009.cov": {

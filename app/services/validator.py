@@ -299,7 +299,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 4.14: REMITTANCE INFORMATION RULES
             self._validate_remittance_rules(xml_content, report)
 
-            # STEP 4.15: CLEARING SYSTEM SPECIFIC RULES (T2, CHAPS)
+            # STEP 4.15: CLEARING SYSTEM SPECIFIC RULES
             self._validate_clearing_system_rules(xml_content, report)
 
             # STEP 4.16: CHARACTER SET VALIDATION (Nm, AdrLine, StrtNm, TwnNm, etc.)
@@ -561,6 +561,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             "BizMsgIdr":  35,
             "MsgId":      35,
             "TxId":       35,
+            "ClrSysRef":  35,
         }
 
         # Build one combined pattern that matches any of the tracked tags
@@ -2158,6 +2159,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         Step 4.15 — Clearing System Specific Rules
         1. TARGET2 (T2) -> Settlement Currency MUST be "EUR"
         2. CHAPS -> Transaction Currency MUST be "GBP"
+        3. ClrSysRef (SR2025) -> Mandatory if clearing system used, forbidden if not.
         Uses etree for absolute reliability with namespaces and prefixes.
         """
         try:
@@ -2169,7 +2171,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
         def local(tag):
             return tag.split('}')[-1] if '}' in tag else tag
 
-        # 1. Identify which clearing systems are present
+        # --- 1. Identify clearing systems and ClrSysRef elements ---
         active_systems = set()
         for cd in root.xpath("//*[local-name()='Cd']"):
             if cd.text:
@@ -2178,11 +2180,66 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                 if parent is not None and local(parent.tag) in ('ClrSysId', 'ClrSys'):
                     active_systems.add(val)
         
-        if not active_systems:
-            return
+        # Also check ClrChanl for values like RTGS
+        for chanl in root.xpath("//*[local-name()='ClrChanl']"):
+            if chanl.text:
+                active_systems.add(chanl.text.strip().upper())
+        
+        clr_ref_els = root.xpath("//*[local-name()='ClrSysRef']")
+        has_clr_ref = len(clr_ref_els) > 0
+        
+        # --- 2. Extract Business Service/Standard (e.g. pacs.009.001.08) ---
+        biz_svc = "Unknown"
+        doc = root.find(".//{*}Document")
+        if doc is not None and len(doc) > 0:
+            biz_svc = local(doc[0].tag)
 
-        # 2. Extract Currency from IntrBkSttlmAmt
-        for amt in root.xpath("//*[local-name()='IntrBkSttlmAmt']"):
+        # --- 3. ClrSysRef SPECIAL RULES (Manual Entry Scope) ---
+        
+        # Rule 3.1: No Empty ClrSysRef Tag
+        for ref_el in clr_ref_els:
+            if not ref_el.text or not ref_el.text.strip():
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "CLRSYSREF_EMPTY", str(ref_el.sourceline or "Unknown"),
+                    "Clearing System Reference <ClrSysRef> must NOT be empty.",
+                    "Provide a valid alphanumeric reference or remove the empty tag."
+                ))
+
+        # Rule 3.2: Only one ClrSysRef per PmtId (Structural check)
+        for pmt_id in root.xpath("//*[local-name()='PmtId']"):
+            refs = pmt_id.xpath("./*[local-name()='ClrSysRef']")
+            if len(refs) > 1:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "CLRSYSREF_DUPLICATE", str(refs[1].sourceline or pmt_id.sourceline),
+                    "Only one Clearing System Reference <ClrSysRef> is allowed inside <PmtId>.",
+                    "Remove the duplicate <ClrSysRef> element."
+                ))
+
+        # Rule 3.3: ClrSysRef MUST NOT be sent WITHOUT a clearing system
+        # Standard Clearing Systems: T2, CHAPS, CHIPS, FED, RTGS (as per user req)
+        standard_systems = {'T2', 'CHAPS', 'CHIPS', 'FED', 'RTGS'}
+        has_standard_clearing = any(s in standard_systems for s in active_systems)
+
+        if has_clr_ref and not has_standard_clearing:
+             # Find the first ClrSysRef for report line number
+             line = clr_ref_els[0].sourceline or "Unknown"
+             report.add_issue(ValidationIssue(
+                 "ERROR", 3, "CLRSYSREF_FORBIDDEN", str(line),
+                 "Clearing System Reference <ClrSysRef> must NOT be sent if no active clearing system is used.",
+                 "Remove <ClrSysRef> or specify a clearing system (T2, CHAPS, CHIPS, FED, or RTGS) in agent identifiers."
+             ))
+        
+        # Rule 3.4: ClrSysRef Recommendation (Warning if missing when clearing is used)
+        if has_standard_clearing and not has_clr_ref:
+             # Report on PmtId or IntrBkSttlmAmt
+             report.add_issue(ValidationIssue(
+                 "WARNING", 3, "CLRSYSREF_RECOMMENDED", "Unknown",
+                 "Clearing System Reference is recommended when a clearing system (T2/CHAPS/etc.) is used.",
+                 "Consider adding <ClrSysRef> under <PmtId> for better tracking."
+             ))
+
+        # --- 4. Currency Specific Rules (Legacy) ---
+        for amt in root.xpath("//*[local-name()='IntrBkSttlmAmt' or local-name()='Amt']"):
             ccy = amt.get('Ccy')
             if not ccy: continue
             ccy = ccy.strip().upper()
@@ -2191,9 +2248,25 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # Check T2 Rule
             if 'T2' in active_systems and ccy != 'EUR':
                 report.add_issue(ValidationIssue(
-                    "ERROR", 3, "TARGET2_CURRENCY_ERROR", str(line_num),
-                    "TARGET2 payments must use EUR as the settlement currency.",
+                    "ERROR", 3, "T2_CURRENCY_ERROR", str(line_num),
+                    "T2 allows only EUR currency.",
                     f"Clearing System 'T2' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'EUR'."
+                ))
+
+            # Check CHIPS Rule
+            if 'CHIPS' in active_systems and ccy != 'USD':
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "CHIPS_CURRENCY_ERROR", str(line_num),
+                    "CHIPS allows only USD currency.",
+                    f"Clearing System 'CHIPS' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'USD'."
+                ))
+
+            # Check FED Rule
+            if 'FED' in active_systems and ccy != 'USD':
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "FED_CURRENCY_ERROR", str(line_num),
+                    "FED allows only USD currency.",
+                    f"Clearing System 'FED' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'USD'."
                 ))
 
             # Check CHAPS Rule
@@ -2202,6 +2275,72 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
                     "ERROR", 3, "CHAPS_CURRENCY_ERROR", str(line_num),
                     "Invalid Currency for CHAPS clearing system. When ClrSysId/Cd = CHAPS, the transaction currency must be GBP.",
                     f"Clearing System 'CHAPS' detected, but currency is '{ccy}'. Change IntrBkSttlmAmt currency to 'GBP'."
+                ))
+
+        # --- 5. Settlement Priority (SttlmPrty) Rules ---
+        sttlm_prty_els = root.xpath("//*[local-name()='SttlmPrty']")
+        
+        # Rule 5.1: No Empty Tag & Valid Values
+        for sp_el in sttlm_prty_els:
+            if not sp_el.text or not sp_el.text.strip():
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "STTLMPRTY_EMPTY", str(sp_el.sourceline or "Unknown"),
+                    "Settlement Priority <SttlmPrty> must NOT be empty.",
+                    "Provide HIGH or NORM or remove the empty tag."
+                ))
+            else:
+                val = sp_el.text.strip().upper()
+                if val not in ('HIGH', 'NORM'):
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, "STTLMPRTY_INVALID", str(sp_el.sourceline or "Unknown"),
+                        f"Invalid Settlement Priority: '{val}'. Must be HIGH or NORM.",
+                        "Change value to HIGH or NORM."
+                    ))
+            
+            # Rule 5.2: Dependency - Must be inside CdtTrfTxInf
+            parent = sp_el.getparent()
+            if parent is not None and local(parent.tag) != 'CdtTrfTxInf':
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "STTLMPRTY_WRONG_PARENT", str(sp_el.sourceline or "Unknown"),
+                    "Settlement Priority <SttlmPrty> MUST be inside <CdtTrfTxInf>.",
+                    "Move <SttlmPrty> directly under <CdtTrfTxInf>."
+                ))
+
+        # Rule 5.3: Position and Uniqueness (Relative to CdtTrfTxInf)
+        for tx_inf in root.xpath("//*[local-name()='CdtTrfTxInf']"):
+            sp = tx_inf.xpath("./*[local-name()='SttlmPrty']")
+            if len(sp) > 1:
+                 report.add_issue(ValidationIssue(
+                    "ERROR", 3, "STTLMPRTY_DUPLICATE", str(sp[1].sourceline or tx_inf.sourceline),
+                    "Only one Settlement Priority <SttlmPrty> is allowed per transaction.",
+                    "Remove the duplicate element."
+                ))
+            
+            if sp:
+                # MUST appear immediately after IntrBkSttlmDt
+                prev = sp[0].getprevious()
+                # Skip comments/PIs
+                while prev is not None:
+                    if isinstance(prev.tag, str):
+                        break
+                    prev = prev.getprevious()
+                
+                prev_tag = local(prev.tag) if prev is not None else "None"
+                if prev is None or prev_tag != 'IntrBkSttlmDt':
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 3, "STTLMPRTY_WRONG_POSITION", str(sp[0].sourceline or "Unknown"),
+                        "Settlement Priority <SttlmPrty> MUST appear immediately after <IntrBkSttlmDt>.",
+                        "Ensure <SttlmPrty> follows <IntrBkSttlmDt> according to ISO 20022 sequence."
+                    ))
+
+        # Rule 5.4: Business Rule - RTGS Recommendation
+        if 'RTGS' in active_systems:
+            has_high = any(el.text and el.text.strip().upper() == 'HIGH' for el in sttlm_prty_els)
+            if not has_high:
+                 report.add_issue(ValidationIssue(
+                    "WARNING", 3, "RTGS_STTLMPRTY_RECOMMENDED", "Unknown",
+                    "For RTGS clearing channel, Settlement Priority HIGH is recommended.",
+                    "Consider setting Settlement Priority to HIGH for faster processing."
                 ))
 
 
@@ -2220,7 +2359,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
 
         CHECKED_TAGS = {
             'Nm', 'StrtNm', 'TwnNm', 'BldgNm', 'AdrLine',
-            'DstrctNm', 'CtrySubDvsn', 'TwnLctnNm'
+            'DstrctNm', 'CtrySubDvsn', 'TwnLctnNm', 'ClrSysRef'
         }
         # ISO 20022 MX extended character set for Strd fields
         SAFE = _re.compile(r'^[0-9a-zA-Z/\-\?:\(\)\.,\'\+ !#$%&\*=^_`\{\|\}~\x22;<>@\[\\\]]+$')
