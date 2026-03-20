@@ -215,7 +215,7 @@
         "description": "Debtor, Creditor, Debtor Agent, and Creditor Agent are mandatory for all payment messages (PACS/PAIN).",
         "layer": 3,
         "severity": "ERROR",
-        "condition": "any(k.startswith('Document.FIToFI') or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
+        "condition": "any((k.startswith('Document.FIToFI') and 'FIToFIPmtStsRpt' not in k) or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
         "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())",
         "errorMessage": "Mandatory Parties Missing: Debtor, Creditor, Debtor Agent, and Creditor Agent must be provided.",
         "fix": "Ensure all party blocks <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> are included in the transaction."
