@@ -162,7 +162,13 @@ class Layer3Mixin:
                         error_msg = f"Field '{field_name}' has invalid format: '{value}'."
 
                     # 1. Regex Validation
-                    if regex_pattern and not re.match(regex_pattern, str(value)):
+                    # Robust string conversion for regex matching (especially for floats)
+                    if isinstance(value, (float, int)):
+                        val_str = "{:.15f}".format(float(value)).rstrip('0').rstrip('.')
+                    else:
+                        val_str = str(value)
+                        
+                    if regex_pattern and not re.match(regex_pattern, val_str):
                         report.add_issue(ValidationIssue(
                             "ERROR", 3, "INVALID_FIELD_FORMAT", str(line_map.get(key, "/")),
                             error_msg,
@@ -295,12 +301,19 @@ class Layer3Mixin:
                                     continue
                         
                         if allowed_decimals is not None:
-                            val_str = str(value)
+                            # Robust decimal counting
+                            if isinstance(value, float):
+                                # Convert float to string with reasonable precision and strip
+                                val_str = "{:.15f}".format(value).rstrip('0').rstrip('.')
+                            else:
+                                val_str = str(value)
+
                             actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
+                            
                             if actual_decimals > allowed_decimals:
                                 report.add_issue(ValidationIssue(
                                     severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key),
-                                    f"Incorrect decimal precision for {ccy} amount '{value}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
+                                    f"Incorrect decimal precision for {ccy} amount '{val_str}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
                                     f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'10.00' if allowed_decimals == 2 else '10' if allowed_decimals == 0 else '10.000'})."
                                 ))
 

@@ -69,6 +69,31 @@
                 "IBAN"
             ]
         },
+        "pacs.004": {
+            "AppHdr": [
+                "BizMsgIdr",
+                "CreDtTm",
+                "BICFI"
+            ],
+            "GrpHdr": [
+                "MsgId",
+                "CreDtTm",
+                "NbOfTxs",
+                "SttlmInf"
+            ],
+            "TxInf": [
+                "RtrId",
+                "OrgnlInstrId",
+                "OrgnlEndToEndId",
+                "OrgnlTxId",
+                "OrgnlUETR",
+                "RtrdIntrBkSttlmAmt",
+                "IntrBkSttlmDt",
+                "ChrgBr",
+                "RtrRsnInf",
+                "RtrChain"
+            ]
+        },
         "camt.057": {
             "AppHdr": [
                 "BizMsgIdr",
