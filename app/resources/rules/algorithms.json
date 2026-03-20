@@ -51,6 +51,10 @@
         "Numeric15": {
             "pattern": "^[0-9]{1,15}$",
             "message": "Must be a numeric value up to 15 digits."
+        },
+        "ClrSysCd": {
+            "pattern": "^[A-Za-z0-9]{1,5}$",
+            "message": "Invalid Clearing System Code. Use 1-5 alphanumeric characters."
         }
     }
 }

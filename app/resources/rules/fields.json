@@ -25,8 +25,8 @@
             "max": 1
         },
         "dbtrOrgClrSysCd": {
-            "regex": "Max35Text",
-            "message": "Invalid Clearing System Code.",
+            "regex": "ClrSysCd",
+            "message": "Invalid Clearing System Code. Must be up to 5 alphanumeric characters.",
             "min": 0,
             "max": 1
         },
@@ -147,6 +147,42 @@
         "Ustrd": {
             "regex": "Max140Text",
             "message": "Message exceeds 140 characters.",
+            "min": 0,
+            "max": 1
+        },
+        "InstrId": {
+            "regex": "Max35Text",
+            "message": "Invalid Instruction ID. Max 35 chars.",
+            "min": 1,
+            "max": 1
+        },
+        "IntrBkSttlmAmt": {
+            "regex": "Amount",
+            "message": "Invalid Settlement Amount.",
+            "min": 1,
+            "max": 1
+        },
+        "ClrSysRef": {
+            "regex": "Max35Text",
+            "message": "Invalid Clearing System Reference.",
+            "min": 0,
+            "max": 1
+        },
+        "InstrPrty": {
+            "regex": "Max35Text",
+            "message": "Invalid Instruction Priority.",
+            "min": 0,
+            "max": 1
+        },
+        "SttlmPrty": {
+            "regex": "Max35Text",
+            "message": "Invalid Settlement Priority.",
+            "min": 0,
+            "max": 1
+        },
+        "ClrChanl": {
+            "regex": "Max35Text",
+            "message": "Invalid Clearing Channel.",
             "min": 0,
             "max": 1
         }

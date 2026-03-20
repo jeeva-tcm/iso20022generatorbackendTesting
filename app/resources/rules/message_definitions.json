@@ -41,10 +41,16 @@
                 "NbOfTxs"
             ],
             "CdtTrfTxInf": [
+                "InstrId",
+                "EndToEndId",
                 "TxId",
+                "UETR",
+                "InstrPrty",
+                "ClrChanl",
                 "IntrBkSttlmAmt",
                 "IntrBkSttlmDt",
-                "BICFI"
+                "SttlmPrty",
+                "ClrSysRef"
             ]
         },
         "pacs.009.cov": {
