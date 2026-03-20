@@ -14,9 +14,10 @@ from .layer1_validator import Layer1Mixin
 from .layer2_validator import Layer2Mixin
 from .layer3_validator import Layer3Mixin
 from .layer3_timing import validateLayer3Timing
+from .pacs004_validator import Pacs004Mixin
 
 
-class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
+class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
 
     _id_lock = threading.Lock()
     _daily_counter = 0
@@ -338,8 +339,9 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin):
             # STEP 5.0: Run Generic Field Library & Global Algorithms Validation
             self._run_generic_field_validation(detected_type, canonical_data, line_map, report)
 
-            # (Date validation already ran in Step 4.5 above, before Layer 2)
-
+            # STEP 5.1: PACS.004 SPECIALIZED VALIDATION (SR2025)
+            if "pacs.004" in detected_type:
+                await self._validate_pacs_004(xml_content, canonical_data, line_map, report)
 
             # STEP 5.1: FAIL-FAST SANCTIONS SCREENING (Dynamic)
             sanctions_config = self.config.get("sanctions", {})
