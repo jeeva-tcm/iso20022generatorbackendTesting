@@ -559,11 +559,14 @@ class Layer3Mixin:
                 "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
                 "check_iban_currency": lambda k, v: self._check_iban_currency(k, v, data, report, _gl, codelists),
                 "is_after_2026": datetime.now() > mandate_date,
+                "exists": lambda x: any(k.startswith(x) for k in data.keys()),
+                "check_msg_uetr_duplicate": lambda m, u: self._check_msg_uetr_duplicate(m, u, report),
+                "re": re
                 "MESSAGE_TYPE": report.message_type if report else "Unknown",
                 "exists": lambda x: any(k.startswith(x) for k in data.keys())
             }
             
-            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str"])
+            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
             for key in sorted(data.keys(), key=len, reverse=True):
                 pattern = r'\b' + re.escape(key) + r'\b'
                 if re.search(pattern, temp_expr) and key not in reserved:
@@ -654,6 +657,24 @@ class Layer3Mixin:
             return True # Suppress generic error
 
         return True
+
+    def _check_msg_uetr_duplicate(self, msg_id, uetr, report):
+        """
+        Business Rule: Verify if the MsgId + UETR combination has been seen before.
+        """
+        if not hasattr(self, 'history_service') or not self.history_service:
+            return True # Cannot check if service is missing
+
+        # Query history for MsgId and UETR
+        # This assumes history_service has a method to check duplicates
+        # If not, we might need to implement it.
+        try:
+            is_dupe = self.history_service.check_duplicate_msg_uetr(msg_id, uetr)
+            return not is_dupe
+        except Exception as e:
+            print(f"DEBUG: Error checking for duplicate MsgId/UETR: {e}")
+            return True # Fail open to avoid blocking if DB has issues
+
     def validate_entity_mismatch(self, xml_content: str, report: ValidationReport):
         """
         Special early check for Entity Mismatch (L3-BIZ-PARTY-NAME-ENTITY-MATCH).

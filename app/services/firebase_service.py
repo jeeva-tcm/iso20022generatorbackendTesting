@@ -320,3 +320,51 @@ class FirebaseHistoryService:
             print(f"Firebase counter error: {e}")
             return None
 
+    def check_duplicate_msg_uetr(self, msg_id: str, uetr: str) -> bool:
+        """
+        Checks Firestore for any existing validation history record with the
+        same MsgId and UETR combination.
+        """
+        if not self.enabled:
+            return False
+            
+        try:
+            # Search for documents where message_type contains pacs.009 (optional but narrows search)
+            # and report_json. GrpHdr.MsgId matches OR report_json hasMsgId/UETR at certain paths
+            # Since report_json is a nested dict, Firestore allows querying nested fields.
+            
+            # The most direct way given save_history structure is to query original_message OR the report_json
+            # report_json contains the full report. We can also index MsgId and UETR during save_history for faster lookup.
+            
+            # For now, let's query based on the original structure saved in save_history
+            # MsgId is saved in report_json["GrpHdr"]["MsgId"] (usually)
+            # UETR is saved in report_json["CdtTrfTxInf"]["PmtId"]["UETR"]
+            
+            # However, the record itself has some flattened fields.
+            # Let's check if we have msg_id / uetr in the record. No, they are in report_json.
+            
+            # To make this performant without deep nested queries, 
+            # we should ideally add 'msg_id' and 'uetr' to the record dict in main.py.
+            
+            # Let's try searching via where clauses on properties we know.
+            # We'll use a slightly broader query and filter in Python if needed, 
+            # but Firestore where() is better.
+            
+            query = self.db.collection("validation_history") \
+                        .where("deleted", "==", False) \
+                        .where("report_json.metadata.MsgId", "==", msg_id) \
+                        .stream()
+            
+            for doc in query:
+                data = doc.to_dict()
+                report = data.get("report_json", {})
+                metadata = report.get("metadata", {})
+                
+                if metadata.get("UETR") == uetr:
+                    return True
+                    
+            return False
+        except Exception as e:
+            print(f"Error checking duplicate MsgId/UETR in Firestore: {e}")
+            return False
+

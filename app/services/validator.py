@@ -241,6 +241,15 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         validation_id = self.generate_next_id()
         report = ValidationReport(validation_id, detected_type, mode)
 
+        # Extract MsgId and UETR early for history and metadata
+        msg_id_match = re.search(r'<MsgId>\s*([^<]+?)\s*</MsgId>', xml_content, re.IGNORECASE)
+        uetr_match = re.search(r'<UETR>\s*([^<]+?)\s*</UETR>', xml_content, re.IGNORECASE)
+        
+        if msg_id_match:
+            report.metadata["MsgId"] = msg_id_match.group(1).strip()
+        if uetr_match:
+            report.metadata["UETR"] = uetr_match.group(1).strip()
+
         try:
             # STEP 1 & 2: Safe XML Parse & Well-formedness (Layer 1)
             # STEP 3: Identity & Rejection logic is here
