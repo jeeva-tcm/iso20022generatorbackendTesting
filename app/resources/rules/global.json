@@ -179,10 +179,10 @@
     },
     {
         "rule_id": "L3_SETTLEMENT_METHOD",
-        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, INGA",
+        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, INGA, CLRG, COVE",
         "type": "expression",
         "selector": ".*SttlmMtd$",
-        "expression": "VALUE in ['INDA', 'INGA']",
+        "expression": "VALUE in ['INDA', 'INGA', 'CLRG', 'COVE']",
         "severity": "ERROR",
         "layer": 3
     },
