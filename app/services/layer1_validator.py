@@ -127,7 +127,7 @@ class Layer1Mixin:
                         f"The namespace '{ns}' does not match the ISO 20022 standard format.",
                         "Use the correct URN format (e.g. urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08)."
                     ))
-                report.metadata = {"Namespace": ns}
+                report.metadata.update({"Namespace": ns})
 
             # 9. XML Depth Limit Check
             max_depth = self.config.get("app_settings", {}).get("max_xml_depth", 50)
