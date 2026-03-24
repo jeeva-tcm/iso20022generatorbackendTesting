@@ -561,7 +561,8 @@ class Layer3Mixin:
                 "is_after_2026": datetime.now() > mandate_date,
                 "exists": lambda x: any(k.startswith(x) for k in data.keys()),
                 "check_msg_uetr_duplicate": lambda m, u: self._check_msg_uetr_duplicate(m, u, report),
-                "re": re
+                "re": re,
+                "MESSAGE_TYPE": report.message_type if report else "Unknown"
             }
             
             reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
@@ -585,7 +586,7 @@ class Layer3Mixin:
                     # Use lambda to avoid backslash issues in re.sub
                     temp_expr = re.sub(pattern, lambda m: val_str, temp_expr)
             
-            return eval(temp_expr, {"__builtins__": None}, ctx)
+            return eval(temp_expr, ctx, ctx)
         except Exception as e:
             print(f"DEBUG _evaluate_expression error for expr '{expr[:80]}': {e}")
             return False

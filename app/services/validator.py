@@ -278,6 +278,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             except:
                 pass # Non-critical failure
 
+            # Final check to force COV variant on report if elements are present
+            if report.message_type and report.message_type.startswith("pacs.009") and "cov" not in report.message_type.lower():
+                if "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
+                    report.message_type = "pacs.009.cov"
+                    detected_type = "pacs.009.cov"
+
             # STEP 4.5: DATE VALIDATION — runs on raw XML before Layer 2
             # so past-date errors are ALWAYS reported even when XSD also fails.
             self._validate_dates_in_xml(xml_content, report, start_time)
@@ -1796,14 +1802,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             elif 'pain.002' in ns: message_type = 'pain.002'
 
         # Special logic to determine if it is pacs.009 COV
-        if message_type == 'pacs.009':
+        if message_type and message_type.startswith('pacs.009'):
             # Fast check if it is COV by looking for UndrlygCstmrCdtTrf
             is_cov = False
             for _ in root.iter(f"{{{root.tag.split('}')[0]}}}UndrlygCstmrCdtTrf"):
                 is_cov = True
                 break
             if is_cov:
-                message_type += '.COV'
+                message_type += '.cov'
         
         # Helper for ISO 11649 Creditor Reference validation
         def is_iso11649(ref: str) -> bool:
@@ -2018,36 +2024,53 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             r'xmlns[:\w]*\s*=\s*["\']urn:swift:xsd:([^"\']+)["\']'
         ])
         
+        res = "Unknown"
+        # 1. Broad Namespace Search (Handles single/double quotes)
+        ns_patterns = self.config.get("validation_rules", {}).get("namespace_patterns", [
+            r'xmlns[:\w]*\s*=\s*["\']urn:iso:std:iso:20022:tech:xsd:([^"\']+)["\']',
+            r'xmlns[:\w]*\s*=\s*["\']urn:swift:xsd:([^"\']+)["\']'
+        ])
+        
         candidates = []
         for pattern in ns_patterns:
             for match in re.finditer(pattern, xml_content[:scan_limit]): # Dynamic Scan Limit
                 val = match.group(1).strip()
                 # Prioritize non-header and non-envelope types
                 if all(x not in val.lower() for x in ["head.001", "envelope", "busmsgenvlp"]):
-                    return val
+                    res = val
+                    break
                 candidates.append(val)
+            if res != "Unknown": break
         
-        # If only head found so far, return it as last resort
-        if candidates:
-            return candidates[0]
+        # If no payload namespace, check candidates
+        if res == "Unknown" and candidates:
+            res = candidates[0]
 
         # 2. MsgDefIdr Tag Search (Often has the correct Business Type)
-        match_hdr = re.search(r'<MsgDefIdr>([^<]+)</MsgDefIdr>', xml_content)
-        if match_hdr:
-            return match_hdr.group(1).strip()
+        if res == "Unknown":
+            match_hdr = re.search(r'<MsgDefIdr>([^<]+)</MsgDefIdr>', xml_content)
+            if match_hdr:
+                res = match_hdr.group(1).strip()
 
         # 3. Root Tag Heuristic (e.g. <pacs.008.001.08 ...>)
-        match_root = re.search(r'<([a-z]{4}\.[0-9]{3}\.[0-9]{3}\.[0-9]{2})', xml_content[:2000])
-        if match_root:
-            return match_root.group(1).strip()
+        if res == "Unknown":
+            match_root = re.search(r'<([a-z]{4}\.[0-9]{3}\.[0-9]{3}\.[0-9]{2})', xml_content[:2000])
+            if match_root:
+                res = match_root.group(1).strip()
 
         # 4. Family Fallback
-        families = self.config.get("supported_families_fallback", ["pacs.008", "pacs.009", "pain.001", "camt.053"])
-        for family in families:
-            if family in xml_content[:5000]: # Search first 5K for performance
-                return family
+        if res == "Unknown":
+            families = self.config.get("supported_families_fallback", ["pacs.008", "pacs.009", "pain.001", "camt.053"])
+            for family in families:
+                if family in xml_content[:5000]: # Search first 5K for performance
+                    res = family
+                    break
         
-        return "Unknown"
+        # FINAL REFINEMENT: Conver variants
+        if res.startswith("pacs.009") and ("cov" in xml_content.lower() or "UndrlygCstmrCdtTrf" in xml_content):
+            return "pacs.009.cov"
+            
+        return res
 
     def _finalize_report(self, report: ValidationReport, start_time: float) -> ValidationReport:
         # 1. Deduplicate issues
@@ -2133,6 +2156,10 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         """
         if not message_type or message_type == "Unknown":
             return None
+
+        # Special handling for internal refined types
+        if message_type == "pacs.009.cov":
+            message_type = "pacs.009.001.08" # Use standard version for XSD
 
         # 1. Exact Match
         exact_xsd = f"{message_type}.xsd"
