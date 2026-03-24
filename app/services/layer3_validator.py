@@ -559,6 +559,7 @@ class Layer3Mixin:
                 "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
                 "check_iban_currency": lambda k, v: self._check_iban_currency(k, v, data, report, _gl, codelists),
                 "is_after_2026": datetime.now() > mandate_date,
+                "MESSAGE_TYPE": report.message_type if report else "Unknown",
                 "exists": lambda x: any(k.startswith(x) for k in data.keys())
             }
             
