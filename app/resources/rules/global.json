@@ -123,8 +123,8 @@
     {
         "rule_id": "L3_STTLM_CLRG_001",
         "description": "If Settlement Method is CLRG (Clearing System), Clearing System (ClrSys) identity must be present.",
-        "condition": "Document..GrpHdr.SttlmInf.SttlmMtd == 'CLRG'",
-        "expression": "exists(Document..GrpHdr.SttlmInf.ClrSys) or exists(Document..CdtTrfTxInf.SttlmInf.ClrSys)",
+        "condition": "any(k.endswith('.GrpHdr.SttlmInf.SttlmMtd') and DATA[k] == 'CLRG' for k in DATA.keys())",
+        "expression": "any(k.endswith('.GrpHdr.SttlmInf.ClrSys') for k in DATA.keys()) or any(k.endswith('.CdtTrfTxInf.SttlmInf.ClrSys') for k in DATA.keys())",
         "severity": "ERROR",
         "layer": 3
     },
@@ -179,10 +179,10 @@
     },
     {
         "rule_id": "L3_SETTLEMENT_METHOD",
-        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, INGA",
+        "description": "Settlement Method must be one of the ISO 20022 standard codes: INDA, INGA, CLRG, COVE",
         "type": "expression",
         "selector": ".*SttlmMtd$",
-        "expression": "VALUE in ['INDA', 'INGA']",
+        "expression": "VALUE in ['INDA', 'INGA', 'CLRG', 'COVE']",
         "severity": "ERROR",
         "layer": 3
     },
@@ -212,13 +212,13 @@
     },
     {
         "rule_id": "L3-MANDATORY-PAYMENT-PARTIES",
-        "description": "Debtor, Creditor, Debtor Agent, and Creditor Agent are mandatory for all payment messages (PACS/PAIN).",
+        "description": "Debtor and Creditor are mandatory for all payment messages. For customer credit transfers (pacs.008, pacs.003), Debtor Agent and Creditor Agent are also required.",
         "layer": 3,
         "severity": "ERROR",
-        "condition": "any(k.startswith('Document.FIToFI') or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
-        "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())",
-        "errorMessage": "Mandatory Parties Missing: Debtor, Creditor, Debtor Agent, and Creditor Agent must be provided.",
-        "fix": "Ensure all party blocks <Dbtr>, <Cdtr>, <DbtrAgt>, and <CdtrAgt> are included in the transaction."
+        "condition": "any((k.startswith('Document.FIToFI') and 'FIToFIPmtStsRpt' not in k) or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
+        "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and (any(k.startswith('Document.FICdtTrf') for k in DATA.keys()) or (any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())))",
+        "errorMessage": "Mandatory Parties Missing: Debtor and Creditor must be provided. For customer credit transfers, Debtor Agent and Creditor Agent must also be included.",
+        "fix": "Ensure <Dbtr> and <Cdtr> blocks are included. For pacs.008/pacs.003, also include <DbtrAgt> and <CdtrAgt>."
     },
     {
         "rule_id": "L3_APPHDR_PRTY_001",

@@ -1,16 +1,10 @@
 import sys
 import os
 import traceback
-
-# Ensure the current directory is in sys.path so 'app' can be discovered as a package
-# This fixes "Could not find import of app.main" errors in some environments
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+from dotenv import load_dotenv
 
 # Load environment variables from .env before importing app
-from dotenv import load_dotenv
-load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 try:
     import uvicorn

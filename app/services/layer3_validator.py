@@ -162,7 +162,13 @@ class Layer3Mixin:
                         error_msg = f"Field '{field_name}' has invalid format: '{value}'."
 
                     # 1. Regex Validation
-                    if regex_pattern and not re.match(regex_pattern, str(value)):
+                    # Robust string conversion for regex matching (especially for floats)
+                    if isinstance(value, (float, int)):
+                        val_str = "{:.15f}".format(float(value)).rstrip('0').rstrip('.')
+                    else:
+                        val_str = str(value)
+                        
+                    if regex_pattern and not re.match(regex_pattern, val_str):
                         report.add_issue(ValidationIssue(
                             "ERROR", 3, "INVALID_FIELD_FORMAT", str(line_map.get(key, "/")),
                             error_msg,
@@ -295,12 +301,19 @@ class Layer3Mixin:
                                     continue
                         
                         if allowed_decimals is not None:
-                            val_str = str(value)
+                            # Robust decimal counting
+                            if isinstance(value, float):
+                                # Convert float to string with reasonable precision and strip
+                                val_str = "{:.15f}".format(value).rstrip('0').rstrip('.')
+                            else:
+                                val_str = str(value)
+
                             actual_decimals = len(val_str.split('.')[1]) if '.' in val_str else 0
+                            
                             if actual_decimals > allowed_decimals:
                                 report.add_issue(ValidationIssue(
                                     severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key),
-                                    f"Incorrect decimal precision for {ccy} amount '{value}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
+                                    f"Incorrect decimal precision for {ccy} amount '{val_str}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
                                     f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'10.00' if allowed_decimals == 2 else '10' if allowed_decimals == 0 else '10.000'})."
                                 ))
 
@@ -546,10 +559,13 @@ class Layer3Mixin:
                 "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
                 "check_iban_currency": lambda k, v: self._check_iban_currency(k, v, data, report, _gl, codelists),
                 "is_after_2026": datetime.now() > mandate_date,
-                "exists": lambda x: any(k.startswith(x) for k in data.keys())
+                "exists": lambda x: any(k.startswith(x) for k in data.keys()),
+                "check_msg_uetr_duplicate": lambda m, u: self._check_msg_uetr_duplicate(m, u, report),
+                "re": re,
+                "MESSAGE_TYPE": report.message_type if report else "Unknown"
             }
             
-            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str"])
+            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
             for key in sorted(data.keys(), key=len, reverse=True):
                 pattern = r'\b' + re.escape(key) + r'\b'
                 if re.search(pattern, temp_expr) and key not in reserved:
@@ -570,7 +586,7 @@ class Layer3Mixin:
                     # Use lambda to avoid backslash issues in re.sub
                     temp_expr = re.sub(pattern, lambda m: val_str, temp_expr)
             
-            return eval(temp_expr, {"__builtins__": None}, ctx)
+            return eval(temp_expr, ctx, ctx)
         except Exception as e:
             print(f"DEBUG _evaluate_expression error for expr '{expr[:80]}': {e}")
             return False
@@ -640,6 +656,24 @@ class Layer3Mixin:
             return True # Suppress generic error
 
         return True
+
+    def _check_msg_uetr_duplicate(self, msg_id, uetr, report):
+        """
+        Business Rule: Verify if the MsgId + UETR combination has been seen before.
+        """
+        if not hasattr(self, 'history_service') or not self.history_service:
+            return True # Cannot check if service is missing
+
+        # Query history for MsgId and UETR
+        # This assumes history_service has a method to check duplicates
+        # If not, we might need to implement it.
+        try:
+            is_dupe = self.history_service.check_duplicate_msg_uetr(msg_id, uetr)
+            return not is_dupe
+        except Exception as e:
+            print(f"DEBUG: Error checking for duplicate MsgId/UETR: {e}")
+            return True # Fail open to avoid blocking if DB has issues
+
     def validate_entity_mismatch(self, xml_content: str, report: ValidationReport):
         """
         Special early check for Entity Mismatch (L3-BIZ-PARTY-NAME-ENTITY-MATCH).

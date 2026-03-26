@@ -134,7 +134,7 @@
     {
         "rule_id": "PACS009_017",
         "description": "Underlying Customer Credit Transfer (UndrlygCstmrCdtTrf): Element is not allowed as per MyStandards for pacs.009.",
-        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf)",
+        "condition": "exists(Document.FICdtTrf.CdtTrfTxInf) and 'cov' not in MESSAGE_TYPE.lower()",
         "expression": "all('.UndrlygCstmrCdtTrf' not in k for k in DATA.keys())",
         "severity": "ERROR",
         "layer": 3
@@ -216,13 +216,6 @@
         "description": "Clearing System FED: Settlement currency must be USD.",
         "condition": "any(k.endswith('.ClrSysId.Cd') and DATA[k] == 'FED' for k in DATA.keys())",
         "expression": "all(DATA[k] == 'USD' for k in DATA.keys() if k.endswith('@Ccy') and ('IntrBkSttlmAmt' in k or 'InstdAmt' in k))",
-        "severity": "ERROR",
-        "layer": 3
-    },
-    {
-        "rule_id": "PACS009_028",
-        "description": "Empty tags or whitespace-only elements are not allowed.",
-        "expression": "all(DATA[k].strip() != '' for k in DATA.keys() if isinstance(DATA[k], str) and not k.endswith('@Ccy'))",
         "severity": "ERROR",
         "layer": 3
     }

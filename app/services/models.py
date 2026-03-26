@@ -34,6 +34,7 @@ class ValidationReport:
         self.total_time_ms = 0
         self.layer_status = {}
         self.issues = []
+        self.metadata = {}
 
     def add_issue(self, issue: ValidationIssue):
         self.issues.append(issue.to_dict())
@@ -58,5 +59,6 @@ class ValidationReport:
             "warnings": self.warnings,
             "total_time_ms": round(self.total_time_ms, 2),
             "layer_status": self.layer_status,
-            "details": self.issues
+            "details": self.issues,
+            "metadata": self.metadata
         }
