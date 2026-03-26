@@ -336,6 +336,13 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
 
             if mode != "Layer 1 only":
                 try:
+                    # STEP 4.21: CBPR+ DATETIME FORMAT VALIDATION
+                    self._validate_cbpr_datetime(xml_content, report)
+                    
+                    # Global Rule: Name & Address Co-existence (CBPR+)
+                    self._validate_name_address_coexistence(xml_content, report)
+
+
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                     if not layer2_success:
                          # Rejection: If XSD fails, stop here after collecting all errors.
@@ -613,6 +620,125 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     f"Shorten the value of <{tag_name}> to at most {max_len} characters. "
                     f"Current value has {actual_len} characters."
                 ))
+
+    def _validate_cbpr_datetime(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.21 — CBPR+ DateTime Format Validation
+        Enforces:
+          1. Timezone offset is mandatory (e.g., +00:00, +05:30)
+          2. 'Z' (UTC indicator) is FORBIDDEN
+          3. Milliseconds (.sss) should be removed
+        Rule: .*(\+|-)((0[0-9])|(1[0-4])):[0-5][0-9]
+        """
+        # Match all datetime tags: <CreDt>, <CreDtTm>, <IntrBkSttlmTm>, etc.
+        # CBPR+ specifically targets fields that contain DateTime
+        datetime_tags = ["CreDt", "CreDtTm", "IntrBkSttlmTm", "PmtStpTm", "SttlmTmReq", "CLSTm", "TillTm", "FrTm", "RjctTm"]
+        
+        tag_alternation = "|".join(re.escape(t) for t in datetime_tags)
+        dt_patt = re.compile(
+            r'<(' + tag_alternation + r')>'   # opening tag  (group 1)
+            r'\s*([^<]+?)\s*'                  # value        (group 2)
+            r'</\1>'                           # matching closing tag
+        )
+
+        for m in dt_patt.finditer(xml_content):
+            tag_name   = m.group(1)
+            raw_value  = m.group(2).strip()
+            
+            # 1. Check for 'Z'
+            if 'Z' in raw_value:
+                line_num = xml_content.count('\n', 0, m.start()) + 1
+                report.add_issue(ValidationIssue(
+                    "ERROR", 2, "CBPR_DATETIME_Z_FORBIDDEN", str(line_num),
+                    f"Element <{tag_name}> contains 'Z' UTC indicator which is forbidden in CBPR+.",
+                    f"Replace 'Z' with an explicit timezone offset like '+00:00'."
+                ))
+                continue
+
+            # 2. Check for milliseconds
+            if '.' in raw_value:
+                # If it's a date like 2026-03-23, ignore. But these tags are likely DateTime.
+                if 'T' in raw_value:
+                    line_num = xml_content.count('\n', 0, m.start()) + 1
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "CBPR_DATETIME_MS_FORBIDDEN", str(line_num),
+                        f"Element <{tag_name}> contains milliseconds which are forbidden in CBPR+.",
+                        f"Remove the decimal part (e.g., '.415') from the time."
+                    ))
+                    continue
+
+            # 3. Check for mandatory offset using the user-provided regex
+            # Regex: .*(\+|-)((0[0-9])|(1[0-4])):[0-5][0-9]
+            offset_patt = re.compile(r'.*(\+|-)((0[0-9])|(1[0-4])):[0-5][0-9]$')
+            if not offset_patt.match(raw_value):
+                line_num = xml_content.count('\n', 0, m.start()) + 1
+                report.add_issue(ValidationIssue(
+                    "ERROR", 2, "CBPR_DATETIME_OFFSET_MANDATORY", str(line_num),
+                    f"Element <{tag_name}> is missing a mandatory timezone offset.",
+                    f"Ensure the format is YYYY-MM-DDThh:mm:ss(+/-)HH:MM (e.g., +00:00)."
+                ))
+
+    def _validate_name_address_coexistence(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        Step 4.22 — Global Name & Postal Address Co-existence (CBPR+)
+        Enforces the rule: If Name <Nm> is present, Postal Address <PstlAdr> must be present.
+        Applies to all party and financial institution structures.
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        # Target elements that typically contain both Nm and PstlAdr
+        target_tags = {
+            'Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty', 
+            'DbtrAgt', 'CdtrAgt', 'InstgAgt', 'InstdAgt', 'IntrmyAgt1', 
+            'IntrmyAgt2', 'IntrmyAgt3', 'FinInstnId', 'BrnchId', 'Pty'
+        }
+
+        for elem in root.iter():
+            if not isinstance(elem.tag, str):
+                continue
+            
+            tag_local = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
+            if tag_local not in target_tags:
+                continue
+
+            # Check for Nm and PstlAdr children
+            has_nm = False
+            has_pstl_adr = False
+            nm_line = elem.sourceline or 1
+
+            for child in elem:
+                if not isinstance(child.tag, str):
+                    continue
+                child_local = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                if child_local == 'Nm':
+                    has_nm = True
+                    nm_line = child.sourceline or nm_line
+                elif child_local == 'PstlAdr':
+                    has_pstl_adr = True
+
+            # The Rule: If <Nm> exists, <PstlAdr> MUST exist.
+            if has_nm and not has_pstl_adr:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "NAME_ADDRESS_COEXISTENCE", str(nm_line),
+                    "Error: Name and Address must always be present together",
+                    f"The element <{tag_local}> contains a Name <Nm> but is missing a Postal Address <PstlAdr>. "
+                    "For CBPR+ compliance, if a name is provided, the full postal address must also be included."
+                ))
+            
+            # (Optional inverse) If <PstlAdr> exists, <Nm> MUST exist.
+            elif has_pstl_adr and not has_nm:
+                report.add_issue(ValidationIssue(
+                    "ERROR", 3, "NAME_ADDRESS_COEXISTENCE", str(elem.sourceline or 1),
+                    "Error: Name and Address must always be present together",
+                    f"The element <{tag_local}> contains a Postal Address <PstlAdr> but is missing a Name <Nm>. "
+                    "For CBPR+ compliance, if an address is provided, the name of the party must also be included."
+                ))
+
+
 
     def _validate_uetr_in_xml(self, xml_content: str, report: ValidationReport) -> None:
         """
