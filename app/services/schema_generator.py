@@ -18,6 +18,8 @@ def _camel_to_words(name: str) -> str:
     """Convert ISO 20022 CamelCase names to readable English words."""
     if not name:
         return ""
+    # Handle specific common abbreviations
+    name = name.replace("BICFI", "BicFi").replace("IBAN", "Iban").replace("UETR", "Uetr")
     name = re.sub(r'\d+$', '', name)
     words = re.findall(r'[A-Z][a-z]+|[A-Z]+(?=[A-Z][a-z]|$)|[a-z]+|[A-Z]', name)
     return ' '.join(words) if words else name
@@ -66,6 +68,13 @@ class SchemaGenerator:
             "type": "simple",
             "children": []
         }
+
+        # Inject common options for status fields (especially for camt.029 Conf)
+        if name == "Conf":
+            node["options"] = ["ACCR", "PDCR", "RJCR", "CNCL"]
+        elif name in ["TxSts", "GrpSts", "Sts", "TxCxlSts"]:
+            # Common status codes for pacs.002, pain.002, camt.029 TxCxlSts, etc.
+            node["options"] = ["ACTC", "RJCT", "PDNG", "ACCP", "ACSP", "ACWC", "RJCR", "ACCR", "PDCR", "CNCL"]
         
         if not type_name:
             complex_type = elem.find(f"{{{XS}}}complexType")

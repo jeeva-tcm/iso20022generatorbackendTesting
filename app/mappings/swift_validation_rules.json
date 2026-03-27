@@ -2307,6 +2307,23 @@
                                     "mapped_from": "generated_uetr or block3_121",
                                     "description": "Original UETR"
                                 },
+                                "CxlStsRsnInf": {
+                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsRsnInf",
+                                    "mandatory": false,
+                                    "children": {
+                                        "Rsn": {
+                                            "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsRsnInf/Rsn",
+                                            "mandatory": true,
+                                            "children": {
+                                                "Cd": {
+                                                    "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsRsnInf/Rsn/Cd",
+                                                    "mandatory": true,
+                                                    "allowed_values": ["CUST", "DUPL", "UPAY", "AC04"]
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
                                 "OrgnlGrpInf": {
                                     "path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/OrgnlGrpInf",
                                     "mandatory": false,
