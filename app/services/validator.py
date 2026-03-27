@@ -223,7 +223,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         self._last_cache_update = now
         return self._message_type_cache
 
-    async def validate(self, xml_content: str, mode: str = "Full 1-3", message_type: str = "Auto-detect", filename: Optional[str] = None) -> ValidationReport:
+    async def validate(self, xml_content: str, mode: str = "Full 1-3", message_type: str = "Auto-detect", filename: Optional[str] = None, validation_id: Optional[str] = None) -> ValidationReport:
         """
         Main 10-Step Validation Flow
         """
@@ -238,8 +238,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         # Keep full version in report for UI display
         # The _get_xsd_path function will handle version-blind matching internally
 
-        validation_id = self.generate_next_id()
-        report = ValidationReport(validation_id, detected_type, mode)
+        assigned_id = validation_id if validation_id else self.generate_next_id()
+        report = ValidationReport(assigned_id, detected_type, mode)
 
         # Extract MsgId and UETR early for history and metadata
         msg_id_match = re.search(r'<MsgId>\s*([^<]+?)\s*</MsgId>', xml_content, re.IGNORECASE)

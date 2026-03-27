@@ -113,9 +113,13 @@ class FirebaseHistoryService:
         if "deleted" not in record:
             record["deleted"] = False
             
-        doc_ref = self.db.collection("validation_history").document(record["validation_id"])
+        doc_id = record["validation_id"]
+        if record.get("file_id"):
+            doc_id = f"{record['validation_id']}_{record['file_id']}"
+            
+        doc_ref = self.db.collection("validation_history").document(doc_id)
         doc_ref.set(record)
-        return record["validation_id"]
+        return doc_id
 
     def get_history(self, skip: int = 0, limit: int = 5000) -> List[Dict[str, Any]]:
         """Retrieves history records from Firestore"""
