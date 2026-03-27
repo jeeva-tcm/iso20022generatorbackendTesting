@@ -812,6 +812,26 @@ class MT2MXConverter:
                 except Exception as e:
                     errors.append(f"Balance processing failed for tag {tag}: {str(e)}")
 
+            elif rule_type == "datetime":
+                # MT Format: YYMMDDHHMM (or YYMMDDHHMM+HHMM)
+                try:
+                    val_str = str(val).strip().replace('\r', '').replace('\n', '')
+                    if len(val_str) < 10:
+                        errors.append(f"Invalid datetime format in field :{tag}: '{val}'")
+                        continue
+                        
+                    # Extract YYMMDDHHMM (first 10 chars)
+                    dt_part = val_str[:10]
+                    dt = datetime.strptime(dt_part, "%y%m%d%H%M")
+                    # Force CreDtTm to be current time to avoid validation errors "Date cannot be in the past"
+                    if "CreDtTm" in rule.get("mx_path", ""):
+                        iso_dt = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                    else:
+                        iso_dt = dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                    self.set_element_text(mx_root, rule["mx_path"], iso_dt, namespaces)
+                except Exception as e:
+                    errors.append(f"Datetime processing failed for tag {tag}: {str(e)}")
+
             elif rule_type == "bic":
                 target_path = rule.get("mx_path_bic") or rule.get("mx_path")
                 if target_path:

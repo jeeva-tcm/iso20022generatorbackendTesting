@@ -46,7 +46,7 @@ app.add_middleware(
 async def validate_message(
     request: schemas.ValidationRequest
 ):
-    report = await validator.validate(request.xml_content, request.mode, request.message_type)
+    report = await validator.validate(request.xml_content, request.mode, request.message_type, validation_id=request.batch_id)
     report_dict = report.to_dict()
     
     # Attach file_id and batch_id to the report dict for frontend display
@@ -85,7 +85,7 @@ async def validate_file(
     content = await file.read()
     xml_content = content.decode("utf-8")
     
-    report = await validator.validate(xml_content, mode, message_type, filename=file.filename)
+    report = await validator.validate(xml_content, mode, message_type, filename=file.filename, validation_id=batch_id)
     report_dict = report.to_dict()
     
     # Attach file_id and batch_id to the report dict

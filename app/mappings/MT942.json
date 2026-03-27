@@ -46,7 +46,7 @@
             "mt_tag": "13D",
             "name": "Date/Time Indication",
             "mandatory": true,
-            "type": "text",
+            "type": "datetime",
             "mx_path": "BkToCstmrAcctRpt/Rpt/CreDtTm"
         },
         {
