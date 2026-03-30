@@ -215,7 +215,7 @@
         "description": "Debtor and Creditor are mandatory for all payment messages. For customer credit transfers (pacs.008, pacs.003), Debtor Agent and Creditor Agent are also required.",
         "layer": 3,
         "severity": "ERROR",
-        "condition": "any((k.startswith('Document.FIToFI') and 'FIToFIPmtStsRpt' not in k) or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
+        "condition": "any((k.startswith('Document.FIToFI') and 'FIToFIPmtStsRpt' not in k and 'FIToFIPmtCxlReq' not in k) or k.startswith('Document.FICdtTrf') or k.startswith('Document.CstmrCdtTrfInitn') or k.startswith('Document.PmtIndctn') for k in DATA.keys())",
         "expression": "any('.Dbtr' in k for k in DATA.keys()) and any('.Cdtr' in k for k in DATA.keys()) and (any(k.startswith('Document.FICdtTrf') for k in DATA.keys()) or (any('.DbtrAgt' in k for k in DATA.keys()) and any('.CdtrAgt' in k for k in DATA.keys())))",
         "errorMessage": "Mandatory Parties Missing: Debtor and Creditor must be provided. For customer credit transfers, Debtor Agent and Creditor Agent must also be included.",
         "fix": "Ensure <Dbtr> and <Cdtr> blocks are included. For pacs.008/pacs.003, also include <DbtrAgt> and <CdtrAgt>."

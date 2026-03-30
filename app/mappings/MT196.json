@@ -19,14 +19,14 @@
             "name": "Assigner (Sender)",
             "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "RsltnOfInvstgtn/Assgnmt/Assgnr/Agt/FinInstnId/BICFI"
+            "mx_path": "RsltnOfInvstgtn/Assgnmt/Assgnr/Agt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_receiverBic",
             "name": "Assignee (Receiver)",
             "mandatory": false,
             "type": "bic",
-            "mx_path_bic": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt/FinInstnId/BICFI"
+            "mx_path": "RsltnOfInvstgtn/Assgnmt/Assgne/Agt/FinInstnId/BICFI"
         },
         {
             "mt_tag": "_timestamp",
@@ -40,7 +40,7 @@
             "name": "Resolution Confirmation",
             "mandatory": false,
             "type": "static",
-            "value": "RJCT",
+            "value": "RJCR",
             "mx_path": "RsltnOfInvstgtn/Sts/Conf"
         },
         {
@@ -71,6 +71,27 @@
             "type": "static",
             "value": "RJCT",
             "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsId"
+        },
+        {
+            "mt_tag": "20",
+            "name": "Case ID",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Id"
+        },
+        {
+            "mt_tag": "_receiverBic",
+            "name": "Case Creator BIC",
+            "mandatory": false,
+            "type": "bic",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/RslvdCase/Cretr/Agt/FinInstnId/BICFI"
+        },
+        {
+            "mt_tag": "77",
+            "name": "Reason for Rejection",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "RsltnOfInvstgtn/CxlDtls/TxInfAndSts/CxlStsRsnInf/Rsn/Cd"
         },
         {
             "mt_tag": "79",

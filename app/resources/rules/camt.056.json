@@ -1,18 +1,1 @@
-[
-    {
-        "rule_id": "CAMT056_001",
-        "description": "Payment Cancellation Request: Debtor should identify with Name and/or ID (Organisation or Private).",
-        "condition": "exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Dbtr)",
-        "expression": "exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Dbtr.Nm) or exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Dbtr.Id)",
-        "severity": "WARNING",
-        "layer": 3
-    },
-    {
-        "rule_id": "CAMT056_002",
-        "description": "Payment Cancellation Request: Creditor should identify with Name and/or ID (Organisation or Private).",
-        "condition": "exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Cdtr)",
-        "expression": "exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Cdtr.Nm) or exists(Document.FIToFIPmtCxlReq.Undrlyg.CxlConf.OrgnlGrpInfAndCxl.Cdtr.Id)",
-        "severity": "WARNING",
-        "layer": 3
-    }
-]
+[]
