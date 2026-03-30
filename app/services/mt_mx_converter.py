@@ -1255,7 +1255,12 @@ class MT2MXConverter:
                 
                 if val:
                     # Specific code-block checking: if field name is "Sts" and it's a container element
-                    if field_name == "Sts":
+                    # Skip for resolution messages where Cd is not a valid direct child of Sts choice
+                    root_tag = mx_root.tag.split("}")[-1]
+                    body_tag = [child.tag.split("}")[-1] for child in list(mx_root)][0] if list(mx_root) else None
+                    is_resolution = root_tag in ["RsltnOfInvstgtn", "FIToFIPmtCxlReq"] or body_tag in ["RsltnOfInvstgtn", "FIToFIPmtCxlReq"]
+                    
+                    if field_name == "Sts" and not is_resolution:
                         sts_node = self._get_or_create_node(mx_root, path, namespaces)
                         if self._navigate_path(sts_node, "Cd", namespaces, create_missing=False) is None:
                             self.set_element_text(sts_node, "Cd", "BOOK", namespaces)
@@ -1361,6 +1366,7 @@ class MT2MXConverter:
             "FIToFIPmtCxlReq": ["Assgnmt", "Undrlyg", "SplmtryData"],
             "Undrlyg": ["TxInf"],
             "CxlRsnInf": ["Orgtr", "Rsn", "AddtlInf"],
+            "CxlStsRsnInf": ["Orgtr", "Rsn", "AddtlInf"],
             "TxInf": ["CxlId", "Case", "OrgnlGrpInf", "OrgnlInstrId", "OrgnlEndToEndId", "OrgnlTxId", "OrgnlUETR", "OrgnlClrSysRef", "OrgnlIntrBkSttlmAmt", "OrgnlIntrBkSttlmDt", "CxlRsnInf"],
             "CxlDtls": ["TxInfAndSts"],
             "TxInfAndSts": [
@@ -1382,7 +1388,7 @@ class MT2MXConverter:
             "NtryDtls": ["Btch", "TxDtls"],
             "TxDtls": ["Refs", "Amt", "AmtDtls", "Avlbty", "BkTxCd", "Chrgs", "RltdPties", "RltdAgts", "LclInstrm", "Purp", "RltdRmtInf", "RmtInf", "RltdDates", "SplmtryData", "CdtDbtInd"],
             "Refs": ["MsgId", "AcctSvcrRef", "PmtInfId", "InstrId", "EndToEndId", "UETR", "TxId", "MndtId", "ChqNb", "ClrSysRef", "AcctOwnrTxId", "AcctSvcrTxId", "MktInfrstrctrTxId", "PrcgId", "Prtry"],
-            "Sts": ["Cd", "Prtry", "Rsn"],
+            "Sts": ["Conf", "RjctdMod", "DplctOf", "AssgnmtCxlConf", "Cd", "Prtry", "Rsn"],
             "Amt": ["InstdAmt", "EqvtAmt"],
             "Ntry": ["NtryRef", "Amt", "CdtDbtInd", "RvslInd", "Sts", "BookgDt", "ValDt", "AcctSvcrRef", "Avlbty", "BkTxCd", "ComssnWvrInd", "AddtlInfInd", "AmtDtls", "Chrgs", "TechInptChanl", "Intrst", "CardTx", "NtryDtls", "AddtlNtryInf"],
             "Stmt": ["Id", "StmtPgntn", "ElctrncSeqNb", "LglSeqNb", "CreDtTm", "FrToDt", "Acct", "Bal", "TxsSummry", "Ntry"],
@@ -1422,6 +1428,14 @@ class MT2MXConverter:
 
     def _heal_camt_mandatory_fields(self, root, namespaces):
         """Final sweep to ensure Ntry nodes are compliant with mandatory reporting rules."""
+        
+        # Check if we are dealing with a resolution message (camt.029) or a cancellation request (camt.056)
+        # These are NOT reporting messages with Ntry structures.
+        body_tags = [child.tag.split("}")[-1] for child in list(root)]
+        if root.tag.split("}")[-1] in ["RsltnOfInvstgtn", "FIToFIPmtCxlReq"] or \
+           any(tag in ["RsltnOfInvstgtn", "FIToFIPmtCxlReq"] for tag in body_tags):
+            return
+
         # Find all Ntry nodes regardless of their specific namespace version
         all_ntries = []
         for elem in root.iter():
