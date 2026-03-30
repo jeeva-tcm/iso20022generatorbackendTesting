@@ -542,7 +542,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             except ValueError:
                 continue  # not a real calendar date
 
-            if parsed_date < today_date:
+            if parsed_date < today_date and tag_name != 'BirthDt':
                 # Find the line number in the raw XML
                 try:
                     line_num = xml_content.count('\n', 0, m.start()) + 1
