@@ -764,9 +764,32 @@ class Layer2Mixin:
                 # Check for duplication (X found where X was expected)
                 is_dupe = found_elem in all_expected
                 if not is_dupe and xml_content:
+                    # Generic ISO 20022 element names (Id, Cd, Nm, etc.) are legitimately
+                    # reused at different hierarchy levels in the same message.
+                    # A global document search always returns > 1 for these, producing
+                    # false-positive "Tag <Id> is duplicated" errors (e.g. Assgnmt/Id,
+                    # Case/Id, Pty/Id, Othr/Id are all valid and distinct).
+                    # Fix: use a ±15-line context window when error_line is available;
+                    # only flag as duplicate if the same tag appears twice nearby.
+                    _MULTI_LEVEL_TAGS = {
+                        'Id', 'Cd', 'Nm', 'Tp', 'Ref', 'Dt', 'Amt', 'Inf',
+                        'Issr', 'Sts', 'Rsn', 'Agt', 'Pty', 'Acct', 'Ctry', 'Ccy'
+                    }
                     tag_pattern = re.compile(f'<{re.escape(found_elem)}[\\s/>]', re.IGNORECASE)
-                    if len(tag_pattern.findall(xml_content)) > 1:
-                        is_dupe = True
+                    if found_elem in _MULTI_LEVEL_TAGS:
+                        if error_line:
+                            # Check only within a ±15-line window around the failing element
+                            _ctx_lines = xml_content.splitlines()
+                            _start = max(0, error_line - 15)
+                            _end   = min(len(_ctx_lines), error_line + 15)
+                            _window = '\n'.join(_ctx_lines[_start:_end])
+                            if len(tag_pattern.findall(_window)) > 1:
+                                is_dupe = True
+                        # If no error_line available, skip global search to avoid false positives
+                    else:
+                        # For non-generic tags a global search is reliable
+                        if len(tag_pattern.findall(xml_content)) > 1:
+                            is_dupe = True
 
                 if is_dupe:
                     label = tag_label(found_elem)

@@ -542,7 +542,24 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             except ValueError:
                 continue  # not a real calendar date
 
-            if parsed_date < today_date:
+            if tag_name == 'BirthDt':
+                # Birth dates MUST be in the past or today, but NOT in the future
+                if parsed_date > today_date:
+                    try:
+                        line_num = xml_content.count('\n', 0, m.start()) + 1
+                    except Exception:
+                        line_num = "Unknown"
+
+                    report.add_issue(ValidationIssue(
+                        "ERROR",
+                        2,
+                        "FUTURE_DATE_BIRTH_ERROR",
+                        str(line_num),
+                        f"Birth date cannot be in the future. ",
+                        f"Field <{tag_name}> contains '{raw_value}', which is after today ({today_date}).",
+                        f"Update <{tag_name}> to a valid past date. (Line: {line_num})"
+                    ))
+            elif parsed_date < today_date:
                 # Find the line number in the raw XML
                 try:
                     line_num = xml_content.count('\n', 0, m.start()) + 1
