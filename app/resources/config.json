@@ -14,7 +14,8 @@
         "pacs.008.001.08": "SR2025",
         "pacs.009.001.08": "SR2025",
         "camt.053.001.08": "SR2025",
-        "camt.053.001.10": "SR2025"
+        "camt.053.001.10": "SR2025",
+        "camt.056.001.08": "SR2025"
     },
     "validation_rules": {
         "namespace_patterns": [
