@@ -108,21 +108,54 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
     def _load_bics(self) -> Set[str]:
         """Loads BIC codes from the entities.ftm.json file (JSONL format)"""
         bics = set()
+        self.bic_records = [] # Store simplified records for search
         file_path = os.path.join(self.bics_path, "entities.ftm.json")
         if os.path.exists(file_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    for line in f:
+                    for i, line in enumerate(f, 1):
+                        if not line.strip(): continue
                         try:
                             data = json.loads(line)
-                            swift_bics = data.get("properties", {}).get("swiftBic", [])
+                            props = data.get("properties", {})
+                            swift_bics = props.get("swiftBic", [])
+                            name = str(data.get("caption") or props.get("name", ["Unknown Bank"])[0])
+                            country = str(props.get("country", [""])[0]).upper()
+                            address = str(props.get("address", [""])[0])
+                            
                             for bic in swift_bics:
-                                bics.add(bic.upper())
-                        except:
+                                if not bic: continue
+                                bic_upper = str(bic).upper()
+                                bics.add(bic_upper)
+                                self.bic_records.append({
+                                    "bic": bic_upper,
+                                    "name": name,
+                                    "country": country,
+                                    "address": address
+                                })
+                        except Exception as e:
+                            print(f"Skipping line {i} in entities.ftm.json due to error: {e}")
                             continue
             except Exception as e:
-                print(f"Error loading BICs: {e}")
+                print(f"Error loading BICs from {file_path}: {e}")
         return bics
+
+    def search_bics(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Searches for BICs matching the query in either the BIC code or bank name"""
+        if not query or len(query) < 2:
+            return []
+        
+        query = query.upper()
+        results = []
+        for record in self.bic_records:
+            # Safely check bic and name
+            bic_val = record.get("bic", "")
+            name_val = record.get("name", "").upper()
+            if query in bic_val or query in name_val:
+                results.append(record)
+                if len(results) >= limit:
+                    break
+        return results
 
     def _ensure_xsds_extracted(self):
         """

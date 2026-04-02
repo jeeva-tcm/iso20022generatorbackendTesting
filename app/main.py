@@ -284,6 +284,11 @@ def get_codelist(list_name: str):
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+@app.get("/bics/search")
+def search_bics(query: str = "", limit: int = 20):
+    """Search for BIC codes and bank information"""
+    return validator.search_bics(query, limit)
+
 # --- GLOBALLY READY: Serve Frontend ---
 # This allows the backend to serve the frontend UI in a production environment
 frontend_path = os.path.join(os.path.dirname(__file__), "static")
