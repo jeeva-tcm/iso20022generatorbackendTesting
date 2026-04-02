@@ -9,3 +9,4 @@ firebase-admin
 python-multipart
 python-dotenv
 cryptography
+openai

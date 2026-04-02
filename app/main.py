@@ -19,6 +19,8 @@ from app.services.validator import ISOValidator
 from app.services.firebase_service import FirebaseHistoryService
 from app.services.schema_generator import SchemaGenerator
 from app.services.mt_mx_converter import MT2MXConverter
+from app.chatbot.routes import router as chatbot_router
+from app.chatbot.chat_service import chat_service
 
 # Initialize services
 history_service = FirebaseHistoryService()
@@ -36,11 +38,24 @@ origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"] if origins_str == "*" else origins,
+    allow_credentials=True if origins_str != "*" else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include chatbot router
+app.include_router(chatbot_router)
+
+# Initialize chatbot knowledge base on startup
+@app.on_event("startup")
+async def startup_event():
+    import threading
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # Init LLM on main thread (fast) so it's ready immediately
+    chat_service._ensure_llm()
+    # Load knowledge base in background (slow - reads 779+ files)
+    threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
 
 @app.post("/validate", response_model=schemas.ValidationResponse)
 async def validate_message(
