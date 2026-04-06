@@ -140,6 +140,62 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                 print(f"Error loading BICs from {file_path}: {e}")
         return bics
 
+    def reload_bics(self) -> None:
+        """
+        Hot-reload the BIC dataset from disk into memory without disrupting
+        active search requests (BR-3, BR-7).
+
+        Builds new data structures first, then swaps the references in a single
+        Python assignment per attribute.  Because Python's GIL makes a single
+        attribute assignment atomic, any concurrent call to ``search_bics`` or
+        ``supported_bics`` will see either the old or the new complete dataset —
+        never a partial state.
+        """
+        new_bics: Set[str] = set()
+        new_records: List[Dict[str, Any]] = []
+        file_path = os.path.join(self.bics_path, "entities.ftm.json")
+
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as fh:
+                    for i, line in enumerate(fh, 1):
+                        if not line.strip():
+                            continue
+                        try:
+                            data = json.loads(line)
+                            props = data.get("properties", {})
+                            swift_bics = props.get("swiftBic", [])
+                            name = str(
+                                data.get("caption")
+                                or props.get("name", ["Unknown Bank"])[0]
+                            )
+                            country = str(props.get("country", [""])[0]).upper()
+                            address = str(props.get("address", [""])[0])
+                            for bic in swift_bics:
+                                if not bic:
+                                    continue
+                                bic_upper = str(bic).upper()
+                                new_bics.add(bic_upper)
+                                new_records.append(
+                                    {
+                                        "bic": bic_upper,
+                                        "name": name,
+                                        "country": country,
+                                        "address": address,
+                                    }
+                                )
+                        except Exception as exc:
+                            print(f"[BIC Reload] Skipping line {i}: {exc}")
+                            continue
+            except Exception as exc:
+                print(f"[BIC Reload] Error reading file: {exc}")
+                return  # Retain existing cache on read failure
+
+        # Atomic reference swaps (GIL-safe single assignments)
+        self.supported_bics = new_bics
+        self.bic_records = new_records
+        print(f"[BIC Reload] Cache refreshed — {len(new_bics):,} BIC codes loaded.")
+
     def search_bics(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Searches for BICs matching the query in either the BIC code or bank name"""
         if not query or len(query) < 2:
