@@ -12,3 +12,4 @@ cryptography
 openai
 apscheduler
 httpx
+prometheus_client

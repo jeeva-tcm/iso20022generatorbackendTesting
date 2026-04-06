@@ -39,7 +39,7 @@ bic_refresh_service = BicRefreshService(
 app = FastAPI(title="ISO 20022 Validation API (Firebase Powered)")
 
 # Configure CORS
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,http://127.0.0.1:8001,https://iso20022generatorfrontend.vercel.app,https://46lzw3h8-4200.inc1.devtunnels.ms")
+origins_str = os.getenv("CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200,http://localhost:8001,http://127.0.0.1:8001,https://iso20022generatorfrontend.vercel.app,https://46lzw3h8-4200.inc1.devtunnels.ms")
 origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
