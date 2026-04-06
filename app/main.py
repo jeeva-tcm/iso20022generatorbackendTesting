@@ -19,6 +19,7 @@ from app.services.validator import ISOValidator
 from app.services.firebase_service import FirebaseHistoryService
 from app.services.schema_generator import SchemaGenerator
 from app.services.mt_mx_converter import MT2MXConverter
+from app.services.bulk_generator import generate_single_xml, get_blocks_for_message
 from app.chatbot.routes import router as chatbot_router
 from app.chatbot.chat_service import chat_service
 
@@ -273,6 +274,58 @@ def get_message_schema(message_type: str):
         raise HTTPException(status_code=500, detail=f"Failed to generate schema tree for {message_type}")
     
     return schema_tree
+
+@app.get("/bulk-generate/blocks/{message_type:path}")
+def get_bulk_blocks(message_type: str):
+    """Return the block definitions (checkboxes) for a given message type."""
+    blocks = get_blocks_for_message(message_type)
+    if not blocks:
+        raise HTTPException(status_code=404, detail=f"No block config found for {message_type}")
+    return {"message_type": message_type, "blocks": blocks}
+
+
+@app.post("/bulk-generate")
+def bulk_generate(request: dict):
+    """
+    Generate N ISO 20022 messages of the given type with selected optional blocks.
+    Body: { message_type, count, selected_blocks }
+    Sync def so FastAPI runs it in a thread pool — avoids blocking the event loop.
+    """
+    message_type = request.get("message_type", "pacs.008")
+    count = int(request.get("count", 1))
+    selected_blocks = request.get("selected_blocks", [])
+
+    if count < 1 or count > 500:
+        raise HTTPException(status_code=400, detail="count must be between 1 and 500")
+    if not message_type:
+        raise HTTPException(status_code=400, detail="message_type is required")
+
+    messages = []
+    for i in range(1, count + 1):
+        try:
+            xml = generate_single_xml(message_type, selected_blocks, i)
+            messages.append({
+                "index": i,
+                "xml": xml,
+                "message_type": message_type,
+                "status": "generated",
+            })
+        except Exception as e:
+            messages.append({
+                "index": i,
+                "xml": f"<!-- Generation error: {str(e)} -->",
+                "message_type": message_type,
+                "status": "error",
+                "error": str(e),
+            })
+
+    return {
+        "message_type": message_type,
+        "requested": count,
+        "count": len(messages),
+        "messages": messages
+    }
+
 
 @app.get("/codelists/{list_name}")
 def get_codelist(list_name: str):
