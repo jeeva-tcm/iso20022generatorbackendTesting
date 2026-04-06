@@ -19,6 +19,7 @@ from app.services.validator import ISOValidator
 from app.services.firebase_service import FirebaseHistoryService
 from app.services.schema_generator import SchemaGenerator
 from app.services.mt_mx_converter import MT2MXConverter
+from app.services.bic_refresh_service import BicRefreshService
 from app.services.bulk_generator import generate_single_xml, get_blocks_for_message
 from app.chatbot.routes import router as chatbot_router
 from app.chatbot.chat_service import chat_service
@@ -27,6 +28,11 @@ from app.chatbot.chat_service import chat_service
 history_service = FirebaseHistoryService()
 validator = ISOValidator(history_service=history_service)
 mt_mx_converter = MT2MXConverter()
+bic_refresh_service = BicRefreshService(
+    bics_dir=validator.bics_path,
+    history_service=history_service,
+    validator_instance=validator,
+)
 
 # DEPRECATED: SQLite Initialization
 # database.Base.metadata.create_all(bind=database.engine)
@@ -48,7 +54,7 @@ app.add_middleware(
 # Include chatbot router
 app.include_router(chatbot_router)
 
-# Initialize chatbot knowledge base on startup
+# Initialize chatbot knowledge base and BIC refresh scheduler on startup
 @app.on_event("startup")
 async def startup_event():
     import threading
@@ -57,6 +63,44 @@ async def startup_event():
     chat_service._ensure_llm()
     # Load knowledge base in background (slow - reads 779+ files)
     threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
+
+    # ── BIC Weekly Refresh Scheduler (BR-1) ───────────────────────────────
+    # Runs every Monday at 02:00 UTC; missed runs are retried within 1 hour.
+    bic_refresh_enabled = os.getenv("BIC_REFRESH_ENABLED", "true").lower() == "true"
+    if bic_refresh_enabled:
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler
+            from apscheduler.triggers.cron import CronTrigger
+
+            app.state.scheduler = BackgroundScheduler(timezone="UTC")
+            app.state.scheduler.add_job(
+                func=lambda: bic_refresh_service.refresh(trigger="scheduled"),
+                trigger=CronTrigger(day_of_week="mon", hour=2, minute=0),
+                id="bic_weekly_refresh",
+                name="Weekly BIC Dataset Refresh (ISO 9362 / OpenSanctions)",
+                misfire_grace_time=3600,  # retry up to 1 h after a missed window
+                coalesce=True,            # run once even if multiple windows were missed
+                replace_existing=True,
+            )
+            app.state.scheduler.start()
+            print("[BIC Refresh] Weekly scheduler started (every Monday 02:00 UTC).")
+        except ImportError:
+            print(
+                "[BIC Refresh] WARNING: 'apscheduler' not installed. "
+                "Automated weekly refresh is DISABLED. "
+                "Run: pip install apscheduler"
+            )
+    else:
+        print("[BIC Refresh] Automated refresh disabled via BIC_REFRESH_ENABLED=false.")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Gracefully stop the APScheduler background scheduler on server shutdown."""
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler and scheduler.running:
+        scheduler.shutdown(wait=False)
+        print("[BIC Refresh] Scheduler stopped.")
 
 @app.post("/validate", response_model=schemas.ValidationResponse)
 async def validate_message(
@@ -336,6 +380,84 @@ def get_codelist(list_name: str):
         raise HTTPException(status_code=404, detail="Codelist not found")
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+@app.get("/bics/search")
+def search_bics(query: str = "", limit: int = 20):
+    """Search for BIC codes and bank information"""
+    return validator.search_bics(query, limit)
+
+
+@app.post("/bics/refresh")
+def trigger_bic_refresh():
+    """
+    Manually trigger a BIC dataset refresh (BR-9).
+
+    The refresh runs in a background thread so this endpoint returns
+    immediately.  Poll ``GET /bics/refresh/status`` to track progress.
+
+    Returns 409 if a refresh is already running.
+    """
+    if bic_refresh_service.is_running:
+        raise HTTPException(
+            status_code=409,
+            detail="A BIC dataset refresh is already in progress. "
+                   "Check GET /bics/refresh/status for updates.",
+        )
+    import threading
+    threading.Thread(
+        target=lambda: bic_refresh_service.refresh(trigger="manual"),
+        daemon=True,
+        name="bic-manual-refresh",
+    ).start()
+    return {
+        "status": "refresh_started",
+        "message": (
+            "BIC dataset refresh has been triggered. "
+            "Check GET /bics/refresh/status for the outcome."
+        ),
+    }
+
+
+@app.get("/bics/refresh/status")
+def get_bic_refresh_status(limit: int = 10):
+    """
+    Return the most recent BIC dataset refresh log entries (BR-6, BR-9).
+
+    Args:
+        limit: Number of log entries to return (default 10, max 100).
+
+    Each entry contains:
+        - timestamp       ISO-8601 datetime of the attempt
+        - trigger         ``"scheduled"`` or ``"manual"``
+        - status          ``"SUCCESS"``, ``"FAILED"``, or ``"SKIPPED"``
+        - total_records   Number of JSONL records in the downloaded file
+        - records_added   BICs present in the new dataset but not the old
+        - records_removed BICs present in the old dataset but not the new
+        - error_message   Error detail when status is ``"FAILED"``
+        - dataset_url     Source URL used for the download
+    """
+    limit = min(max(1, limit), 100)
+    logs = bic_refresh_service.get_last_status(limit=limit)
+    return {
+        "refresh_in_progress": bic_refresh_service.is_running,
+        "logs": logs,
+    }
+
+
+@app.post("/bics/rollback/{version_hash}")
+def rollback_bic_dataset(version_hash: str):
+    """
+    Instantly roll back the active BIC dataset to a previous version hash (BR-ROLLBACK).
+    
+    This updates the 'entities.ftm.json' symlink and reloads the validator cache.
+    """
+    try:
+        result = bic_refresh_service.rollback(version_hash)
+        return result
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 # --- GLOBALLY READY: Serve Frontend ---
 # This allows the backend to serve the frontend UI in a production environment
