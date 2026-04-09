@@ -55,6 +55,14 @@ class FirebaseHistoryService:
         if project_id and private_key and client_email:
             # Fix escaped newlines (common when pasting from .env files)
             private_key = private_key.replace("\\n", "\n")
+            # Handle cases where the key might have been pasted with literal quotes into the env UI
+            if private_key.startswith('"') and private_key.endswith('"'):
+                private_key = private_key[1:-1]
+            # Also handle single quotes for good measure
+            if private_key.startswith("'") and private_key.endswith("'"):
+                private_key = private_key[1:-1]
+            # Strip again in case there was space inside quotes
+            private_key = private_key.strip()
 
             cert_dict = {
                 "type": "service_account",
