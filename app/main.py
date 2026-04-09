@@ -62,7 +62,11 @@ async def startup_event():
     # Init LLM on main thread (fast) so it's ready immediately
     chat_service._ensure_llm()
     # Load knowledge base in background (slow - reads 779+ files)
-    threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
+    chat_enabled = os.getenv("CHATBOT_ENABLED", "false").lower() == "true"
+    if chat_enabled:
+        threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
+    else:
+        print("[Chatbot] Knowledge base initialization skipped via CHATBOT_ENABLED=false (saves memory).")
 
     # ── BIC Weekly Refresh Scheduler (BR-1) ───────────────────────────────
     # Runs every Monday at 02:00 UTC; missed runs are retried within 1 hour.
@@ -329,46 +333,142 @@ def get_bulk_blocks(message_type: str):
 
 
 @app.post("/bulk-generate")
-def bulk_generate(request: dict):
+async def bulk_generate(request: dict):
     """
-    Generate N ISO 20022 messages of the given type with selected optional blocks.
-    Body: { message_type, count, selected_blocks }
-    Sync def so FastAPI runs it in a thread pool — avoids blocking the event loop.
+    Generate exactly N VALID ISO 20022 messages of the given type with selected optional blocks.
+
+    Uses an unbounded retry loop: generates, validates via full pipeline, keeps only PASS
+    results, and regenerates for every failure.  The loop does NOT stop until exactly `count`
+    valid messages are produced.
+
+    The requested count ALWAYS means "exactly this many VALID messages", never
+    "this many attempts" or "best effort".
+
+    Validation pipeline per message (ALL must pass):
+      1) Field population & XML build
+      2) XSD schema validation  (Layer 2 — mandatory gate)
+      3) Business rules         (Layer 3)
+      4) CBPR+ / Network rules
+
+    Catastrophic safety valve: if total attempts exceed count * 50, the endpoint raises
+    an explicit HTTP 500 error — it never returns partial results silently.
     """
-    message_type = request.get("message_type", "pacs.008")
+    import traceback as tb
+
+    message_type = request.get("message_type")
     count = int(request.get("count", 1))
     selected_blocks = request.get("selected_blocks", [])
 
-    if count < 1 or count > 500:
+    if count < 1 or (count > 500 and not os.environ.get("UNLIMITED_BULK")):
         raise HTTPException(status_code=400, detail="count must be between 1 and 500")
     if not message_type:
         raise HTTPException(status_code=400, detail="message_type is required")
 
-    messages = []
-    for i in range(1, count + 1):
-        try:
-            xml = generate_single_xml(message_type, selected_blocks, i)
-            messages.append({
-                "index": i,
-                "xml": xml,
-                "message_type": message_type,
-                "status": "generated",
-            })
-        except Exception as e:
-            messages.append({
-                "index": i,
-                "xml": f"<!-- Generation error: {str(e)} -->",
-                "message_type": message_type,
-                "status": "error",
-                "error": str(e),
-            })
+    print(f"\n{'='*70}")
+    print(f"[Bulk Gen] START — Type: {message_type}, Requested: {count}, Blocks: {selected_blocks}")
+    print(f"{'='*70}")
 
-    return {
+    valid_messages = []
+    attempts = 0
+    consecutive_failures = 0
+    # Catastrophic safety valve — prevents truly infinite loops due to systemic bugs
+    # This is intentionally very high (count * 50) so normal generation never hits it
+    catastrophic_limit = count * 50
+
+    # Track failure reasons for debugging
+    failure_reasons: dict = {}   # reason_string -> count
+    last_failure_details: list = []  # last N failure details for response
+    MAX_FAILURE_LOG = 10  # keep last N failure details in response
+
+    # ── EXACT-COUNT LOOP: keep going until we have exactly `count` valid messages ──
+    while len(valid_messages) < count:
+        attempts += 1
+        current_valid = len(valid_messages)
+
+        # ── Catastrophic safety valve ──
+        if attempts > catastrophic_limit:
+            summary = "; ".join(f"({v}x) {k[:100]}" for k, v in sorted(failure_reasons.items(), key=lambda x: -x[1])[:3])
+            error_detail = (
+                f"CRITICAL: Could not generate {count} valid {message_type} messages "
+                f"after {attempts - 1} attempts (produced {len(valid_messages)}). "
+                f"This indicates a systemic generation or validation issue. "
+                f"Top failure reasons: {summary}"
+            )
+            print(f"[Bulk Gen] 🚨 CATASTROPHIC LIMIT HIT: {error_detail}")
+            raise HTTPException(status_code=500, detail=error_detail)
+
+        try:
+            # 1. Generate XML
+            xml = generate_single_xml(message_type, selected_blocks, current_valid + 1)
+
+            # 2. Run Full Validation (Async) — L1, L2 (XSD), L3 (Business Rules)
+            report = await validator.validate(xml, mode="Full 1-3", message_type="Auto-detect")
+
+            # 3. Check result
+            if report.status == "PASS":
+                valid_messages.append({
+                    "index": current_valid + 1,
+                    "xml": xml,
+                    "message_type": report.message_type or message_type,
+                    "status": "VALID",
+                    "validation_report": report.to_dict()
+                })
+                consecutive_failures = 0  # reset on success
+                print(f"[Bulk Gen] Attempt {attempts}: ✅ VALID (Total valid: {current_valid + 1}/{count})")
+            else:
+                consecutive_failures += 1
+                # Collect failure reasons from the validation report
+                issues = report.to_dict().get("details", [])
+                error_codes = [f"{iss.get('code', 'UNKNOWN')}: {iss.get('message', '')[:80]}" for iss in issues if iss.get("severity") in ("ERROR", "CRITICAL")]
+                reason = "; ".join(error_codes[:3]) if error_codes else "Unknown validation failure"
+                failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+
+                # Keep last N failure details
+                if len(last_failure_details) >= MAX_FAILURE_LOG:
+                    last_failure_details.pop(0)
+                last_failure_details.append({
+                    "attempt": attempts,
+                    "status": report.status,
+                    "error_count": report.errors,
+                    "reasons": error_codes[:3]
+                })
+
+                print(f"[Bulk Gen] Attempt {attempts}: ❌ INVALID — {reason[:120]}")
+
+                # Log warning every 50 consecutive failures for visibility
+                if consecutive_failures % 50 == 0:
+                    print(f"[Bulk Gen] ⚠️  {consecutive_failures} consecutive failures — still retrying for {count - current_valid} more valid messages")
+
+        except Exception as e:
+            consecutive_failures += 1
+            err_msg = f"Generation exception: {str(e)}"
+            failure_reasons[err_msg] = failure_reasons.get(err_msg, 0) + 1
+            print(f"[Bulk Gen] Attempt {attempts}: 💥 ERROR — {err_msg}")
+            print(f"[Bulk Gen] Traceback: {tb.format_exc()}")
+
+            if consecutive_failures % 50 == 0:
+                print(f"[Bulk Gen] ⚠️  {consecutive_failures} consecutive failures — still retrying")
+
+    # ── Summary Log ──────────────────────────────────────────────────────────
+    print(f"\n{'─'*70}")
+    print(f"[Bulk Gen] COMPLETE — Valid: {len(valid_messages)}/{count}, Total attempts: {attempts}")
+    if failure_reasons:
+        print(f"[Bulk Gen] Failure breakdown:")
+        for reason, cnt in sorted(failure_reasons.items(), key=lambda x: -x[1]):
+            print(f"           ({cnt}x) {reason[:150]}")
+    print(f"{'─'*70}\n")
+
+    # ── Build response ───────────────────────────────────────────────────────
+    # At this point len(valid_messages) == count ALWAYS (or we raised HTTP 500)
+    response = {
         "message_type": message_type,
         "requested": count,
-        "count": len(messages),
-        "messages": messages
+        "count": len(valid_messages),
+        "total_attempts": attempts,
+        "messages": valid_messages,
     }
+
+    return response
 
 
 @app.get("/codelists/{list_name}")
