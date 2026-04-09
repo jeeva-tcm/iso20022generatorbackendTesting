@@ -12,7 +12,12 @@ try:
     from app.main import app
     
     if __name__ == "__main__":
-        uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=True)
+        # SERVER_PORT: set explicitly in .env or Render dashboard
+        # PORT: injected automatically by Render if SERVER_PORT is not set
+        port = int(os.getenv("SERVER_PORT") or os.getenv("PORT") or 8001)
+        host = os.getenv("SERVER_HOST", "0.0.0.0")
+        reload = os.getenv("RELOAD", "false").lower() == "true"
+        uvicorn.run("app.main:app", host=host, port=port, reload=reload)
 
 except ImportError as e:
     error_msg = f"MISSING DEPENDENCY: {str(e)}\n\nPlease run: pip install -r requirements.txt"
