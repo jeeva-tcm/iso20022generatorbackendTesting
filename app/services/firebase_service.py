@@ -27,8 +27,10 @@ class FirebaseHistoryService:
                 print("Firebase Firestore initialized successfully.")
             else:
                 print("ALERT: No Firebase credentials found.")
-                print("Please configure your .env file with Firebase credentials.")
-                print("See .env.example for reference.")
+                print(f"DEBUG: FIREBASE_PROJECT_ID: {'SET' if os.getenv('FIREBASE_PROJECT_ID') else 'MISSING'}")
+                print(f"DEBUG: FIREBASE_PRIVATE_KEY: {'SET' if os.getenv('FIREBASE_PRIVATE_KEY') else 'MISSING'}")
+                print(f"DEBUG: FIREBASE_CLIENT_EMAIL: {'SET' if os.getenv('FIREBASE_CLIENT_EMAIL') else 'MISSING'}")
+                print(f"DEBUG: FIREBASE_KEY_PATH: {'SET' if os.getenv('FIREBASE_KEY_PATH') else 'MISSING'}")
                 self.enabled = False
         except Exception as e:
             print(f"CRITICAL: Error initializing Firebase: {str(e)}")
