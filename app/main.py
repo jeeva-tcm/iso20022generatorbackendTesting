@@ -62,7 +62,11 @@ async def startup_event():
     # Init LLM on main thread (fast) so it's ready immediately
     chat_service._ensure_llm()
     # Load knowledge base in background (slow - reads 779+ files)
-    threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
+    chat_enabled = os.getenv("CHATBOT_ENABLED", "false").lower() == "true"
+    if chat_enabled:
+        threading.Thread(target=chat_service.initialize, args=(base_dir,), daemon=True).start()
+    else:
+        print("[Chatbot] Knowledge base initialization skipped via CHATBOT_ENABLED=false (saves memory).")
 
     # ── BIC Weekly Refresh Scheduler (BR-1) ───────────────────────────────
     # Runs every Monday at 02:00 UTC; missed runs are retried within 1 hour.
