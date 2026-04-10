@@ -64,27 +64,42 @@ class FirebaseHistoryService:
         Build Firebase credentials from environment variables.
 
         Priority:
-        1. Inline env vars (FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + ...)
+        1. Inline env vars (FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + FIREBASE_CLIENT_EMAIL)
         2. FIREBASE_KEY_PATH env var pointing to a JSON key file
         3. Legacy fallback: firebase-key.json in app/resources/
         """
 
         # --- Option 1: Inline credentials from env vars ---
-        project_id = os.getenv("FIREBASE_PROJECT_ID", "").strip()
-        private_key = os.getenv("FIREBASE_PRIVATE_KEY", "").strip()
+        project_id   = os.getenv("FIREBASE_PROJECT_ID",   "").strip()
+        private_key  = os.getenv("FIREBASE_PRIVATE_KEY",  "").strip()
         client_email = os.getenv("FIREBASE_CLIENT_EMAIL", "").strip()
 
-        if project_id and private_key and client_email:
-            # Fix escaped newlines (common when pasting from .env files)
-            private_key = private_key.replace("\\n", "\n")
-            # Handle cases where the key might have been pasted with literal quotes into the env UI
-            if private_key.startswith('"') and private_key.endswith('"'):
-                private_key = private_key[1:-1]
-            # Also handle single quotes for good measure
-            if private_key.startswith("'") and private_key.endswith("'"):
-                private_key = private_key[1:-1]
-            # Strip again in case there was space inside quotes
-            private_key = private_key.strip()
+        print(f"[Firebase] Credential check — "
+              f"project_id={'SET' if project_id else 'MISSING'}, "
+              f"client_email={'SET' if client_email else 'MISSING'}, "
+              f"private_key_length={len(private_key)}")
+
+        if project_id and client_email and private_key:
+            # ── Step 1: Strip surrounding quotes FIRST (before newline replacement).
+            # The .env file wraps the key in double quotes: FIREBASE_PRIVATE_KEY="..."
+            # Render's dashboard may store those quotes as part of the value.
+            if (private_key.startswith('"') and private_key.endswith('"')) or \
+               (private_key.startswith("'") and private_key.endswith("'")):
+                private_key = private_key[1:-1].strip()
+                print("[Firebase] Stripped surrounding quotes from FIREBASE_PRIVATE_KEY")
+
+            # ── Step 2: Replace escaped newlines → real newlines.
+            # (Must happen AFTER quote stripping, not before)
+            if "\\n" in private_key:
+                private_key = private_key.replace("\\n", "\n")
+                print("[Firebase] Replaced escaped \\n with real newlines in private key")
+
+            # ── Step 3: Validate the key looks sane.
+            if "BEGIN PRIVATE KEY" not in private_key:
+                print(f"[Firebase] WARNING: private key missing 'BEGIN PRIVATE KEY'. "
+                      f"First 50 chars: {repr(private_key[:50])}")
+            else:
+                print("[Firebase] Private key header looks valid — attempting to build credentials")
 
             cert_dict = {
                 "type": "service_account",
@@ -101,20 +116,27 @@ class FirebaseHistoryService:
                 ),
                 "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL", ""),
             }
-            print("Using inline Firebase credentials from environment variables.")
-            return credentials.Certificate(cert_dict)
+            try:
+                cred = credentials.Certificate(cert_dict)
+                print("[Firebase] Option 1 (inline env vars) — credentials created successfully")
+                return cred
+            except Exception as e:
+                print(f"[Firebase] Option 1 FAILED: {type(e).__name__}: {e}")
+                # Fall through to file-based options
 
         # --- Option 2: Key file path from env var ---
         key_path_env = os.getenv("FIREBASE_KEY_PATH", "").strip()
         if key_path_env:
-            # Resolve relative paths from the backend root
             if not os.path.isabs(key_path_env):
                 key_path_env = os.path.join(_backend_root, key_path_env)
             if os.path.exists(key_path_env):
-                print(f"Using Firebase key file from FIREBASE_KEY_PATH: {key_path_env}")
-                return credentials.Certificate(key_path_env)
+                print(f"[Firebase] Option 2 — using key file: {key_path_env}")
+                try:
+                    return credentials.Certificate(key_path_env)
+                except Exception as e:
+                    print(f"[Firebase] Option 2 FAILED: {e}")
             else:
-                print(f"WARNING: FIREBASE_KEY_PATH is set but file not found: {key_path_env}")
+                print(f"[Firebase] Option 2 — FIREBASE_KEY_PATH set but file not found: {key_path_env}")
 
         # --- Option 3: Legacy fallback ---
         legacy_path = os.path.join(
@@ -122,9 +144,13 @@ class FirebaseHistoryService:
             "resources", "firebase-key.json"
         )
         if os.path.exists(legacy_path):
-            print(f"Using legacy Firebase key file: {legacy_path}")
-            return credentials.Certificate(legacy_path)
+            print(f"[Firebase] Option 3 — using legacy key file: {legacy_path}")
+            try:
+                return credentials.Certificate(legacy_path)
+            except Exception as e:
+                print(f"[Firebase] Option 3 FAILED: {e}")
 
+        print("[Firebase] CRITICAL: No valid credentials found via any option.")
         return None
 
     def save_history(self, record: Dict[str, Any]) -> str:
