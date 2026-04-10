@@ -128,30 +128,48 @@ class FirebaseHistoryService:
         return None
 
     def save_history(self, record: Dict[str, Any]) -> str:
-        """Saves a validation report to Firestore"""
+        """Saves a validation report to Firestore."""
         if not self.enabled:
+            # This prints in Render logs so you can see Firebase is disabled
+            print("[Firebase] SKIPPED save_history: Firebase is disabled (credentials not loaded).")
             return None
-        
-        # Convert timestamp to native Firestore timestamp if it's a datetime
-        if "timestamp" not in record:
-            record["timestamp"] = datetime.now(timezone.utc)
-        elif isinstance(record["timestamp"], str):
-            # Parse ISO string if needed
-            try:
-                record["timestamp"] = datetime.fromisoformat(record["timestamp"].replace("Z", "+00:00"))
-            except:
+
+        try:
+            # Convert timestamp string to native datetime for Firestore
+            if "timestamp" not in record:
                 record["timestamp"] = datetime.now(timezone.utc)
-        
-        if "deleted" not in record:
-            record["deleted"] = False
-            
-        doc_id = record["validation_id"]
-        if record.get("file_id"):
-            doc_id = f"{record['validation_id']}_{record['file_id']}"
-            
-        doc_ref = self.db.collection("validation_history").document(doc_id)
-        doc_ref.set(record)
-        return doc_id
+            elif isinstance(record["timestamp"], str):
+                try:
+                    record["timestamp"] = datetime.fromisoformat(record["timestamp"].replace("Z", "+00:00"))
+                except Exception:
+                    record["timestamp"] = datetime.now(timezone.utc)
+
+            if "deleted" not in record:
+                record["deleted"] = False
+
+            # Sanitize the full record so no Python-only types reach Firestore.
+            # report_json in particular can contain nested datetime objects.
+            # We sanitize everything EXCEPT the timestamp field which Firestore
+            # natively accepts as a Python datetime.
+            saved_timestamp = record.get("timestamp")
+            sanitized = _sanitize_firestore_doc(record)
+            # Restore the Python datetime so Firestore indexes it as a Timestamp
+            sanitized["timestamp"] = saved_timestamp
+
+            doc_id = sanitized["validation_id"]
+            if sanitized.get("file_id"):
+                doc_id = f"{sanitized['validation_id']}_{sanitized['file_id']}"
+
+            doc_ref = self.db.collection("validation_history").document(doc_id)
+            doc_ref.set(sanitized)
+            print(f"[Firebase] Saved document: {doc_id}")
+            return doc_id
+
+        except Exception as e:
+            print(f"[Firebase] ERROR in save_history: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     def get_history(self, skip: int = 0, limit: int = 5000) -> List[Dict[str, Any]]:
         """Retrieves history records from Firestore"""
@@ -443,4 +461,29 @@ class FirebaseHistoryService:
         except Exception as e:
             print(f"Error checking duplicate MsgId/UETR in Firestore: {e}")
             return False
+
+    def test_write(self) -> dict:
+        """
+        Writes a small test document to Firestore and immediately deletes it.
+        Useful for diagnosing Render connectivity — hit /firebase-write-test endpoint.
+        Returns a dict with 'success' and optionally 'error'.
+        """
+        if not self.enabled:
+            return {"success": False, "error": "Firebase not enabled — credentials missing or failed to load."}
+        try:
+            test_id = f"_write_test_{int(datetime.now(timezone.utc).timestamp())}"
+            doc_ref = self.db.collection("validation_history").document(test_id)
+            doc_ref.set({
+                "_test": True,
+                "timestamp": datetime.now(timezone.utc),
+                "deleted": True  # invisible to normal history queries
+            })
+            doc_ref.delete()  # clean up immediately
+            print(f"[Firebase] test_write succeeded (doc_id={test_id})")
+            return {"success": True, "doc_id": test_id}
+        except Exception as e:
+            print(f"[Firebase] test_write FAILED: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "error": str(e)}
 

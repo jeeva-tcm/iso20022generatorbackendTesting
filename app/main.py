@@ -585,6 +585,7 @@ def firebase_status():
         "enabled": history_service.enabled,
         "project_id": os.getenv("FIREBASE_PROJECT_ID", "MISSING"),
         "client_email": os.getenv("FIREBASE_CLIENT_EMAIL", "MISSING"),
+        "key_path": os.getenv("FIREBASE_KEY_PATH", "NOT SET"),
         "pk_length": len(pk),
         "pk_starts_with": pk[:30] if pk else "MISSING",
         "pk_ends_with": pk[-20:] if pk else "MISSING",
@@ -592,6 +593,19 @@ def firebase_status():
         "pk_contains_real_newlines": "\n" in pk,
         "cors": os.getenv("CORS_ORIGINS", "MISSING")
     }
+
+@app.get("/firebase-write-test")
+def firebase_write_test():
+    """
+    Diagnostic: tries to write a test document to Firestore and deletes it.
+    Hit this URL on Render to instantly confirm Firebase connectivity.
+    """
+    result = history_service.test_write()
+    if not result.get("success"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail=result)
+    return result
+
 
 @app.get("/")
 def health_check():

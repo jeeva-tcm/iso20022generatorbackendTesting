@@ -1,0 +1,21 @@
+# Never bake secrets into the Docker image.
+# Set these as Environment Variables in Render's dashboard instead.
+.env
+.env.local
+app/resources/firebase-key.json
+
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+ENV/
+
+# Development tools
+.idea/
+.vscode/
+*.log
+crash_report.txt
+startup_error.txt
+debug_output.txt
