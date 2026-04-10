@@ -64,12 +64,28 @@ class FirebaseHistoryService:
         Build Firebase credentials from environment variables.
 
         Priority:
+        0. FIREBASE_CREDENTIALS_BASE64 — entire service account JSON, base64-encoded (RECOMMENDED for Render)
         1. Inline env vars (FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + FIREBASE_CLIENT_EMAIL)
         2. FIREBASE_KEY_PATH env var pointing to a JSON key file
         3. Legacy fallback: firebase-key.json in app/resources/
         """
 
-        # --- Option 1: Inline credentials from env vars ---
+        # --- Option 0: Single base64-encoded JSON blob (works perfectly on Render) ---
+        b64_creds = os.getenv("FIREBASE_CREDENTIALS_BASE64", "").strip()
+        if b64_creds:
+            print("[Firebase] Option 0 — found FIREBASE_CREDENTIALS_BASE64, decoding...")
+            try:
+                import base64 as _b64
+                cred_json = _b64.b64decode(b64_creds).decode("utf-8")
+                cred_dict = json.loads(cred_json)
+                cred = credentials.Certificate(cred_dict)
+                print(f"[Firebase] Option 0 — credentials decoded successfully "
+                      f"(project: {cred_dict.get('project_id')})")
+                return cred
+            except Exception as e:
+                print(f"[Firebase] Option 0 FAILED: {type(e).__name__}: {e}")
+                # Fall through to other options
+
         project_id   = os.getenv("FIREBASE_PROJECT_ID",   "").strip()
         private_key  = os.getenv("FIREBASE_PRIVATE_KEY",  "").strip()
         client_email = os.getenv("FIREBASE_CLIENT_EMAIL", "").strip()

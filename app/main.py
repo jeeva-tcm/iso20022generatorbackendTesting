@@ -581,14 +581,17 @@ if os.path.exists(frontend_path):
 def firebase_status():
     import os
     pk = os.getenv("FIREBASE_PRIVATE_KEY", "")
+    b64 = os.getenv("FIREBASE_CREDENTIALS_BASE64", "")
     return {
         "enabled": history_service.enabled,
+        # --- New single-var approach (recommended for Render) ---
+        "b64_creds_set": bool(b64),
+        "b64_creds_length": len(b64),
+        # --- Legacy per-var approach ---
         "project_id": os.getenv("FIREBASE_PROJECT_ID", "MISSING"),
         "client_email": os.getenv("FIREBASE_CLIENT_EMAIL", "MISSING"),
         "key_path": os.getenv("FIREBASE_KEY_PATH", "NOT SET"),
         "pk_length": len(pk),
-        "pk_starts_with": pk[:30] if pk else "MISSING",
-        "pk_ends_with": pk[-20:] if pk else "MISSING",
         "pk_contains_escaped_newlines": "\\n" in pk,
         "pk_contains_real_newlines": "\n" in pk,
         "cors": os.getenv("CORS_ORIGINS", "MISSING")
