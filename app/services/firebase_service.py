@@ -11,6 +11,28 @@ _backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 load_dotenv(os.path.join(_backend_root, ".env"))
 
 
+def _sanitize_firestore_doc(obj: Any) -> Any:
+    """
+    Recursively converts Firestore-specific types to JSON-serializable Python types.
+    - DatetimeWithNanoseconds / datetime  →  ISO-8601 string (UTC, ending in 'Z')
+    - dict  →  recursively sanitized dict
+    - list  →  recursively sanitized list
+    All other types pass through unchanged.
+    """
+    if obj is None:
+        return obj
+    # Firestore DatetimeWithNanoseconds is a subclass of datetime
+    if isinstance(obj, datetime):
+        if obj.tzinfo is None:
+            obj = obj.replace(tzinfo=timezone.utc)
+        return obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(obj, dict):
+        return {k: _sanitize_firestore_doc(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_firestore_doc(item) for item in obj]
+    return obj
+
+
 class FirebaseHistoryService:
     def __init__(self):
         self.db = None
@@ -137,21 +159,27 @@ class FirebaseHistoryService:
             return []
             
         try:
-            # We filter for deleted=False in Python to avoid requiring a composite index in Firestore.
+            # Filter deleted=False in Python to avoid requiring a composite Firestore index.
             query = self.db.collection("validation_history") \
                           .order_by("timestamp", direction=firestore.Query.DESCENDING)
             
             docs = query.stream()
             results = []
-            count = 0
+            non_deleted_count = 0  # tracks position among non-deleted docs for skip
             for doc in docs:
                 data = doc.to_dict()
-                if not data.get("deleted", False):
-                    if count >= skip:
-                        results.append(data)
-                    count += 1
+                if data.get("deleted", False):
+                    continue  # skip soft-deleted records entirely
+
+                if non_deleted_count >= skip:
+                    # Sanitize Firestore timestamps before serialization
+                    results.append(_sanitize_firestore_doc(data))
                     if len(results) >= limit:
+                        non_deleted_count += 1
                         break
+
+                non_deleted_count += 1
+
             return results
         except Exception as e:
             print(f"Error fetching Firestore history: {e}")
@@ -290,18 +318,52 @@ class FirebaseHistoryService:
         return total_deleted
 
     def get_detail(self, validation_id: str) -> Optional[Dict[str, Any]]:
-        """Gets full report and original message"""
+        """
+        Gets full report and original message for a given validation_id.
+
+        Lookup order:
+        1. Exact document ID match (bare validation_id, e.g. 'VAL100426000001').
+        2. Composite document ID match (e.g. 'VAL100426000001_FILE0001') — used
+           when a batch was submitted with file_id tracking.
+        3. Firestore query by the 'batch_id' field — catches cases where the
+           document was saved under a composite key but the caller only has the
+           batch/validation ID portion.
+        """
         if not self.enabled:
             return None
         try:
-            doc = self.db.collection("validation_history").document(validation_id).get()
+            collection = self.db.collection("validation_history")
+
+            # --- Attempt 1: exact document ID ---
+            doc = collection.document(validation_id).get()
             if doc.exists:
                 data = doc.to_dict()
                 if not data.get("deleted", False):
-                    return data
+                    return _sanitize_firestore_doc(data)
+
+            # --- Attempt 2: query by validation_id field (handles composite keys) ---
+            docs = list(
+                collection.where("validation_id", "==", validation_id)
+                          .where("deleted", "==", False)
+                          .limit(1)
+                          .stream()
+            )
+            if docs:
+                return _sanitize_firestore_doc(docs[0].to_dict())
+
+            # --- Attempt 3: query by batch_id field ---
+            docs = list(
+                collection.where("batch_id", "==", validation_id)
+                          .where("deleted", "==", False)
+                          .limit(1)
+                          .stream()
+            )
+            if docs:
+                return _sanitize_firestore_doc(docs[0].to_dict())
+
             return None
         except Exception as e:
-            print(f"Error fetching detail: {e}")
+            print(f"Error fetching detail for '{validation_id}': {e}")
             return None
 
     def get_next_sequence(self, date_str: str) -> int:
