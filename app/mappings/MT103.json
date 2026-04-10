@@ -155,6 +155,12 @@
             "name": "Remittance Information",
             "type": "text",
             "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/RmtInf/Ustrd"
+        },
+        {
+            "mt_tag": "72",
+            "name": "Sender to Receiver Information",
+            "type": "sender_to_receiver_info",
+            "mx_path": "FIToFICstmrCdtTrf/CdtTrfTxInf/InstrForCdtrAgt"
         }
     ]
 }

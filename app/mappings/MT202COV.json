@@ -122,7 +122,7 @@
         {
             "mt_tag": "50K",
             "name": "Ordering Customer (Undrlyg Dbtr)",
-            "mandatory": true,
+            "mandatory": false,
             "type": "account_name_address",
             "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/Nm",
             "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Dbtr/PstlAdr/AdrLine",
@@ -131,11 +131,25 @@
         {
             "mt_tag": "59",
             "name": "Beneficiary Customer (Undrlyg Cdtr)",
-            "mandatory": true,
+            "mandatory": false,
             "type": "account_name_address",
             "mx_path_name": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/Nm",
             "mx_path_address": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/Cdtr/PstlAdr/AdrLine",
             "mx_path_account": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/CdtrAcct/Id/Othr/Id"
+        },
+        {
+            "mt_tag": "70",
+            "name": "Remittance Information (Underlying Customer)",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/UndrlygCstmrCdtTrf/RmtInf/Ustrd"
+        },
+        {
+            "mt_tag": "71A",
+            "name": "Details of Charges",
+            "mandatory": false,
+            "type": "text",
+            "mx_path": "FICdtTrf/CdtTrfTxInf/ChrgBr"
         },
         {
             "mt_tag": "_uetr",
