@@ -1823,3 +1823,40 @@ class MT2MXConverter:
                     self.set_element_text(pty_node, "Nm", "UNKNOWN DEBTOR", namespaces)
                     # Clear parent text
                     dbtr_node.text = None
+
+            # 3. Ensure Dbtr/Pty has PstlAdr if Nm is present
+            for child in list(itm):
+                if child.tag.split("}")[-1] == "Dbtr":
+                    for subchild in list(child):
+                        if subchild.tag.split("}")[-1] == "Pty":
+                            has_nm = False
+                            has_pstl_adr = False
+                            for pty_child in list(subchild):
+                                if pty_child.tag.split("}")[-1] == "Nm":
+                                    has_nm = True
+                                elif pty_child.tag.split("}")[-1] == "PstlAdr":
+                                    has_pstl_adr = True
+                            
+                            if has_nm and not has_pstl_adr:
+                                pstl_adr_tag = f"{{{xmlns}}}PstlAdr" if xmlns else "PstlAdr"
+                                pstl_adr = ET.SubElement(subchild, pstl_adr_tag)
+                                self.set_element_text(pstl_adr, "Ctry", "US", namespaces)
+                                self.set_element_text(pstl_adr, "TwnNm", "UNKNOWN TOWN", namespaces)
+                                self.set_element_text(pstl_adr, "AdrLine", "UNKNOWN ADDRESS", namespaces)
+
+        # 4. GLOBAL CBPR+ HEALING: Ensure all Pty elements with Nm have PstlAdr
+        for pty in root.iter(f"{{{xmlns}}}Pty" if xmlns else "Pty"):
+            has_nm = False
+            has_pstl_adr = False
+            for child in list(pty):
+                if child.tag.split("}")[-1] == "Nm":
+                    has_nm = True
+                elif child.tag.split("}")[-1] == "PstlAdr":
+                    has_pstl_adr = True
+            
+            if has_nm and not has_pstl_adr:
+                pstl_adr_tag = f"{{{xmlns}}}PstlAdr" if xmlns else "PstlAdr"
+                pstl_adr = ET.SubElement(pty, pstl_adr_tag)
+                self.set_element_text(pstl_adr, "Ctry", "US", namespaces)
+                self.set_element_text(pstl_adr, "TwnNm", "UNKNOWN TOWN", namespaces)
+                self.set_element_text(pstl_adr, "AdrLine", "UNKNOWN ADDRESS", namespaces)
