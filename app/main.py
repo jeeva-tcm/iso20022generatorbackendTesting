@@ -409,7 +409,7 @@ async def bulk_generate(request: dict):
                 valid_messages.append({
                     "index": current_valid + 1,
                     "xml": xml,
-                    "message_type": report.message_type or message_type,
+                    "message_type": message_type,
                     "status": "VALID",
                     "validation_report": report.to_dict()
                 })

@@ -367,11 +367,14 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             except:
                 pass # Non-critical failure
 
-            # Final check to force COV variant on report if elements are present
-            if report.message_type and report.message_type.startswith("pacs.009") and "cov" not in report.message_type.lower():
+            # Final check to force COV or ADV variant on report if elements are present
+            if report.message_type and report.message_type.startswith("pacs.009") and "cov" not in report.message_type.lower() and "adv" not in report.message_type.lower():
                 if "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
                     report.message_type = "pacs.009.cov"
                     detected_type = "pacs.009.cov"
+                elif "<Prtry>ADV</Prtry>" in xml_content:
+                    report.message_type = "pacs.009.adv"
+                    detected_type = "pacs.009.adv"
 
             # STEP 4.5: DATE VALIDATION — runs on raw XML before Layer 2
             # so past-date errors are ALWAYS reported even when XSD also fails.
@@ -2392,6 +2395,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         # Special handling for internal refined types
         if message_type == "pacs.009.cov":
             message_type = "pacs.009.001.08" # Use standard version for XSD
+        elif message_type == "pacs.009.adv":
+            message_type = "pacs.009.001.12"
 
         # 1. Exact Match
         exact_xsd = f"{message_type}.xsd"

@@ -7,6 +7,10 @@ import random
 import string
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
+import contextvars
+
+# Context variable to hold selected blocks for deep XML generators
+selected_blocks_ctx = contextvars.ContextVar('selected_blocks', default=set())
 
 # ── Random Data Pools ──────────────────────────────────────────────────────────
 FIRST_NAMES = ["James", "Emma", "Oliver", "Sophia", "Liam", "Ava", "Noah", "Isabella",
@@ -37,7 +41,7 @@ BIC_COUNTRIES = {
     "NL": "NL", "SE": "SS",
     "NO": "NO", "DK": "KK", "BE": "BB", "AT": "WW", "IT": "MM",
 }
-CHARGE_BEARERS = ["SLEV", "SHAR", "CRED", "DEBT"]
+CHARGE_BEARERS = ["SHAR", "CRED", "DEBT"]
 SETTLEMENT_METHODS = ["INDA", "INGA"]
 RETURN_REASONS = ["AC01", "AC04", "AC06", "AG01", "AM04", "CUST", "FF01", "MD01", "MS03", "RR01"]
 SERVICE_LEVELS = ["G001", "SDVA", "URGP", "NURG"]
@@ -144,7 +148,19 @@ def rng_datetime() -> str:
       - Must have explicit timezone offset like +00:00
     """
     d = datetime.now(timezone.utc)
-    return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    # Use a safe business time (e.g., 10 AM) to avoid daily cutoff errors (CUT001) during generation
+    return d.strftime("%Y-%m-%dT10:00:00+00:00")
+
+
+def rng_currency_and_country() -> tuple[str, str]:
+    """Returns a valid (currency, country_code) pair that will pass business rules."""
+    curr_map = {
+        "GB": "GBP", "DE": "EUR", "FR": "EUR", "NL": "EUR", "BE": "EUR",
+        "AT": "EUR", "IT": "EUR", "ES": "EUR", "PT": "EUR", "SE": "SEK",
+        "NO": "NOK", "DK": "DKK", "CH": "CHF", "US": "USD", "CA": "CAD"
+    }
+    country = random.choice(list(curr_map.keys()))
+    return curr_map[country], country
 
 
 def rng_id(prefix: str = "", length: int = 16, max_total: int = 35) -> str:
@@ -197,11 +213,44 @@ def tag_wrap(tag: str, content: str, indent: int = 3) -> str:
     return f"{tabs(indent)}<{tag}>\n{content}{tabs(indent)}</{tag}>\n"
 
 
+def _rng_pstl_adr(indent: int, country: str = None) -> str:
+    t2 = tabs(indent)
+    t3 = tabs(indent + 1)
+    c = country or rng_country()
+    
+    xml = f"{t2}<PstlAdr>\n"
+    # Include all requested fields with randomized data IN STRICT XSD ORDER:
+    # StrtNm, BldgNb, BldgNm, PstCd, TwnNm, Ctry, AdrLine
+    xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+    xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+    if random.random() > 0.3:
+        xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
+    xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
+    xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+    xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+    xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Ave</AdrLine>\n"
+    xml += f"{t3}<AdrLine>Suite {random.randint(1, 100)}</AdrLine>\n"
+    xml += f"{t2}</PstlAdr>\n"
+    return xml
+
+
 def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
     t = tabs(indent)
     t1 = tabs(indent + 1)
     t2 = tabs(indent + 2)
-    return f"{t}<{tag}>\n{t1}<FinInstnId>\n{t2}<BICFI>{xe(bic)}</BICFI>\n{t1}</FinInstnId>\n{t}</{tag}>\n"
+    
+    xml = f"{t}<{tag}>\n{t1}<FinInstnId>\n{t2}<BICFI>{xe(bic)}</BICFI>\n"
+    
+    # Exclude InstgAgt and InstdAgt from getting the address
+    exclude_tags = {"InstgAgt", "InstdAgt"}
+    
+    # Randomly include Name and Address (must coexist per CBPR+)
+    if tag not in exclude_tags and random.random() < 0.5:
+        xml += f"{t2}<Nm>{xe(random.choice(COMPANY_NAMES))} Bank</Nm>\n"
+        xml += _rng_pstl_adr(indent + 2)
+        
+    xml += f"{t1}</FinInstnId>\n{t}</{tag}>\n"
+    return xml
 
 
 def account_xml(tag: str, iban: str, indent: int = 4) -> str:
@@ -222,9 +271,13 @@ def account_othr_xml(tag: str, acct_id: str, indent: int = 4) -> str:
 def party_xml(tag: str, name: str, country: str, indent: int = 4) -> str:
     t = tabs(indent)
     t1 = tabs(indent + 1)
-    t2 = tabs(indent + 2)
+    
     content = f"{t1}<Nm>{xe(name)}</Nm>\n"
-    content += f"{t1}<PstlAdr>\n{t2}<Ctry>{xe(country)}</Ctry>\n{t1}</PstlAdr>\n"
+    
+    # Always include full address (StrtNm, BldgNb, PstCd, TwnNm, Ctry, AdrLine)
+    # CBPR+ rule: If PstlAdr is used and AdrLine is absent, TwnNm + Ctry are mandatory
+    content += _rng_pstl_adr(indent + 1, country)
+        
     return f"{t}<{tag}>\n{content}{t}</{tag}>\n"
 
 
@@ -282,8 +335,30 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
         {"id": "intermediary_agent_3",       "label": "Intermediary Agent 3",        "mandatory": False, "requires": ["intermediary_agent_2"]},
         {"id": "intermediary_agent_3_account","label": "Intermediary Agent 3 Account","mandatory": False, "requires": ["intermediary_agent_3"]},
-        {"id": "ultimate_debtor",            "label": "Ultimate Debtor",             "mandatory": False},
-        {"id": "ultimate_creditor",          "label": "Ultimate Creditor",           "mandatory": False},
+        {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
+        {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
+        {"id": "settlement_time_request",    "label": "Settlement Time Request",     "mandatory": False},
+    ],
+    "pacs.009.adv": [
+        {"id": "instructing_agent",          "label": "Instructing Agent",           "mandatory": True},
+        {"id": "instructed_agent",           "label": "Instructed Agent",            "mandatory": True},
+        {"id": "debtor",                     "label": "Debtor (FI)",                 "mandatory": True},
+        {"id": "debtor_account",             "label": "Debtor Account",              "mandatory": False},
+        {"id": "debtor_agent",               "label": "Debtor Agent",                "mandatory": False},
+        {"id": "debtor_agent_account",       "label": "Debtor Agent Account",        "mandatory": False, "requires": ["debtor_agent"]},
+        {"id": "creditor_agent",             "label": "Creditor Agent",              "mandatory": False},
+        {"id": "creditor_agent_account",     "label": "Creditor Agent Account",      "mandatory": False, "requires": ["creditor_agent"]},
+        {"id": "creditor",                   "label": "Creditor (FI)",               "mandatory": True},
+        {"id": "creditor_account",           "label": "Creditor Account",            "mandatory": False},
+        {"id": "previous_instructing_agent_1","label": "Previous Instructing Agent 1","mandatory": False},
+        {"id": "previous_instructing_agent_2","label": "Previous Instructing Agent 2","mandatory": False, "requires": ["previous_instructing_agent_1"]},
+        {"id": "previous_instructing_agent_3","label": "Previous Instructing Agent 3","mandatory": False, "requires": ["previous_instructing_agent_2"]},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
+        {"id": "intermediary_agent_1_account","label": "Intermediary Agent 1 Account","mandatory": False, "requires": ["intermediary_agent_1"]},
+        {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
+        {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
+        {"id": "intermediary_agent_3",       "label": "Intermediary Agent 3",        "mandatory": False, "requires": ["intermediary_agent_2"]},
+        {"id": "intermediary_agent_3_account","label": "Intermediary Agent 3 Account","mandatory": False, "requires": ["intermediary_agent_3"]},
         {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
         {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
         {"id": "settlement_time_request",    "label": "Settlement Time Request",     "mandatory": False},
@@ -305,8 +380,6 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
         {"id": "intermediary_agent_3",       "label": "Intermediary Agent 3",        "mandatory": False, "requires": ["intermediary_agent_2"]},
-        {"id": "ultimate_debtor",            "label": "Ultimate Debtor",             "mandatory": False},
-        {"id": "ultimate_creditor",          "label": "Ultimate Creditor",           "mandatory": False},
         {"id": "underlying_customer_credit_transfer", "label": "Underlying Customer Credit Transfer (COV)", "mandatory": True},
         {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
         {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
@@ -470,6 +543,8 @@ def get_blocks_for_message(msg_type: str) -> List[Dict]:
         return MESSAGE_BLOCKS["pacs.008"]
     if "pacs.009" in key and "cov" in key:
         return MESSAGE_BLOCKS["pacs.009.cov"]
+    if "pacs.009" in key and "adv" in key:
+        return MESSAGE_BLOCKS["pacs.009.adv"]
     if "pacs.009" in key:
         return MESSAGE_BLOCKS["pacs.009"]
     if "pacs.004" in key:
@@ -508,7 +583,7 @@ def get_blocks_for_message(msg_type: str) -> List[Dict]:
 # ── Pacs.008 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs008(selected: set, idx: int) -> str:
-    ccy = rng_currency()
+    ccy, iban_country = rng_currency_and_country()
     from_bic = rng_bic("GB")
     to_bic = rng_bic("GB")
     biz_msg_id = rng_id("BIZ", 16)
@@ -526,28 +601,43 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     # Party data
     debtor_name = rng_name()
     creditor_name = rng_name()
-    debtor_ctry = rng_country()
-    creditor_ctry = rng_country()
-    debtor_bic = rng_bic()
-    creditor_bic = rng_bic()
+    debtor_ctry = iban_country
+    creditor_ctry = iban_country
+    debtor_iban = rng_iban(iban_country)
+    creditor_iban = rng_iban(iban_country)
+    debtor_bic = rng_bic(iban_country)
+    creditor_bic = rng_bic(iban_country)
     instg_bic = from_bic
     instd_bic = to_bic
-    debtor_iban = rng_iban()
-    creditor_iban = rng_iban()
 
-    # Transaction XML
+    # Transaction XML — elements MUST follow strict XSD CreditTransferTransaction39 sequence
     tx = ""
 
-    # PmtTpInf
+    # 1. PmtTpInf (optional)
     if "payment_type_information" in selected:
         svc = random.choice(SERVICE_LEVELS)
         tx += f"\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>{svc}</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n"
 
+    # 2. IntrBkSttlmAmt (mandatory)
     tx += f"\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
+
+    # 3. IntrBkSttlmDt
     tx += el("IntrBkSttlmDt", sttlm_dt, 4)
+
+    # 4. SttlmTmReq (optional) — must come BEFORE InstdAmt per XSD
+    if "settlement_time_request" in selected:
+        tx += f"\t\t\t\t<SttlmTmReq>\n\t\t\t\t\t<CLSTm>14:00:00+00:00</CLSTm>\n\t\t\t\t</SttlmTmReq>\n"
+
+    # 4b. InstdAmt — MANDATORY when ChrgsInf is present (CBPR+ rule)
+    if "charges_information" in selected:
+        instd_amt = rng_amount(ccy)
+        tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{instd_amt}</InstdAmt>\n"
+
+    # 5. ChrgBr (MANDATORY in pacs.008) — exclude SHAR/SLEV per business rules
+    charge_br = random.choice(["CRED", "DEBT"])
     tx += el("ChrgBr", charge_br, 4)
 
-    # ChrgsInf
+    # 6. ChrgsInf (optional)
     if "charges_information" in selected:
         chg_ccy = ccy
         chg_amt = rng_amount(chg_ccy)
@@ -557,7 +647,7 @@ def _gen_pacs008(selected: set, idx: int) -> str:
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
 
-    # PrvsInstgAgt1/2/3
+    # 7. PrvsInstgAgt1/2/3 (optional)
     if "previous_instructing_agent_1" in selected:
         tx += agent_xml("PrvsInstgAgt1", rng_bic(), 4)
     if "previous_instructing_agent_2" in selected:
@@ -565,13 +655,13 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     if "previous_instructing_agent_3" in selected:
         tx += agent_xml("PrvsInstgAgt3", rng_bic(), 4)
 
-    # InstgAgt / InstdAgt at txn level
+    # 8. InstgAgt / InstdAgt (in CdtTrfTxInf per XSD v13 CreditTransferTransaction70)
     if "instructing_agent" in selected:
         tx += agent_xml("InstgAgt", instg_bic, 4)
     if "instructed_agent" in selected:
         tx += agent_xml("InstdAgt", instd_bic, 4)
 
-    # IntrmyAgts
+    # 9. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
         intr1_bic = rng_bic()
         tx += agent_xml("IntrmyAgt1", intr1_bic, 4)
@@ -588,37 +678,37 @@ def _gen_pacs008(selected: set, idx: int) -> str:
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
-    # SttlmTmReq
-    if "settlement_time_request" in selected:
-        tx += f"\t\t\t\t<SttlmTmReq>\n\t\t\t\t\t<CLSTm>14:00:00+00:00</CLSTm>\n\t\t\t\t</SttlmTmReq>\n"
-
-    # UltmtDbtr
+    # 10. UltmtDbtr (optional)
     if "ultimate_debtor" in selected:
         tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
 
-    # Dbtr, DbtrAcct, DbtrAgt, DbtrAgtAcct
-    if "debtor" in selected:
-        tx += party_xml("Dbtr", debtor_name, debtor_ctry, 4)
-    if "debtor_account" in selected:
-        tx += account_xml("DbtrAcct", debtor_iban, 4)
-    if "debtor_agent" in selected:
-        tx += agent_xml("DbtrAgt", debtor_bic, 4)
+    # 11. Dbtr (mandatory)
+    tx += party_xml("Dbtr", debtor_name, debtor_ctry, 4)
+
+    # 12. DbtrAcct (mandatory)
+    tx += account_xml("DbtrAcct", debtor_iban, 4)
+
+    # 13. DbtrAgt (mandatory)
+    tx += agent_xml("DbtrAgt", debtor_bic, 4)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
-    # CdtrAgt, CdtrAgtAcct, Cdtr, CdtrAcct, UltmtCdtr
-    if "creditor_agent" in selected:
-        tx += agent_xml("CdtrAgt", creditor_bic, 4)
+    # 14. CdtrAgt (mandatory)
+    tx += agent_xml("CdtrAgt", creditor_bic, 4)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
-    if "creditor" in selected:
-        tx += party_xml("Cdtr", creditor_name, creditor_ctry, 4)
-    if "creditor_account" in selected:
-        tx += account_xml("CdtrAcct", creditor_iban, 4)
+
+    # 15. Cdtr (mandatory)
+    tx += party_xml("Cdtr", creditor_name, creditor_ctry, 4)
+
+    # 16. CdtrAcct (mandatory)
+    tx += account_xml("CdtrAcct", creditor_iban, 4)
+
+    # 17. UltmtCdtr (optional)
     if "ultimate_creditor" in selected:
         tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
 
-    # RmtInf
+    # 18. RmtInf (optional)
     if "remittance_information" in selected:
         rmt_ref = rng_id("REF", 16)
         tx += f"\t\t\t\t<RmtInf>\n\t\t\t\t\t<Ustrd>{xe(rmt_ref)}</Ustrd>\n\t\t\t\t</RmtInf>\n"
@@ -631,11 +721,11 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.008.001.13</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.13">
 \t\t<FIToFICstmrCdtTrf>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -661,7 +751,7 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 
 # ── Pacs.009 Generator ─────────────────────────────────────────────────────────
 
-def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
+def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = False) -> str:
     """Generate pacs.009.001.12 (FI Credit Transfer).
 
     v12 schema differences vs v08:
@@ -671,7 +761,7 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
       - UltmtDbtr / UltmtCdtr: also BranchAndFinancialInstitutionIdentification8
       - ChrgsInf:     does NOT exist in CreditTransferTransaction67
     """
-    ccy = rng_currency()
+    ccy, country = rng_currency_and_country()
     from_bic = rng_bic("GB")
     to_bic = rng_bic("GB")
     biz_msg_id = rng_id("BIZ", 16)
@@ -697,9 +787,14 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
     # ── Element order must match XSD CreditTransferTransaction67 sequence ──
 
     # 1. PmtTpInf (optional)
-    if "payment_type_information" in selected:
+    if "payment_type_information" in selected or is_adv:
         svc = random.choice(SERVICE_LEVELS)
-        tx += f"\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>{svc}</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n"
+        tx += "\t\t\t\t<PmtTpInf>\n"
+        if "payment_type_information" in selected:
+            tx += f"\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>{svc}</Cd>\n\t\t\t\t\t</SvcLvl>\n"
+        if is_adv:
+            tx += "\t\t\t\t\t<LclInstrm>\n\t\t\t\t\t\t<Prtry>ADV</Prtry>\n\t\t\t\t\t</LclInstrm>\n"
+        tx += "\t\t\t\t</PmtTpInf>\n"
 
     # 2. IntrBkSttlmAmt (mandatory)
     tx += f"\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
@@ -738,16 +833,12 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
-    # 8. UltmtDbtr (optional — FI type in v12)
-    if "ultimate_debtor" in selected:
-        tx += agent_xml("UltmtDbtr", rng_bic(), 4)
-
     # 9. Dbtr — MANDATORY in v12, FI type (BranchAndFinancialInstitutionIdentification8)
     tx += agent_xml("Dbtr", debtor_bic, 4)
 
     # 10. DbtrAcct (optional)
     if "debtor_account" in selected:
-        tx += account_xml("DbtrAcct", rng_iban(), 4)
+        tx += account_xml("DbtrAcct", rng_iban(country), 4)
     # 11. DbtrAgt (optional)
     if "debtor_agent" in selected:
         tx += agent_xml("DbtrAgt", rng_bic(), 4)
@@ -765,11 +856,7 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
 
     # 14. CdtrAcct (optional)
     if "creditor_account" in selected:
-        tx += account_xml("CdtrAcct", rng_iban(), 4)
-
-    # 15. UltmtCdtr (optional — FI type in v12)
-    if "ultimate_creditor" in selected:
-        tx += agent_xml("UltmtCdtr", rng_bic(), 4)
+        tx += account_xml("CdtrAcct", rng_iban(country), 4)
 
     # 16. RmtInf (optional)
     if "remittance_information" in selected:
@@ -837,12 +924,14 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False) -> str:
 # ── Pacs.004 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs004(selected: set, idx: int) -> str:
-    ccy = rng_currency()
+    ccy, country = rng_currency_and_country()
+    iban_country = country
     from_bic = rng_bic()
     to_bic = rng_bic()
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     rtr_id = rng_id("RTR", 16)
+    orig_instr_id = rng_id("ORGINSTR", 11)
     orig_e2e = rng_id("ORIE2E", 10)
     orig_tx = rng_id("ORITX", 10)
     orig_uetr = rng_uetr()
@@ -851,38 +940,12 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     sttlm_dt = rng_date(1)
     amount = rng_amount(ccy)
     rtr_reason = random.choice(RETURN_REASONS)
+    # pacs.004 usually allows CRED, SHAR but may reject DEBT/SLEV in some rules
+    charge_br = random.choice(["SHAR", "CRED"])
 
     tx = ""
 
-    if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4)
-    if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4)
-    if "ultimate_debtor" in selected:
-        tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
-
-    # RtrChain
-    chain = ""
-    if "debtor_agent" in selected:
-        chain += agent_xml("DbtrAgt", rng_bic(), 5)
-    if "debtor" in selected:
-        chain += party_xml("Dbtr", rng_name(), rng_country(), 5)
-    if "debtor_account" in selected:
-        chain += account_xml("DbtrAcct", rng_iban(), 5)
-    if "creditor_agent" in selected:
-        chain += agent_xml("CdtrAgt", rng_bic(), 5)
-    if "creditor" in selected:
-        chain += party_xml("Cdtr", rng_name(), rng_country(), 5)
-    if "creditor_account" in selected:
-        chain += account_xml("CdtrAcct", rng_iban(), 5)
-    if chain:
-        tx += f"\t\t\t\t<RtrChain>\n{chain}\t\t\t\t</RtrChain>\n"
-
-    if "ultimate_creditor" in selected:
-        tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
-
-    tx += f"\t\t\t\t<RtrRsnInf>\n\t\t\t\t\t<Rsn>\n\t\t\t\t\t\t<Cd>{xe(rtr_reason)}</Cd>\n\t\t\t\t\t</Rsn>\n\t\t\t\t</RtrRsnInf>\n"
-
+    # -- ChrgsInf (optional) -- XSD pos after IntrBkSttlmDt
     if "charges_information" in selected:
         chg_amt = rng_amount(ccy)
         chg_bic = rng_bic()
@@ -891,8 +954,44 @@ def _gen_pacs004(selected: set, idx: int) -> str:
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
 
+    # -- InstgAgt / InstdAgt -- XSD pos after ChrgsInf
+    if "instructing_agent" in selected:
+        tx += agent_xml("InstgAgt", from_bic, 4)
+    if "instructed_agent" in selected:
+        tx += agent_xml("InstdAgt", to_bic, 4)
+
+    # -- RtrChain (TransactionParties11) -- XSD pos after InstdAgt
+    # XSD sequence inside RtrChain: UltmtDbtr → Dbtr → DbtrAcct → ... → DbtrAgt → ... → CdtrAgt → ... → Cdtr → CdtrAcct → UltmtCdtr
+    chain = ""
+    if "ultimate_debtor" in selected:
+        chain += f"\t\t\t\t\t<UltmtDbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtDbtr>\n"
+    
+    # Dbtr is Mandatory in pacs.004 TransactionParties11
+    chain += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
+    
+    if "debtor_account" in selected:
+        chain += account_xml("DbtrAcct", rng_iban(iban_country), 5)
+    if "debtor_agent" in selected:
+        chain += agent_xml("DbtrAgt", rng_bic(), 5)
+    if "creditor_agent" in selected:
+        chain += agent_xml("CdtrAgt", rng_bic(), 5)
+
+    # Cdtr is ALSO Mandatory in TransactionParties11
+    chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
+
+    if "creditor_account" in selected:
+        chain += account_xml("CdtrAcct", rng_iban(iban_country), 5)
+    if "ultimate_creditor" in selected:
+        chain += f"\t\t\t\t\t<UltmtCdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtCdtr>\n"
+    if chain:
+        tx += f"\t\t\t\t<RtrChain>\n{chain}\t\t\t\t</RtrChain>\n"
+
+    # -- RtrRsnInf -- XSD pos after RtrChain
+    tx += f"\t\t\t\t<RtrRsnInf>\n\t\t\t\t\t<Rsn>\n\t\t\t\t\t\t<Cd>{xe(rtr_reason)}</Cd>\n\t\t\t\t\t</Rsn>\n\t\t\t\t</RtrRsnInf>\n"
+
+    # -- RmtInf -- not a direct child per XSD, skip for now
     if "remittance_information" in selected:
-        tx += f"\t\t\t\t<RmtInf>\n\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t</RmtInf>\n"
+        pass  # RmtInf is inside OrgnlTxRef, not directly in TxInf for pacs.004
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -902,11 +1001,11 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.004.001.09</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.004.001.14</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.004.001.09">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.004.001.14">
 \t\t<PmtRtr>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -920,13 +1019,15 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 \t\t\t\t<RtrId>{xe(rtr_id)}</RtrId>
 \t\t\t\t<OrgnlGrpInf>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInf>
+\t\t\t\t<OrgnlInstrId>{xe(orig_instr_id)}</OrgnlInstrId>
 \t\t\t\t<OrgnlEndToEndId>{xe(orig_e2e)}</OrgnlEndToEndId>
 \t\t\t\t<OrgnlTxId>{xe(orig_tx)}</OrgnlTxId>
 \t\t\t\t<OrgnlUETR>{xe(orig_uetr)}</OrgnlUETR>
 \t\t\t\t<RtrdIntrBkSttlmAmt Ccy="{xe(ccy)}">{amount}</RtrdIntrBkSttlmAmt>
 \t\t\t\t<IntrBkSttlmDt>{xe(sttlm_dt)}</IntrBkSttlmDt>
+\t\t\t\t<ChrgBr>{xe(charge_br)}</ChrgBr>
 {tx}\t\t\t</TxInf>
 \t\t</PmtRtr>
 \t</Document>
@@ -937,7 +1038,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 # ── Pacs.003 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs003(selected: set, idx: int) -> str:
-    ccy = rng_currency()
+    ccy, country = rng_currency_and_country()
+    iban_country = country
     from_bic = rng_bic()
     to_bic = rng_bic()
     biz_msg_id = rng_id("BIZ", 16)
@@ -959,8 +1061,12 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 
     tx += f"\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
     tx += el("IntrBkSttlmDt", sttlm_dt, 4)
-    tx += el("ChrgBr", random.choice(CHARGE_BEARERS), 4)
 
+    # -- ChrgBr (mandatory per XSD) --
+    charge_br = random.choice(["SHAR", "CRED", "DEBT"])
+    tx += el("ChrgBr", charge_br, 4)
+
+    # -- ChrgsInf (optional) --
     if "charges_information" in selected:
         chg_amt = rng_amount(ccy)
         chg_bic = rng_bic()
@@ -969,31 +1075,58 @@ def _gen_pacs003(selected: set, idx: int) -> str:
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
 
+    # -- ReqdColltnDt (pos 11) --
+    tx += el("ReqdColltnDt", rng_date(2), 4)
+
+    # -- DrctDbtTx (optional, after ReqdColltnDt per XSD) --
+    if "direct_debit_transaction" in selected:
+        tx += (f"\t\t\t\t<DrctDbtTx>\n"
+               f"\t\t\t\t\t<MndtRltdInf>\n"
+               f"\t\t\t\t\t\t<MndtId>{xe(mndt_id)}</MndtId>\n"
+               f"\t\t\t\t\t\t<DtOfSgntr>{rng_date(-30)}</DtOfSgntr>\n"
+               f"\t\t\t\t\t</MndtRltdInf>\n"
+               f"\t\t\t\t</DrctDbtTx>\n")
+
+    # -- Cdtr (Mandatory) --
+    tx += party_xml("Cdtr", rng_name(), rng_country(), 4)
+    # CdtrAcct (Mandatory)
+    tx += account_xml("CdtrAcct", rng_iban(), 4)
+
+    # -- CdtrAgt (Mandatory) --
+    tx += agent_xml("CdtrAgt", rng_bic(), 4)
+    if "creditor_agent_account" in selected:
+        tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
+
+    # -- UltmtCdtr --
+    if "ultimate_creditor" in selected:
+        tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
+
+    # -- InstgAgt / InstdAgt --
     if "instructing_agent" in selected:
         tx += agent_xml("InstgAgt", from_bic, 4)
     if "instructed_agent" in selected:
         tx += agent_xml("InstdAgt", to_bic, 4)
 
+    # -- IntrmyAgt1/2/3 --
+    if "intermediary_agent_1" in selected:
+        tx += agent_xml("IntrmyAgt1", rng_bic(), 4)
+    if "intermediary_agent_2" in selected:
+        tx += agent_xml("IntrmyAgt2", rng_bic(), 4)
+    if "intermediary_agent_3" in selected:
+        tx += agent_xml("IntrmyAgt3", rng_bic(), 4)
+
+    # -- Dbtr (Mandatory) --
+    tx += party_xml("Dbtr", rng_name(), rng_country(), 4)
+    # DbtrAcct (Mandatory)
+    tx += account_xml("DbtrAcct", rng_iban(iban_country), 4)
+    # DbtrAgt (Mandatory)
+    tx += agent_xml("DbtrAgt", rng_bic(), 4)
+
+    # -- UltmtDbtr --
     if "ultimate_debtor" in selected:
         tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
-    if "debtor" in selected:
-        tx += party_xml("Dbtr", rng_name(), rng_country(), 4)
-    if "debtor_account" in selected:
-        tx += account_xml("DbtrAcct", rng_iban(), 4)
-    if "debtor_agent" in selected:
-        tx += agent_xml("DbtrAgt", rng_bic(), 4)
-    if "creditor_agent" in selected:
-        cdtr_agt_bic = rng_bic()
-        tx += agent_xml("CdtrAgt", cdtr_agt_bic, 4)
-        if "creditor_agent_account" in selected:
-            tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
-    if "creditor" in selected:
-        tx += party_xml("Cdtr", rng_name(), rng_country(), 4)
-    if "creditor_account" in selected:
-        tx += account_xml("CdtrAcct", rng_iban(), 4)
-    if "ultimate_creditor" in selected:
-        tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
 
+    # -- RmtInf --
     if "remittance_information" in selected:
         tx += f"\t\t\t\t<RmtInf>\n\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t</RmtInf>\n"
 
@@ -1005,11 +1138,11 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.003.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.003.001.11</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.003.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.003.001.11">
 \t\t<FIToFICstmrDrctDbt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1026,12 +1159,6 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 \t\t\t\t\t<TxId>{xe(tx_id)}</TxId>
 \t\t\t\t\t<UETR>{xe(uetr)}</UETR>
 \t\t\t\t</PmtId>
-\t\t\t\t<DrctDbtTx>
-\t\t\t\t\t<MndtRltdInf>
-\t\t\t\t\t\t<MndtId>{xe(mndt_id)}</MndtId>
-\t\t\t\t\t\t<DtOfSgntr>{rng_date(-30)}</DtOfSgntr>
-\t\t\t\t\t</MndtRltdInf>
-\t\t\t\t</DrctDbtTx>
 {tx}\t\t\t</DrctDbtTxInf>
 \t\t</FIToFICstmrDrctDbt>
 \t</Document>
@@ -1042,6 +1169,8 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 # ── Pacs.002 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs002(selected: set, idx: int) -> str:
+    ccy, country = rng_currency_and_country()
+    iban_country = country
     from_bic = rng_bic()
     to_bic = rng_bic()
     biz_msg_id = rng_id("BIZ", 16)
@@ -1054,15 +1183,18 @@ def _gen_pacs002(selected: set, idx: int) -> str:
     status_codes = ["ACSC", "ACCP", "ACSP", "RJCT", "PDNG"]
     status = random.choice(status_codes)
 
-    tx = ""
+    grphdr_tx = ""
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4)
+        grphdr_tx += agent_xml("InstgAgt", from_bic, 4)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4)
+        grphdr_tx += agent_xml("InstdAgt", to_bic, 4)
+
+    # Original parties belong in OrgnlTxRef (pos 16 in TxInfAndSts)
+    orgnl_tx_ref = ""
     if "debtor" in selected:
-        tx += party_xml("OrgnlDbtr", rng_name(), rng_country(), 4)
+        orgnl_tx_ref += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Dbtr>\n"
     if "creditor" in selected:
-        tx += party_xml("OrgnlCdtr", rng_name(), rng_country(), 4)
+        orgnl_tx_ref += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Cdtr>\n"
 
     reject_reason = ""
     if status == "RJCT":
@@ -1077,26 +1209,28 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.002.001.10</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.002.001.15</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.10">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.15">
 \t\t<FIToFIPmtStsRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
-{tx}\t\t\t</GrpHdr>
+{grphdr_tx}\t\t\t</GrpHdr>
 \t\t\t<TxInfAndSts>
 \t\t\t\t<OrgnlGrpInf>
 \t\t\t\t\t<OrgnlMsgId>{xe(orig_msg_id)}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInf>
 \t\t\t\t<OrgnlEndToEndId>{xe(orig_e2e)}</OrgnlEndToEndId>
 \t\t\t\t<OrgnlTxId>{xe(orig_tx)}</OrgnlTxId>
 \t\t\t\t<OrgnlUETR>{xe(orig_uetr)}</OrgnlUETR>
 \t\t\t\t<TxSts>{xe(status)}</TxSts>
-{reject_reason}\t\t\t</TxInfAndSts>
+{reject_reason}\t\t\t\t<OrgnlTxRef>
+{orgnl_tx_ref}\t\t\t\t</OrgnlTxRef>
+\t\t\t</TxInfAndSts>
 \t\t</FIToFIPmtStsRpt>
 \t</Document>
 </BusMsgEnvlp>"""
@@ -1106,11 +1240,13 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 # ── Pacs.010 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
-    ccy = rng_currency()
+    ccy, country = rng_currency_and_country()
+    iban_country = country
     from_bic = rng_bic()
     to_bic = rng_bic()
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    cdt_id = rng_id("CDT", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
@@ -1119,37 +1255,40 @@ def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
     sttlm_dt = rng_date(1)
     amount = rng_amount(ccy)
 
-    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03" if v3 else "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.10"
-    msg_def = "pacs.010.001.03" if v3 else "pacs.010.001.10"
+    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03" if v3 else "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.06"
+    msg_def = "pacs.010.001.03" if v3 else "pacs.010.001.06"
 
-    tx = ""
-
+    # DrctDbtTxInf body: PmtId → PmtTpInf → IntrBkSttlmAmt → IntrBkSttlmDt → UltmtDbtr → Dbtr → DbtrAcct → DbtrAgt → RmtInf
+    dd_tx = ""
     if "payment_type_information" in selected:
         svc = random.choice(SERVICE_LEVELS)
-        tx += f"\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>{svc}</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n"
+        dd_tx += f"\t\t\t\t\t<PmtTpInf>\n\t\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t\t<Cd>{svc}</Cd>\n\t\t\t\t\t\t</SvcLvl>\n\t\t\t\t\t</PmtTpInf>\n"
 
-    tx += f"\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
-    tx += el("IntrBkSttlmDt", sttlm_dt, 4)
+    dd_tx += f"\t\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
+    dd_tx += el("IntrBkSttlmDt", sttlm_dt, 5)
 
-    if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4)
-    if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4)
-    if "debtor_agent" in selected:
-        tx += agent_xml("DbtrAgt", rng_bic(), 4)
-    if "debtor" in selected:
-        tx += party_xml("Dbtr", rng_name(), rng_country(), 4)
+    # Dbtr mandatory (BranchAndFinancialInstitutionIdentification8)
+    dd_tx += agent_xml("Dbtr", rng_bic(), 5)
     if "debtor_account" in selected:
-        tx += account_xml("DbtrAcct", rng_iban(), 4)
-    if "creditor_agent" in selected:
-        tx += agent_xml("CdtrAgt", rng_bic(), 4)
-    if "creditor" in selected:
-        tx += party_xml("Cdtr", rng_name(), rng_country(), 4)
-    if "creditor_account" in selected:
-        tx += account_xml("CdtrAcct", rng_iban(), 4)
+        dd_tx += account_xml("DbtrAcct", rng_iban(iban_country), 5)
+    if "debtor_agent" in selected:
+        dd_tx += agent_xml("DbtrAgt", rng_bic(), 5)
 
     if "remittance_information" in selected:
-        tx += f"\t\t\t\t<RmtInf>\n\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t</RmtInf>\n"
+        dd_tx += f"\t\t\t\t\t<RmtInf>\n\t\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t\t</RmtInf>\n"
+
+    # CdtInstr body: CdtId → IntrBkSttlmDt → InstgAgt → InstdAgt → CdtrAgt → Cdtr → CdtrAcct → DrctDbtTxInf
+    cdt_body = ""
+    if "instructing_agent" in selected:
+        cdt_body += agent_xml("InstgAgt", from_bic, 4)
+    if "instructed_agent" in selected:
+        cdt_body += agent_xml("InstdAgt", to_bic, 4)
+    if "creditor_agent" in selected:
+        cdt_body += agent_xml("CdtrAgt", rng_bic(), 4)
+    # Cdtr mandatory (BranchAndFinancialInstitutionIdentification8)
+    cdt_body += agent_xml("Cdtr", rng_bic(), 4)
+    if "creditor_account" in selected:
+        cdt_body += account_xml("CdtrAcct", rng_iban(iban_country), 4)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -1164,24 +1303,25 @@ def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
 \t<Document xmlns="{ns}">
-\t\t<FIToFIFincInstrFwd>
+\t\t<FIDrctDbt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
-\t\t\t\t<SttlmInf>
-\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>
-\t\t\t\t</SttlmInf>
 \t\t\t</GrpHdr>
-\t\t\t<DrctDbtTxInf>
-\t\t\t\t<PmtId>
-\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
-\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
-\t\t\t\t\t<TxId>{xe(tx_id)}</TxId>
-\t\t\t\t\t<UETR>{xe(uetr)}</UETR>
-\t\t\t\t</PmtId>
-{tx}\t\t\t</DrctDbtTxInf>
-\t\t</FIToFIFincInstrFwd>
+\t\t\t<CdtInstr>
+\t\t\t\t<CdtId>{xe(cdt_id)}</CdtId>
+\t\t\t\t<IntrBkSttlmDt>{sttlm_dt}</IntrBkSttlmDt>
+{cdt_body}\t\t\t\t<DrctDbtTxInf>
+\t\t\t\t\t<PmtId>
+\t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
+\t\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
+\t\t\t\t\t\t<TxId>{xe(tx_id)}</TxId>
+\t\t\t\t\t\t<UETR>{xe(uetr)}</UETR>
+\t\t\t\t\t</PmtId>
+{dd_tx}\t\t\t\t</DrctDbtTxInf>
+\t\t\t</CdtInstr>
+\t\t</FIDrctDbt>
 \t</Document>
 </BusMsgEnvlp>"""
     return xml
@@ -1190,31 +1330,24 @@ def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
 # ── CAMT.057 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt057(selected: set, idx: int) -> str:
-    from_bic = rng_bic("GB")
-    to_bic = rng_bic("GB")
+    ccy, country = rng_currency_and_country()
+    iban_country = country
+    from_bic = rng_bic()
+    to_bic = rng_bic()
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     notif_id = rng_id("NTFN", 10)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
     amount = rng_amount(ccy)
     e2e_id = rng_id("E2E", 16)
 
     items = ""
     if "debtor" in selected:
-        items += party_xml("Dbtr", rng_name(), rng_country(), 4)
-    if "debtor_account" in selected:
-        items += account_xml("DbtrAcct", rng_iban(), 4)
+        items += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 6).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
     if "debtor_agent" in selected:
-        items += agent_xml("DbtrAgt", rng_bic(), 4)
-    if "creditor" in selected:
-        items += party_xml("Cdtr", rng_name(), rng_country(), 4)
-    if "creditor_account" in selected:
-        items += account_xml("CdtrAcct", rng_iban(), 4)
-    if "creditor_agent" in selected:
-        items += agent_xml("CdtrAgt", rng_bic(), 4)
+        items += agent_xml("DbtrAgt", rng_bic(), 5)
     if "intermediary_agent_1" in selected:
-        items += agent_xml("IntrmyAgt1", rng_bic(), 4)
+        items += agent_xml("IntrmyAgt", rng_bic(), 5)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -1236,10 +1369,14 @@ def _gen_camt057(selected: set, idx: int) -> str:
 \t\t\t</GrpHdr>
 \t\t\t<Ntfctn>
 \t\t\t\t<Id>{xe(notif_id)}</Id>
-\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
-\t\t\t\t<Amt Ccy="{xe(ccy)}">{amount}</Amt>
+\t\t\t\t<Acct><Id><IBAN>{xe(rng_iban(country))}</IBAN></Id></Acct>
 \t\t\t\t<XpctdValDt>{rng_date(2)}</XpctdValDt>
-{items}\t\t\t</Ntfctn>
+\t\t\t\t<Itm>
+\t\t\t\t\t<Id>{xe(rng_id("ITM", 10))}</Id>
+\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
+\t\t\t\t\t<Amt Ccy="{xe(ccy)}">{amount}</Amt>
+{items}\t\t\t\t</Itm>
+\t\t\t</Ntfctn>
 \t\t</NtfctnToRcv>
 \t</Document>
 </BusMsgEnvlp>"""
@@ -1258,12 +1395,13 @@ def _gen_camt052(selected: set, idx: int) -> str:
     acct_iban = rng_iban()
 
     rpt = ""
-    if "account_identification" in selected:
-        rpt += account_xml("Acct", acct_iban, 4)
+    # Account block with nested Ownr/Svcr in v13
+    rpt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>\n"
     if "account_owner" in selected:
-        rpt += party_xml("AcctOwnr", rng_name(), rng_country(), 4)
+        rpt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        rpt += agent_xml("AcctSvcr", rng_bic(), 4)
+        rpt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+    rpt += "\t\t\t\t</Acct>\n"
     if "balance" in selected:
         bal_amt = rng_amount(ccy)
         rpt += f"""\t\t\t\t<Bal>
@@ -1286,6 +1424,7 @@ def _gen_camt052(selected: set, idx: int) -> str:
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
 \t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
 \t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -1297,11 +1436,11 @@ def _gen_camt052(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.052.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>camt.052.001.13</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.13">
 \t\t<BkToCstmrAcctRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1325,19 +1464,21 @@ def _gen_camt053(selected: set, idx: int) -> str:
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
-    acct_iban = rng_iban()
+    ccy, iban_country = rng_currency_and_country()
+    acct_iban = rng_iban(iban_country)
 
     stmt = ""
-    if "account_identification" in selected:
-        stmt += account_xml("Acct", acct_iban, 4)
+    # Account block with nested Ownr/Svcr in v13
+    stmt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>\n"
     if "account_owner" in selected:
-        stmt += party_xml("AcctOwnr", rng_name(), rng_country(), 4)
+        stmt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        stmt += agent_xml("AcctSvcr", rng_bic(), 4)
-    if "balance" in selected:
-        bal_amt = rng_amount(ccy)
-        stmt += f"""\t\t\t\t<Bal>
+        stmt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+    stmt += "\t\t\t\t</Acct>\n"
+    
+    # Balance is Mandatory in camt.053 AccountStatement
+    bal_amt = rng_amount(ccy)
+    stmt += f"""\t\t\t\t<Bal>
 \t\t\t\t\t<Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
 \t\t\t\t\t<Amt Ccy="{xe(ccy)}">{bal_amt}</Amt>
 \t\t\t\t\t<CdtDbtInd>CRDT</CdtDbtInd>
@@ -1357,6 +1498,7 @@ def _gen_camt053(selected: set, idx: int) -> str:
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
 \t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
 \t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -1368,11 +1510,11 @@ def _gen_camt053(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.053.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>camt.053.001.13</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.13">
 \t\t<BkToCstmrStmt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1403,12 +1545,13 @@ def _gen_camt054(selected: set, idx: int) -> str:
     ccy = rng_currency()
 
     ntfctn = ""
-    if "account_identification" in selected:
-        ntfctn += account_xml("Acct", rng_iban(), 4)
+    # Account block with nested Ownr/Svcr in v13
+    ntfctn += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(rng_iban())}</IBAN></Id>\n"
     if "account_owner" in selected:
-        ntfctn += party_xml("AcctOwnr", rng_name(), rng_country(), 4)
+        ntfctn += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        ntfctn += agent_xml("AcctSvcr", rng_bic(), 4)
+        ntfctn += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+    ntfctn += "\t\t\t\t</Acct>\n"
     if "entry" in selected:
         entry_amt = rng_amount(ccy)
         cdt_dbt = random.choice(["CRDT", "DBIT"])
@@ -1418,6 +1561,7 @@ def _gen_camt054(selected: set, idx: int) -> str:
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
 \t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
 \t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -1429,11 +1573,11 @@ def _gen_camt054(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.054.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>camt.054.001.13</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.13">
 \t\t<BkToCstmrDbtCdtNtfctn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1459,26 +1603,33 @@ def _gen_camt055(selected: set, idx: int) -> str:
     cre_dt = rng_datetime()
 
     body = ""
+    # In v12, Underlying is: OrgnlGrpInfAndCxl, then OrgnlPmtInfAndCxl
     if "original_group_information" in selected:
-        body += f"""\t\t\t\t<OrgnlGrpInf>
+        body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pain.001.001.09</OrgnlMsgNmId>
-\t\t\t\t</OrgnlGrpInf>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t</OrgnlGrpInfAndCxl>
 """
-    if "original_payment_information" in selected:
-        body += f"""\t\t\t\t<OrgnlPmtInfId>{xe(rng_id("ORIGPMT", 10))}</OrgnlPmtInfId>
-"""
-    if "cancellation_reason" in selected:
-        reasons = ["DUPL", "CUST", "AGNT", "CURR", "UPAY"]
-        body += f"""\t\t\t\t<CxlRsnInf>
-\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>
-\t\t\t\t\t<AddtlInf>Cancellation requested</AddtlInf>
-\t\t\t\t</CxlRsnInf>
-"""
+    
+    
+    orgnl_tx_ref = ""
     if "original_transaction" in selected:
-        body += f"""\t\t\t\t<OrgnlTxRef>
-\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(rng_currency())}">{rng_amount("USD")}</IntrBkSttlmAmt>
-\t\t\t\t</OrgnlTxRef>
+        orgnl_tx_ref = f"""\n\t\t\t\t\t\t<OrgnlTxRef>
+\t\t\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(rng_currency())}">{rng_amount("USD")}</IntrBkSttlmAmt>
+\t\t\t\t\t\t</OrgnlTxRef>"""
+
+    # Tx details must be inside OrgnlPmtInfAndCxl -> TxInf
+    body += f"""\t\t\t\t<OrgnlPmtInfAndCxl>
+\t\t\t\t\t<OrgnlPmtInfId>{xe(rng_id("ORIGPMT", 10))}</OrgnlPmtInfId>
+\t\t\t\t\t<TxInf>
+\t\t\t\t\t\t<CxlId>{xe(rng_id("CXLID", 10))}</CxlId>
+\t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
+\t\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
+\t\t\t\t\t\t<CxlRsnInf>
+\t\t\t\t\t\t\t<Rsn><Cd>CUST</Cd></Rsn>
+\t\t\t\t\t\t</CxlRsnInf>{orgnl_tx_ref}
+\t\t\t\t\t</TxInf>
+\t\t\t\t</OrgnlPmtInfAndCxl>
 """
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -1489,11 +1640,11 @@ def _gen_camt055(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.055.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>camt.055.001.12</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.055.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.055.001.12">
 \t\t<CstmrPmtCxlReq>
 \t\t\t<Assgnmt>
 \t\t\t\t<Id>{xe(rng_id("ASSGNMT", 10))}</Id>
@@ -1502,10 +1653,6 @@ def _gen_camt055(selected: set, idx: int) -> str:
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t</Assgnmt>
 \t\t\t<Undrlyg>
-\t\t\t\t<OrgnlGrpInfAndCxl>
-\t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pain.001.001.09</OrgnlMsgNmId>
-\t\t\t\t</OrgnlGrpInfAndCxl>
 {body}\t\t\t</Undrlyg>
 \t\t</CstmrPmtCxlReq>
 \t</Document>
@@ -1524,10 +1671,10 @@ def _gen_camt056(selected: set, idx: int) -> str:
 
     body = ""
     if "original_group_information" in selected:
-        body += f"""\t\t\t\t<OrgnlGrpInf>
+        body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
-\t\t\t\t</OrgnlGrpInf>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t</OrgnlGrpInfAndCxl>
 """
     if "transaction_information" in selected:
         body += f"""\t\t\t\t<TxInf>
@@ -1540,9 +1687,9 @@ def _gen_camt056(selected: set, idx: int) -> str:
 """
         if "cancellation_reason" in selected:
             reasons = ["DUPL", "CUST", "AGNT", "CURR", "UPAY", "FRAD"]
+            orgtr = party_xml("Orgtr", rng_name(), rng_country(), 6)
             body += f"""\t\t\t\t\t<CxlRsnInf>
-\t\t\t\t\t\t<Orgtr><Nm>{xe(rng_name())}</Nm></Orgtr>
-\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>
+{orgtr}\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>
 \t\t\t\t\t\t<AddtlInf>FI cancellation requested</AddtlInf>
 \t\t\t\t\t</CxlRsnInf>
 """
@@ -1592,34 +1739,36 @@ def _gen_pain001(selected: set, idx: int) -> str:
     e2e_id = rng_id("E2E", 16)
     instr_id = rng_id("INSTR", 11)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
+    curr_map = {
+        "GB": "GBP", "DE": "EUR", "FR": "EUR", "NL": "EUR", "BE": "EUR",
+        "AT": "EUR", "IT": "EUR", "ES": "EUR", "PT": "EUR", "SE": "SEK",
+        "NO": "NOK", "DK": "DKK"
+    }
+    iban_country = random.choice(list(curr_map.keys()))
+    ccy = curr_map[iban_country]
     amount = rng_amount(ccy)
 
-    initg = ""
-    if "initiating_party" in selected:
-        initg = f"\t\t\t\t<InitgPty><Nm>{xe(rng_name())}</Nm></InitgPty>\n"
+    # InitgPty is mandatory in pain.001
+    initg = party_xml("InitgPty", rng_name(), rng_country(), 4)
 
-    pmt = ""
+    pmt_tp = ""
     if "payment_type_information" in selected:
         svc = random.choice(SERVICE_LEVELS)
-        pmt += f"\t\t\t\t<PmtTpInf><SvcLvl><Cd>{svc}</Cd></SvcLvl></PmtTpInf>\n"
+        pmt_tp = f"\t\t\t\t<PmtTpInf><SvcLvl><Cd>{svc}</Cd></SvcLvl></PmtTpInf>\n"
 
-    if "debtor" in selected:
-        pmt += party_xml("Dbtr", rng_name(), rng_country(), 4)
-    if "debtor_account" in selected:
-        pmt += account_xml("DbtrAcct", rng_iban(), 4)
-    if "debtor_agent" in selected:
-        pmt += agent_xml("DbtrAgt", rng_bic(), 4)
+    # Debtor, DebtorAccount, DebtorAgent are MANDATORY in pain.001
+    dbtr_info = party_xml("Dbtr", rng_name(), rng_country(), 4)
+    dbtr_info += account_xml("DbtrAcct", rng_iban(iban_country), 4)
+    dbtr_info += agent_xml("DbtrAgt", rng_bic(), 4)
     if "ultimate_debtor" in selected:
-        pmt += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
+        dbtr_info += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
 
     cdt_tf = ""
-    if "creditor_agent" in selected:
-        cdt_tf += agent_xml("CdtrAgt", rng_bic(), 5)
-    if "creditor" in selected:
-        cdt_tf += party_xml("Cdtr", rng_name(), rng_country(), 5)
-    if "creditor_account" in selected:
-        cdt_tf += account_xml("CdtrAcct", rng_iban(), 5)
+    # CdtrAgt, Cdtr, CdtrAcct are MANDATORY in pain.001
+    cdt_tf += agent_xml("CdtrAgt", rng_bic(), 5)
+    cdt_tf += party_xml("Cdtr", rng_name(), rng_country(), 5)
+    cdt_tf += account_xml("CdtrAcct", rng_iban(iban_country), 5)
+    
     if "ultimate_creditor" in selected:
         cdt_tf += party_xml("UltmtCdtr", rng_name(), rng_country(), 5)
     if "remittance_information" in selected:
@@ -1633,11 +1782,11 @@ def _gen_pain001(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.001.001.09</MsgDefIdr>
+\t\t<MsgDefIdr>pain.001.001.12</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.12">
 \t\t<CstmrCdtTrfInitn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1648,8 +1797,8 @@ def _gen_pain001(selected: set, idx: int) -> str:
 \t\t\t\t<PmtInfId>{xe(pmt_inf_id)}</PmtInfId>
 \t\t\t\t<PmtMtd>TRF</PmtMtd>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
-\t\t\t\t<ReqdExctnDt><Dt>{rng_date(1)}</Dt></ReqdExctnDt>
-{pmt}\t\t\t\t<CdtTrfTxInf>
+{pmt_tp}\t\t\t\t<ReqdExctnDt><Dt>{rng_date(1)}</Dt></ReqdExctnDt>
+{dbtr_info}\t\t\t\t<CdtTrfTxInf>
 \t\t\t\t\t<PmtId>
 \t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
 \t\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
@@ -1674,9 +1823,7 @@ def _gen_pain002(selected: set, idx: int) -> str:
     status_codes = ["ACSC", "ACCP", "ACSP", "RJCT", "PDNG"]
     status = random.choice(status_codes)
 
-    body = ""
-    if "original_group_information" in selected:
-        body += f"""\t\t\t\t<OrgnlGrpInfAndSts>
+    body = f"""\t\t\t\t<OrgnlGrpInfAndSts>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
 \t\t\t\t\t<OrgnlMsgNmId>pain.001.001.09</OrgnlMsgNmId>
 \t\t\t\t\t<GrpSts>{status}</GrpSts>
@@ -1709,11 +1856,11 @@ def _gen_pain002(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.002.001.10</MsgDefIdr>
+\t\t<MsgDefIdr>pain.002.001.14</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.002.001.10">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.002.001.14">
 \t\t<CstmrPmtStsRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1737,34 +1884,37 @@ def _gen_pain008(selected: set, idx: int) -> str:
     instr_id = rng_id("INSTR", 11)
     mndt_id = rng_id("MNDT", 10)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
+    curr_map = {
+        "GB": "GBP", "DE": "EUR", "FR": "EUR", "NL": "EUR", "BE": "EUR",
+        "AT": "EUR", "IT": "EUR", "ES": "EUR", "PT": "EUR", "SE": "SEK",
+        "NO": "NOK", "DK": "DKK"
+    }
+    iban_country = random.choice(list(curr_map.keys()))
+    ccy = curr_map[iban_country]
     amount = rng_amount(ccy)
 
-    initg = ""
-    if "initiating_party" in selected:
-        initg = f"\t\t\t\t<InitgPty><Nm>{xe(rng_name())}</Nm></InitgPty>\n"
+    # InitgPty is mandatory in pain.008
+    initg = party_xml("InitgPty", rng_name(), rng_country(), 4)
 
-    pmt = ""
+    pmt_tp = ""
     if "payment_type_information" in selected:
         svc = random.choice(SERVICE_LEVELS)
-        pmt += f"\t\t\t\t<PmtTpInf><SvcLvl><Cd>{svc}</Cd></SvcLvl></PmtTpInf>\n"
+        pmt_tp += f"\t\t\t\t<PmtTpInf><SvcLvl><Cd>{svc}</Cd></SvcLvl></PmtTpInf>\n"
 
-    if "creditor" in selected:
-        pmt += party_xml("Cdtr", rng_name(), rng_country(), 4)
-    if "creditor_account" in selected:
-        pmt += account_xml("CdtrAcct", rng_iban(), 4)
-    if "creditor_agent" in selected:
-        pmt += agent_xml("CdtrAgt", rng_bic(), 4)
+    pmt_body = ""
+    # Cdtr, CdtrAcct, CdtrAgt are MANDATORY in pain.008
+    pmt_body += party_xml("Cdtr", rng_name(), rng_country(), 4)
+    pmt_body += account_xml("CdtrAcct", rng_iban(iban_country), 4)
+    pmt_body += agent_xml("CdtrAgt", rng_bic(), 4)
     if "ultimate_creditor" in selected:
-        pmt += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
+        pmt_body += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
 
     dd_tx = ""
-    if "debtor_agent" in selected:
-        dd_tx += agent_xml("DbtrAgt", rng_bic(), 5)
-    if "debtor" in selected:
-        dd_tx += party_xml("Dbtr", rng_name(), rng_country(), 5)
-    if "debtor_account" in selected:
-        dd_tx += account_xml("DbtrAcct", rng_iban(), 5)
+    # DbtrAgt, Dbtr, DbtrAcct are MANDATORY in pain.008
+    dd_tx += agent_xml("DbtrAgt", rng_bic(), 5)
+    dd_tx += party_xml("Dbtr", rng_name(), rng_country(), 5)
+    dd_tx += account_xml("DbtrAcct", rng_iban(iban_country), 5)
+    
     if "ultimate_debtor" in selected:
         dd_tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 5)
     if "remittance_information" in selected:
@@ -1778,11 +1928,11 @@ def _gen_pain008(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.008.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>pain.008.001.11</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.11">
 \t\t<CstmrDrctDbtInitn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1793,8 +1943,8 @@ def _gen_pain008(selected: set, idx: int) -> str:
 \t\t\t\t<PmtInfId>{xe(pmt_inf_id)}</PmtInfId>
 \t\t\t\t<PmtMtd>DD</PmtMtd>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
-\t\t\t\t<ReqdColltnDt><Dt>{rng_date(2)}</Dt></ReqdColltnDt>
-{pmt}\t\t\t\t<DrctDbtTxInf>
+{pmt_tp}\t\t\t\t<ReqdColltnDt>{rng_date(2)}</ReqdColltnDt>
+{pmt_body}\t\t\t\t<DrctDbtTxInf>
 \t\t\t\t\t<PmtId>
 \t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
 \t\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
@@ -1823,11 +1973,14 @@ def generate_single_xml(
 ) -> str:
     """Generate one ISO 20022 XML message for the given type and return raw XML."""
     selected = set(b.lower() for b in selected_blocks)
+    selected_blocks_ctx.set(selected)
     msg_lower = message_type.lower()
     if "pacs.008" in msg_lower:
         return _gen_pacs008(selected, idx)
     elif "pacs.009" in msg_lower and "cov" in msg_lower:
         return _gen_pacs009(selected, idx, is_cov=True)
+    elif "pacs.009" in msg_lower and "adv" in msg_lower:
+        return _gen_pacs009(selected, idx, is_cov=False, is_adv=True)
     elif "pacs.009" in msg_lower:
         return _gen_pacs009(selected, idx, is_cov=False)
     elif "pacs.004" in msg_lower:
@@ -1871,10 +2024,7 @@ def generate_bulk_messages(
     count: int,
     selected_blocks: List[str]
 ) -> List[Dict[str, Any]]:
-    """
-    Generate `count` ISO 20022 messages of the given type with selected optional blocks.
-    Returns list of dicts: {index, xml, biz_msg_id, uetr}.
-    """
+    
     results = []
     for i in range(1, count + 1):
         try:
