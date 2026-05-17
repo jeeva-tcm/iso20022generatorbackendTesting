@@ -1,0 +1,1866 @@
+[
+  {
+    "validation_id": "VAL17052600001",
+    "batch_id": "VAL17052600001",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:25:34.741173+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 27.75,
+    "report_json": {
+      "validation_id": "VAL17052600001",
+      "timestamp": "2026-05-17T09:25:34.741173+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 27.75,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 9.08
+        },
+        "2": {
+          "status": "❌",
+          "time": 18.67
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600001"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600001",
+    "batch_id": "VAL17052600001",
+    "file_id": "FILE0002",
+    "timestamp": "2026-05-17T09:25:34.800678+00:00",
+    "message_type": "pacs.010.001.03",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 9,
+    "execution_time_ms": 32.53,
+    "report_json": {
+      "validation_id": "VAL17052600001",
+      "timestamp": "2026-05-17T09:25:34.800678+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.010.001.03",
+      "errors": 0,
+      "warnings": 9,
+      "total_time_ms": 32.53,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.34
+        },
+        "2": {
+          "status": "✅",
+          "time": 8.88
+        },
+        "3": {
+          "status": "✅",
+          "time": 22.31
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "37",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "49",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'CHASUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "95",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "156",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "192",
+          "message": "BIC 'WFBIUS6SXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CUT004",
+          "path": "147",
+          "message": "Settlement date is before possible processing date.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-2026-PAC010-001",
+        "UETR": "6bbef0a5-218b-42dc-8bce-9684f59847cd",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03"
+      },
+      "file_id": "FILE0002",
+      "batch_id": "VAL17052600001"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n  <AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n    <Fr>\n      <FIId>\n        <FinInstnId>\n          <BICFI>BOFAUS3NXXX</BICFI>\n        </FinInstnId>\n      </FIId>\n    </Fr>\n    <To>\n      <FIId>\n        <FinInstnId>\n          <BICFI>CITIUS33XXX</BICFI>\n        </FinInstnId>\n      </FIId>\n    </To>\n    <BizMsgIdr>BMD-2026-PAC010-001</BizMsgIdr>\n    <MsgDefIdr>pacs.010.001.03</MsgDefIdr>\n    <BizSvc>swift.cbprplus.02</BizSvc>\n    <CreDt>2026-05-17T13:34:21+05:30</CreDt>\n    <CpyDplct>COPY</CpyDplct>\n    <PssblDplct>true</PssblDplct>\n    <Prty>HIGH</Prty>\n  </AppHdr>\n  <Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03\">\n    <FIDrctDbt>\n      <GrpHdr>\n        <MsgId>MSGID-2026-PAC010-001</MsgId>\n        <CreDtTm>2026-05-17T13:34:21+05:30</CreDtTm>\n        <NbOfTxs>1</NbOfTxs>\n      </GrpHdr>\n      <CdtInstr>\n        <CdtId>CDT-FI-2026-001</CdtId>\n        <InstgAgt>\n          <FinInstnId>\n            <BICFI>BOFAUS3NXXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USAB</Cd>\n              </ClrSysId>\n              <MmbId>MEM-INSTG-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>54930084UKLVMY22DS16</LEI>\n          </FinInstnId>\n        </InstgAgt>\n        <InstdAgt>\n          <FinInstnId>\n            <BICFI>CITIUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USAB</Cd>\n              </ClrSysId>\n              <MmbId>MEM-INSTD-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>54930084UKLVMY22DS16</LEI>\n          </FinInstnId>\n        </InstdAgt>\n        <CdtrAgt>\n          <FinInstnId>\n            <BICFI>CHASUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USFW</Cd>\n              </ClrSysId>\n              <MmbId>MEM-CAGT-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>7H6LDXLRUQGFU57RNE97</LEI>\n            <Nm>JPMORGAN CHASE BANK</Nm>\n            <PstlAdr>\n              <Dept>Treasury Operations</Dept>\n              <SubDept>Corporate Payments</SubDept>\n              <StrtNm>10 Bishopsgate</StrtNm>\n              <BldgNb>10</BldgNb>\n              <BldgNm>City Tower</BldgNm>\n              <Flr>12th Floor</Flr>\n              <PstBx>PO Box 100</PstBx>\n              <Room>Room 1201</Room>\n              <PstCd>EC2N 4BQ</PstCd>\n              <TwnNm>London</TwnNm>\n              <TwnLctnNm>Central London</TwnLctnNm>\n              <Ctry>GB</Ctry>\n            </PstlAdr>\n          </FinInstnId>\n        </CdtrAgt>\n        <CdtrAgtAcct>\n          <Id>\n            <IBAN>GB82WEST12345698765432</IBAN>\n          </Id>\n          <Ccy>USD</Ccy>\n          <Nm>JPM AGENT SETTLEMENT ACCOUNT</Nm>\n        </CdtrAgtAcct>\n        <Cdtr>\n          <FinInstnId>\n            <BICFI>CITIUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USFW</Cd>\n              </ClrSysId>\n              <MmbId>MEM-CDTR-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>E57ODZWZ7FF32TWEFS77</LEI>\n            <Nm>CITIBANK NA</Nm>\n            <PstlAdr>\n              <Dept>Treasury Operations</Dept>\n              <SubDept>Corporate Payments</SubDept>\n              <StrtNm>10 Bishopsgate</StrtNm>\n              <BldgNb>10</BldgNb>\n              <BldgNm>City Tower</BldgNm>\n              <Flr>12th Floor</Flr>\n              <PstBx>PO Box 100</PstBx>\n              <Room>Room 1201</Room>\n              <PstCd>EC2N 4BQ</PstCd>\n              <TwnNm>London</TwnNm>\n              <TwnLctnNm>Central London</TwnLctnNm>\n              <Ctry>GB</Ctry>\n            </PstlAdr>\n          </FinInstnId>\n        </Cdtr>\n        <CdtrAcct>\n          <Id>\n            <IBAN>GB29NWBK60161331926819</IBAN>\n          </Id>\n          <Ccy>USD</Ccy>\n          <Nm>CITI CREDITOR SETTLEMENT</Nm>\n        </CdtrAcct>\n        <DrctDbtTxInf>\n          <PmtId>\n            <InstrId>INSTR-2026-PAC010-001</InstrId>\n            <EndToEndId>E2E-2026-PAC010-001</EndToEndId>\n            <TxId>TXID-2026-PAC010-001</TxId>\n            <UETR>6bbef0a5-218b-42dc-8bce-9684f59847cd</UETR>\n          </PmtId>\n          <PmtTpInf>\n            <InstrPrty>HIGH</InstrPrty>\n            <SvcLvl>\n              <Cd>G001</Cd>\n            </SvcLvl>\n            <LclInstrm>\n              <Cd>ONCL</Cd>\n            </LclInstrm>\n            <CtgyPurp>\n              <Cd>INTC</Cd>\n            </CtgyPurp>\n          </PmtTpInf>\n          <IntrBkSttlmAmt Ccy=\"GBP\">50000.00</IntrBkSttlmAmt>\n          <IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n          <SttlmTmReq>\n            <CLSTm>09:00:00+00:00</CLSTm>\n            <TillTm>17:00:00+00:00</TillTm>\n            <FrTm>08:00:00+00:00</FrTm>\n            <RjctTm>16:00:00+00:00</RjctTm>\n          </SttlmTmReq>\n          <Dbtr>\n            <FinInstnId>\n              <BICFI>BOFAUS3NXXX</BICFI>\n              <ClrSysMmbId>\n                <ClrSysId>\n                  <Cd>USFW</Cd>\n                </ClrSysId>\n                <MmbId>MEM-DBTR-01</MmbId>\n              </ClrSysMmbId>\n              <LEI>5493001KJTIIGC8Y1R12</LEI>\n              <Nm>BANK OF AMERICA NA</Nm>\n              <PstlAdr>\n                <Dept>Treasury Operations</Dept>\n                <SubDept>Corporate Payments</SubDept>\n                <StrtNm>10 Bishopsgate</StrtNm>\n                <BldgNb>10</BldgNb>\n                <BldgNm>City Tower</BldgNm>\n                <Flr>12th Floor</Flr>\n                <PstBx>PO Box 100</PstBx>\n                <Room>Room 1201</Room>\n                <PstCd>EC2N 4BQ</PstCd>\n                <TwnNm>London</TwnNm>\n                <TwnLctnNm>Central London</TwnLctnNm>\n                <Ctry>GB</Ctry>\n                <AdrLine>Central Business District</AdrLine>\n                <AdrLine>Near Liverpool Street</AdrLine>\n              </PstlAdr>\n            </FinInstnId>\n          </Dbtr>\n          <DbtrAcct>\n            <Id>\n              <IBAN>GB82WEST12345698765432</IBAN>\n            </Id>\n            <Ccy>GBP</Ccy>\n            <Nm>GBP DEBTOR SETTLEMENT ACCOUNT</Nm>\n          </DbtrAcct>\n          <DbtrAgt>\n            <FinInstnId>\n              <BICFI>WFBIUS6SXXX</BICFI>\n              <ClrSysMmbId>\n                <ClrSysId>\n                  <Cd>USFW</Cd>\n                </ClrSysId>\n                <MmbId>MEM-DAGT-01</MmbId>\n              </ClrSysMmbId>\n              <LEI>724500PMK2A2M1SQQ228</LEI>\n              <Nm>WELLS FARGO BANK NA</Nm>\n              <PstlAdr>\n                <Dept>Treasury Operations</Dept>\n                <SubDept>Corporate Payments</SubDept>\n                <StrtNm>10 Bishopsgate</StrtNm>\n                <BldgNb>10</BldgNb>\n                <BldgNm>City Tower</BldgNm>\n                <Flr>12th Floor</Flr>\n                <PstBx>PO Box 100</PstBx>\n                <Room>Room 1201</Room>\n                <PstCd>EC2N 4BQ</PstCd>\n                <TwnNm>London</TwnNm>\n                <TwnLctnNm>Central London</TwnLctnNm>\n                <Ctry>GB</Ctry>\n                <AdrLine>Central Business District</AdrLine>\n                <AdrLine>Near Liverpool Street</AdrLine>\n              </PstlAdr>\n            </FinInstnId>\n          </DbtrAgt>\n          <DbtrAgtAcct>\n            <Id>\n              <IBAN>GB33BUKB20201555555555</IBAN>\n            </Id>\n            <Ccy>GBP</Ccy>\n            <Nm>GBP DEBTOR AGENT SETTLEMENT ACCOUNT</Nm>\n          </DbtrAgtAcct>\n          <InstrForDbtrAgt>Settle via RTGS system immediately</InstrForDbtrAgt>\n          <Purp>\n            <Cd>INTC</Cd>\n          </Purp>\n          <RmtInf>\n            <Ustrd>Interbank Direct Debit Settlement March 2026</Ustrd>\n          </RmtInf>\n        </DrctDbtTxInf>\n      </CdtInstr>\n    </FIDrctDbt>\n  </Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600002",
+    "batch_id": "VAL17052600002",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:25:45.019465+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 7.77,
+    "report_json": {
+      "validation_id": "VAL17052600002",
+      "timestamp": "2026-05-17T09:25:45.019465+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 7.77,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.75
+        },
+        "2": {
+          "status": "❌",
+          "time": 7.02
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600002"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600003",
+    "batch_id": "VAL17052600003",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:25:47.778904+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 14.4,
+    "report_json": {
+      "validation_id": "VAL17052600003",
+      "timestamp": "2026-05-17T09:25:47.778904+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 14.4,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.58
+        },
+        "2": {
+          "status": "❌",
+          "time": 13.82
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600003"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600003",
+    "batch_id": "VAL17052600003",
+    "file_id": "FILE0002",
+    "timestamp": "2026-05-17T09:25:47.806274+00:00",
+    "message_type": "pacs.010.001.03",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 9,
+    "execution_time_ms": 24.69,
+    "report_json": {
+      "validation_id": "VAL17052600003",
+      "timestamp": "2026-05-17T09:25:47.806274+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.010.001.03",
+      "errors": 0,
+      "warnings": 9,
+      "total_time_ms": 24.69,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.63
+        },
+        "2": {
+          "status": "✅",
+          "time": 7.93
+        },
+        "3": {
+          "status": "✅",
+          "time": 15.13
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "37",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "49",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'CHASUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "95",
+          "message": "BIC 'CITIUS33XXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "156",
+          "message": "BIC 'BOFAUS3NXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "192",
+          "message": "BIC 'WFBIUS6SXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CUT004",
+          "path": "147",
+          "message": "Settlement date is before possible processing date.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-2026-PAC010-001",
+        "UETR": "6bbef0a5-218b-42dc-8bce-9684f59847cd",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03"
+      },
+      "file_id": "FILE0002",
+      "batch_id": "VAL17052600003"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n  <AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n    <Fr>\n      <FIId>\n        <FinInstnId>\n          <BICFI>BOFAUS3NXXX</BICFI>\n        </FinInstnId>\n      </FIId>\n    </Fr>\n    <To>\n      <FIId>\n        <FinInstnId>\n          <BICFI>CITIUS33XXX</BICFI>\n        </FinInstnId>\n      </FIId>\n    </To>\n    <BizMsgIdr>BMD-2026-PAC010-001</BizMsgIdr>\n    <MsgDefIdr>pacs.010.001.03</MsgDefIdr>\n    <BizSvc>swift.cbprplus.02</BizSvc>\n    <CreDt>2026-05-17T13:34:21+05:30</CreDt>\n    <CpyDplct>COPY</CpyDplct>\n    <PssblDplct>true</PssblDplct>\n    <Prty>HIGH</Prty>\n  </AppHdr>\n  <Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03\">\n    <FIDrctDbt>\n      <GrpHdr>\n        <MsgId>MSGID-2026-PAC010-001</MsgId>\n        <CreDtTm>2026-05-17T13:34:21+05:30</CreDtTm>\n        <NbOfTxs>1</NbOfTxs>\n      </GrpHdr>\n      <CdtInstr>\n        <CdtId>CDT-FI-2026-001</CdtId>\n        <InstgAgt>\n          <FinInstnId>\n            <BICFI>BOFAUS3NXXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USAB</Cd>\n              </ClrSysId>\n              <MmbId>MEM-INSTG-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>54930084UKLVMY22DS16</LEI>\n          </FinInstnId>\n        </InstgAgt>\n        <InstdAgt>\n          <FinInstnId>\n            <BICFI>CITIUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USAB</Cd>\n              </ClrSysId>\n              <MmbId>MEM-INSTD-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>54930084UKLVMY22DS16</LEI>\n          </FinInstnId>\n        </InstdAgt>\n        <CdtrAgt>\n          <FinInstnId>\n            <BICFI>CHASUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USFW</Cd>\n              </ClrSysId>\n              <MmbId>MEM-CAGT-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>7H6LDXLRUQGFU57RNE97</LEI>\n            <Nm>JPMORGAN CHASE BANK</Nm>\n            <PstlAdr>\n              <Dept>Treasury Operations</Dept>\n              <SubDept>Corporate Payments</SubDept>\n              <StrtNm>10 Bishopsgate</StrtNm>\n              <BldgNb>10</BldgNb>\n              <BldgNm>City Tower</BldgNm>\n              <Flr>12th Floor</Flr>\n              <PstBx>PO Box 100</PstBx>\n              <Room>Room 1201</Room>\n              <PstCd>EC2N 4BQ</PstCd>\n              <TwnNm>London</TwnNm>\n              <TwnLctnNm>Central London</TwnLctnNm>\n              <Ctry>GB</Ctry>\n            </PstlAdr>\n          </FinInstnId>\n        </CdtrAgt>\n        <CdtrAgtAcct>\n          <Id>\n            <IBAN>GB82WEST12345698765432</IBAN>\n          </Id>\n          <Ccy>USD</Ccy>\n          <Nm>JPM AGENT SETTLEMENT ACCOUNT</Nm>\n        </CdtrAgtAcct>\n        <Cdtr>\n          <FinInstnId>\n            <BICFI>CITIUS33XXX</BICFI>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USFW</Cd>\n              </ClrSysId>\n              <MmbId>MEM-CDTR-01</MmbId>\n            </ClrSysMmbId>\n            <LEI>E57ODZWZ7FF32TWEFS77</LEI>\n            <Nm>CITIBANK NA</Nm>\n            <PstlAdr>\n              <Dept>Treasury Operations</Dept>\n              <SubDept>Corporate Payments</SubDept>\n              <StrtNm>10 Bishopsgate</StrtNm>\n              <BldgNb>10</BldgNb>\n              <BldgNm>City Tower</BldgNm>\n              <Flr>12th Floor</Flr>\n              <PstBx>PO Box 100</PstBx>\n              <Room>Room 1201</Room>\n              <PstCd>EC2N 4BQ</PstCd>\n              <TwnNm>London</TwnNm>\n              <TwnLctnNm>Central London</TwnLctnNm>\n              <Ctry>GB</Ctry>\n            </PstlAdr>\n          </FinInstnId>\n        </Cdtr>\n        <CdtrAcct>\n          <Id>\n            <IBAN>GB29NWBK60161331926819</IBAN>\n          </Id>\n          <Ccy>USD</Ccy>\n          <Nm>CITI CREDITOR SETTLEMENT</Nm>\n        </CdtrAcct>\n        <DrctDbtTxInf>\n          <PmtId>\n            <InstrId>INSTR-2026-PAC010-001</InstrId>\n            <EndToEndId>E2E-2026-PAC010-001</EndToEndId>\n            <TxId>TXID-2026-PAC010-001</TxId>\n            <UETR>6bbef0a5-218b-42dc-8bce-9684f59847cd</UETR>\n          </PmtId>\n          <PmtTpInf>\n            <InstrPrty>HIGH</InstrPrty>\n            <SvcLvl>\n              <Cd>G001</Cd>\n            </SvcLvl>\n            <LclInstrm>\n              <Cd>ONCL</Cd>\n            </LclInstrm>\n            <CtgyPurp>\n              <Cd>INTC</Cd>\n            </CtgyPurp>\n          </PmtTpInf>\n          <IntrBkSttlmAmt Ccy=\"GBP\">50000.00</IntrBkSttlmAmt>\n          <IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n          <SttlmTmReq>\n            <CLSTm>09:00:00+00:00</CLSTm>\n            <TillTm>17:00:00+00:00</TillTm>\n            <FrTm>08:00:00+00:00</FrTm>\n            <RjctTm>16:00:00+00:00</RjctTm>\n          </SttlmTmReq>\n          <Dbtr>\n            <FinInstnId>\n              <BICFI>BOFAUS3NXXX</BICFI>\n              <ClrSysMmbId>\n                <ClrSysId>\n                  <Cd>USFW</Cd>\n                </ClrSysId>\n                <MmbId>MEM-DBTR-01</MmbId>\n              </ClrSysMmbId>\n              <LEI>5493001KJTIIGC8Y1R12</LEI>\n              <Nm>BANK OF AMERICA NA</Nm>\n              <PstlAdr>\n                <Dept>Treasury Operations</Dept>\n                <SubDept>Corporate Payments</SubDept>\n                <StrtNm>10 Bishopsgate</StrtNm>\n                <BldgNb>10</BldgNb>\n                <BldgNm>City Tower</BldgNm>\n                <Flr>12th Floor</Flr>\n                <PstBx>PO Box 100</PstBx>\n                <Room>Room 1201</Room>\n                <PstCd>EC2N 4BQ</PstCd>\n                <TwnNm>London</TwnNm>\n                <TwnLctnNm>Central London</TwnLctnNm>\n                <Ctry>GB</Ctry>\n                <AdrLine>Central Business District</AdrLine>\n                <AdrLine>Near Liverpool Street</AdrLine>\n              </PstlAdr>\n            </FinInstnId>\n          </Dbtr>\n          <DbtrAcct>\n            <Id>\n              <IBAN>GB82WEST12345698765432</IBAN>\n            </Id>\n            <Ccy>GBP</Ccy>\n            <Nm>GBP DEBTOR SETTLEMENT ACCOUNT</Nm>\n          </DbtrAcct>\n          <DbtrAgt>\n            <FinInstnId>\n              <BICFI>WFBIUS6SXXX</BICFI>\n              <ClrSysMmbId>\n                <ClrSysId>\n                  <Cd>USFW</Cd>\n                </ClrSysId>\n                <MmbId>MEM-DAGT-01</MmbId>\n              </ClrSysMmbId>\n              <LEI>724500PMK2A2M1SQQ228</LEI>\n              <Nm>WELLS FARGO BANK NA</Nm>\n              <PstlAdr>\n                <Dept>Treasury Operations</Dept>\n                <SubDept>Corporate Payments</SubDept>\n                <StrtNm>10 Bishopsgate</StrtNm>\n                <BldgNb>10</BldgNb>\n                <BldgNm>City Tower</BldgNm>\n                <Flr>12th Floor</Flr>\n                <PstBx>PO Box 100</PstBx>\n                <Room>Room 1201</Room>\n                <PstCd>EC2N 4BQ</PstCd>\n                <TwnNm>London</TwnNm>\n                <TwnLctnNm>Central London</TwnLctnNm>\n                <Ctry>GB</Ctry>\n                <AdrLine>Central Business District</AdrLine>\n                <AdrLine>Near Liverpool Street</AdrLine>\n              </PstlAdr>\n            </FinInstnId>\n          </DbtrAgt>\n          <DbtrAgtAcct>\n            <Id>\n              <IBAN>GB33BUKB20201555555555</IBAN>\n            </Id>\n            <Ccy>GBP</Ccy>\n            <Nm>GBP DEBTOR AGENT SETTLEMENT ACCOUNT</Nm>\n          </DbtrAgtAcct>\n          <InstrForDbtrAgt>Settle via RTGS system immediately</InstrForDbtrAgt>\n          <Purp>\n            <Cd>INTC</Cd>\n          </Purp>\n          <RmtInf>\n            <Ustrd>Interbank Direct Debit Settlement March 2026</Ustrd>\n          </RmtInf>\n        </DrctDbtTxInf>\n      </CdtInstr>\n    </FIDrctDbt>\n  </Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600003",
+    "batch_id": "VAL17052600003",
+    "file_id": "FILE0003",
+    "timestamp": "2026-05-17T09:25:47.854766+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 9.04,
+    "report_json": {
+      "validation_id": "VAL17052600003",
+      "timestamp": "2026-05-17T09:25:47.854766+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 9.04,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.53
+        },
+        "2": {
+          "status": "❌",
+          "time": 8.51
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0003",
+      "batch_id": "VAL17052600003"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600004",
+    "batch_id": "VAL17052600004",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:26:16.584765+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 46.09,
+    "report_json": {
+      "validation_id": "VAL17052600004",
+      "timestamp": "2026-05-17T09:26:16.584765+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 46.09,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.65
+        },
+        "2": {
+          "status": "✅",
+          "time": 16.79
+        },
+        "3": {
+          "status": "✅",
+          "time": 28.65
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T14:56:14+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T14:56:14+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T14:56:14+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T14:56:14+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600005",
+    "batch_id": "VAL17052600005",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:26:18.742668+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 40.91,
+    "report_json": {
+      "validation_id": "VAL17052600005",
+      "timestamp": "2026-05-17T09:26:18.742668+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 40.91,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.34
+        },
+        "2": {
+          "status": "✅",
+          "time": 25.64
+        },
+        "3": {
+          "status": "✅",
+          "time": 13.93
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T14:56:14+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T14:56:14+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T14:56:14+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T14:56:14+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600006",
+    "batch_id": "VAL17052600006",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:32:05.558496+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 138.25,
+    "report_json": {
+      "validation_id": "VAL17052600006",
+      "timestamp": "2026-05-17T09:32:05.558496+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 138.25,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 38.53
+        },
+        "2": {
+          "status": "✅",
+          "time": 57.33
+        },
+        "3": {
+          "status": "✅",
+          "time": 42.39
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600006"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T14:56:14+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T14:56:14+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T14:56:14+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T14:56:14+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600007",
+    "batch_id": "VAL17052600007",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:37:51.986248+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 56.93,
+    "report_json": {
+      "validation_id": "VAL17052600007",
+      "timestamp": "2026-05-17T09:37:51.986248+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 56.93,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 20.77
+        },
+        "2": {
+          "status": "❌",
+          "time": 36.16
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600007"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600008",
+    "batch_id": "VAL17052600008",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:38:05.214077+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 11.91,
+    "report_json": {
+      "validation_id": "VAL17052600008",
+      "timestamp": "2026-05-17T09:38:05.214077+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 11.91,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.47
+        },
+        "2": {
+          "status": "❌",
+          "time": 11.44
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600008"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600009",
+    "batch_id": "VAL17052600009",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:38:12.800437+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 19.5,
+    "report_json": {
+      "validation_id": "VAL17052600009",
+      "timestamp": "2026-05-17T09:38:12.800437+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 19.5,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.78
+        },
+        "2": {
+          "status": "❌",
+          "time": 18.72
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600009"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600010",
+    "batch_id": "VAL17052600010",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:38:17.548064+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 22.82,
+    "report_json": {
+      "validation_id": "VAL17052600010",
+      "timestamp": "2026-05-17T09:38:17.548064+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 22.82,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.67
+        },
+        "2": {
+          "status": "❌",
+          "time": 22.15
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600010"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600011",
+    "batch_id": "VAL17052600011",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:40:13.500305+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 45.06,
+    "report_json": {
+      "validation_id": "VAL17052600011",
+      "timestamp": "2026-05-17T09:40:13.500305+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 45.06,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 12.47
+        },
+        "2": {
+          "status": "❌",
+          "time": 32.59
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600011"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600012",
+    "batch_id": "VAL17052600012",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:42:26.333367+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 138.9,
+    "report_json": {
+      "validation_id": "VAL17052600012",
+      "timestamp": "2026-05-17T09:42:26.333367+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 138.9,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 21.0
+        },
+        "2": {
+          "status": "✅",
+          "time": 61.26
+        },
+        "3": {
+          "status": "✅",
+          "time": 56.64
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T15:12:23+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T15:12:23+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T15:12:23+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T15:12:23+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600013",
+    "batch_id": "VAL17052600013",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:42:30.645222+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 32.49,
+    "report_json": {
+      "validation_id": "VAL17052600013",
+      "timestamp": "2026-05-17T09:42:30.645222+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 32.49,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.72
+        },
+        "2": {
+          "status": "✅",
+          "time": 21.54
+        },
+        "3": {
+          "status": "✅",
+          "time": 9.23
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T15:12:23+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T15:12:23+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T15:12:23+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T15:12:23+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600014",
+    "batch_id": "VAL17052600014",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:42:31.875908+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 43.57,
+    "report_json": {
+      "validation_id": "VAL17052600014",
+      "timestamp": "2026-05-17T09:42:31.875908+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 43.57,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.65
+        },
+        "2": {
+          "status": "✅",
+          "time": 14.34
+        },
+        "3": {
+          "status": "✅",
+          "time": 27.58
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T15:12:23+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T15:12:23+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T15:12:23+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T15:12:23+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600015",
+    "batch_id": "VAL17052600015",
+    "file_id": "",
+    "timestamp": "2026-05-17T09:42:32.690035+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 54.64,
+    "report_json": {
+      "validation_id": "VAL17052600015",
+      "timestamp": "2026-05-17T09:42:32.690035+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 54.64,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 1.46
+        },
+        "2": {
+          "status": "✅",
+          "time": 30.99
+        },
+        "3": {
+          "status": "✅",
+          "time": 22.19
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      }
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T15:12:23+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T15:12:23+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T15:12:23+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T15:12:23+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Generated via Manual Entry",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600016",
+    "batch_id": "VAL17052600016",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:42:40.987637+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "PASS",
+    "total_errors": 0,
+    "total_warnings": 7,
+    "execution_time_ms": 22.79,
+    "report_json": {
+      "validation_id": "VAL17052600016",
+      "timestamp": "2026-05-17T09:42:40.987637+00:00",
+      "status": "PASS",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 0,
+      "warnings": 7,
+      "total_time_ms": 22.79,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.85
+        },
+        "2": {
+          "status": "✅",
+          "time": 10.14
+        },
+        "3": {
+          "status": "✅",
+          "time": 11.8
+        }
+      },
+      "details": [
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "7",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "14",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "56",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "61",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "80",
+          "message": "BIC 'SNDRBEBBXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "BIC_NOT_FOUND",
+          "path": "92",
+          "message": "BIC 'RCVRLU2AXXX' not found in official directory.",
+          "fix_suggestion": "Verify if the BIC is correct or recently decommissioned.",
+          "related_test": ""
+        },
+        {
+          "severity": "WARNING",
+          "layer": 3,
+          "code": "CONFIG_NOT_FOUND",
+          "path": "28",
+          "message": "Missing timing config for parties.",
+          "fix_suggestion": "",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGID-20260515-PACS008-001",
+        "UETR": "550e8400-e29b-41d4-a716-446655440000",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600016"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZM-20260515-PACS008-001</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-17T15:12:23+05:30</CreDt>\n\t\t<Prty>NORM</Prty>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGID-20260515-PACS008-001</MsgId>\n\t\t\t\t<CreDtTm>2026-05-17T15:12:23+05:30</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR-20260515-001</InstrId>\n\t\t\t\t\t<EndToEndId>E2E-20260515-SALARY-001</EndToEndId>\n\t\t\t\t\t<TxId>TXN-20260515-001</TxId>\n\t\t\t\t\t<UETR>550e8400-e29b-41d4-a716-446655440000</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<PmtTpInf>\n\t\t\t\t\t<InstrPrty>NORM</InstrPrty>\n\t\t\t\t\t<SvcLvl>\n\t\t\t\t\t\t<Cd>G001</Cd>\n\t\t\t\t\t</SvcLvl>\n\t\t\t\t</PmtTpInf>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">15000.00</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-17</IntrBkSttlmDt>\n\t\t\t\t<SttlmTmIndctn>\n\t\t\t\t\t<DbtDtTm>2026-05-17T15:12:23+05:30</DbtDtTm>\n\t\t\t\t\t<CdtDtTm>2026-05-17T15:12:23+05:30</CdtDtTm>\n\t\t\t\t</SttlmTmIndctn>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Meridian Global Trading GmbH</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t<AdrLine>42 Avenue Louise</AdrLine>\n\t\t\t\t\t\t<AdrLine>1050 Ixelles</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>BE68539007547034</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>SNDRBEBBXXX</BICFI>\n\t\t\t\t\t\t<Nm>KBC Bank NV</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Brussels</TwnNm>\n\t\t\t\t\t\t\t<Ctry>BE</Ctry>\n\t\t\t\t\t\t\t<AdrLine>1 Rue de la Banque</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>1000 Brussels</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RCVRLU2AXXX</BICFI>\n\t\t\t\t\t\t<Nm>Banque Internationale a Luxembourg</Nm>\n\t\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t\t<AdrLine>25 Avenue Monterey</AdrLine>\n\t\t\t\t\t\t\t<AdrLine>L-2163 Luxembourg</AdrLine>\n\t\t\t\t\t\t</PstlAdr>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Northwind Financial Services Ltd</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<TwnNm>Luxembourg City</TwnNm>\n\t\t\t\t\t\t<Ctry>LU</Ctry>\n\t\t\t\t\t\t<AdrLine>18 Boulevard Royal</AdrLine>\n\t\t\t\t\t\t<AdrLine>L-2449 Luxembourg</AdrLine>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>LU280019400644750000</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  },
+  {
+    "validation_id": "VAL17052600017",
+    "batch_id": "VAL17052600017",
+    "file_id": "FILE0001",
+    "timestamp": "2026-05-17T09:43:30.350711+00:00",
+    "message_type": "pacs.008.001.08",
+    "status": "FAIL",
+    "total_errors": 3,
+    "total_warnings": 0,
+    "execution_time_ms": 10.29,
+    "report_json": {
+      "validation_id": "VAL17052600017",
+      "timestamp": "2026-05-17T09:43:30.350711+00:00",
+      "status": "FAIL",
+      "schema": "Unknown",
+      "message": "pacs.008.001.08",
+      "errors": 3,
+      "warnings": 0,
+      "total_time_ms": 10.29,
+      "layer_status": {
+        "1": {
+          "status": "✅",
+          "time": 0.89
+        },
+        "2": {
+          "status": "❌",
+          "time": 9.4
+        },
+        "3": {
+          "status": "SKIPPED",
+          "time": 0
+        }
+      },
+      "details": [
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "21",
+          "message": "Date cannot be in the past. Field <CreDt> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDt> to today (2026-05-17) or a future date. (Line: 21)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "27",
+          "message": "Date cannot be in the past. Field <CreDtTm> contains '2026-05-14T08:49:28+00:00', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <CreDtTm> to today (2026-05-17) or a future date. (Line: 27)",
+          "related_test": ""
+        },
+        {
+          "severity": "ERROR",
+          "layer": 2,
+          "code": "PAST_DATE_ERROR",
+          "path": "41",
+          "message": "Date cannot be in the past. Field <IntrBkSttlmDt> contains '2026-05-15', which is before today (2026-05-17).",
+          "fix_suggestion": "Update <IntrBkSttlmDt> to today (2026-05-17) or a future date. (Line: 41)",
+          "related_test": ""
+        }
+      ],
+      "metadata": {
+        "MsgId": "MSGCP22Z5G24O7V71YN",
+        "UETR": "ab8f31fa-39ff-45bb-9db4-5690b50c74d5",
+        "Namespace": "urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08"
+      },
+      "file_id": "FILE0001",
+      "batch_id": "VAL17052600017"
+    },
+    "original_message": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<BusMsgEnvlp xmlns=\"urn:swift:xsd:envelope\">\n\t<AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\">\n\t\t<Fr>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</Fr>\n\t\t<To>\n\t\t\t<FIId>\n\t\t\t\t<FinInstnId>\n\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t</FinInstnId>\n\t\t\t</FIId>\n\t\t</To>\n\t\t<BizMsgIdr>BIZ1JA1QQ39DWW37JKM</BizMsgIdr>\n\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n\t\t<BizSvc>swift.cbprplus.02</BizSvc>\n\t\t<CreDt>2026-05-14T08:49:28+00:00</CreDt>\n\t</AppHdr>\n\t<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\">\n\t\t<FIToFICstmrCdtTrf>\n\t\t\t<GrpHdr>\n\t\t\t\t<MsgId>MSGCP22Z5G24O7V71YN</MsgId>\n\t\t\t\t<CreDtTm>2026-05-14T08:49:28+00:00</CreDtTm>\n\t\t\t\t<NbOfTxs>1</NbOfTxs>\n\t\t\t\t<SttlmInf>\n\t\t\t\t\t<SttlmMtd>INDA</SttlmMtd>\n\t\t\t\t</SttlmInf>\n\t\t\t</GrpHdr>\n\t\t\t<CdtTrfTxInf>\n\t\t\t\t<PmtId>\n\t\t\t\t\t<InstrId>INSTR9O1XUBEJBFH</InstrId>\n\t\t\t\t\t<EndToEndId>E2EILVBKB7BVYUR7RGY</EndToEndId>\n\t\t\t\t\t<TxId>TXW7RSN6V7AG552GTA</TxId>\n\t\t\t\t\t<UETR>ab8f31fa-39ff-45bb-9db4-5690b50c74d5</UETR>\n\t\t\t\t</PmtId>\n\t\t\t\t<IntrBkSttlmAmt Ccy=\"EUR\">471231.68</IntrBkSttlmAmt>\n\t\t\t\t<IntrBkSttlmDt>2026-05-15</IntrBkSttlmDt>\n\t\t\t\t<ChrgBr>SHAR</ChrgBr>\n\t\t\t\t<InstgAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>AAAAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstgAgt>\n\t\t\t\t<InstdAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>ABNAGB2LXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</InstdAgt>\n\t\t\t\t<Dbtr>\n\t\t\t\t\t<Nm>Northern Bank Holdings</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>FR</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Dbtr>\n\t\t\t\t<DbtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>DE96233717357120615625</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</DbtrAcct>\n\t\t\t\t<DbtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>RBOSNONOXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</DbtrAgt>\n\t\t\t\t<CdtrAgt>\n\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t<BICFI>BBBBCHSSXXX</BICFI>\n\t\t\t\t\t</FinInstnId>\n\t\t\t\t</CdtrAgt>\n\t\t\t\t<Cdtr>\n\t\t\t\t\t<Nm>Ethan Martinez</Nm>\n\t\t\t\t\t<PstlAdr>\n\t\t\t\t\t\t<Ctry>IT</Ctry>\n\t\t\t\t\t</PstlAdr>\n\t\t\t\t</Cdtr>\n\t\t\t\t<CdtrAcct>\n\t\t\t\t\t<Id>\n\t\t\t\t\t\t<IBAN>PT57865852161985668770918</IBAN>\n\t\t\t\t\t</Id>\n\t\t\t\t</CdtrAcct>\n\t\t\t</CdtTrfTxInf>\n\t\t</FIToFICstmrCdtTrf>\n\t</Document>\n</BusMsgEnvlp>",
+    "origin": "Pasted",
+    "deleted": false
+  }
+]

@@ -131,7 +131,8 @@ async def validate_message(
             "total_warnings": report_dict["warnings"],
             "execution_time_ms": report_dict["total_time_ms"],
             "report_json": report_dict,
-            "original_message": request.xml_content
+            "original_message": request.xml_content,
+            "origin": request.origin or "Pasted"
         }
         history_service.save_history(record)
     
@@ -144,7 +145,8 @@ async def validate_file(
     message_type: str = Form("Auto-detect"),
     store_in_history: bool = Form(True),
     batch_id: Optional[str] = Form(None),
-    file_id: Optional[str] = Form(None)
+    file_id: Optional[str] = Form(None),
+    origin: Optional[str] = Form("Uploaded")
 ):
     content = await file.read()
     xml_content = content.decode("utf-8")
@@ -170,7 +172,8 @@ async def validate_file(
             "total_warnings": report_dict["warnings"],
             "execution_time_ms": report_dict["total_time_ms"],
             "report_json": report_dict,
-            "original_message": xml_content
+            "original_message": xml_content,
+            "origin": origin or "Uploaded"
         }
         history_service.save_history(record)
     

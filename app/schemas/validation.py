@@ -9,6 +9,7 @@ class ValidationRequest(BaseModel):
     store_in_history: bool = True
     batch_id: Optional[str] = None
     file_id: Optional[str] = None
+    origin: Optional[str] = "Generated via Manual Entry"
 
 class BatchInitRequest(BaseModel):
     file_count: int
@@ -53,6 +54,7 @@ class HistorySummary(BaseModel):
     total_errors: int
     total_warnings: int
     execution_time_ms: float
+    origin: Optional[str] = "Pasted"
 
     @field_validator('timestamp', mode='before')
     @classmethod

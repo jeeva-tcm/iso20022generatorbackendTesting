@@ -37,6 +37,11 @@ class FirebaseHistoryService:
     def __init__(self):
         self.db = None
         self.enabled = False
+        self.local_fallback = True
+        
+        # Local JSON database paths
+        self.local_db_path = os.path.join(_backend_root, "validation_history_local.json")
+        self.local_counters_path = os.path.join(_backend_root, "validation_counters_local.json")
 
         try:
             cred = self._build_credentials()
@@ -48,29 +53,48 @@ class FirebaseHistoryService:
                 self.enabled = True
                 print("Firebase Firestore initialized successfully.")
             else:
-                print("ALERT: No Firebase credentials found.")
-                print(f"DEBUG: FIREBASE_PROJECT_ID: {'SET' if os.getenv('FIREBASE_PROJECT_ID') else 'MISSING'}")
-                print(f"DEBUG: FIREBASE_PRIVATE_KEY: {'SET' if os.getenv('FIREBASE_PRIVATE_KEY') else 'MISSING'}")
-                print(f"DEBUG: FIREBASE_CLIENT_EMAIL: {'SET' if os.getenv('FIREBASE_CLIENT_EMAIL') else 'MISSING'}")
-                print(f"DEBUG: FIREBASE_KEY_PATH: {'SET' if os.getenv('FIREBASE_KEY_PATH') else 'MISSING'}")
+                print("ALERT: No Firebase credentials found. Falling back to local JSON database.")
                 self.enabled = False
         except Exception as e:
-            print(f"CRITICAL: Error initializing Firebase: {str(e)}")
+            print(f"CRITICAL: Error initializing Firebase: {str(e)}. Falling back to local JSON database.")
             self.enabled = False
+
+    def _read_local_db(self) -> list:
+        if not os.path.exists(self.local_db_path):
+            return []
+        try:
+            with open(self.local_db_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[LocalDB] Error reading local history: {e}")
+            return []
+
+    def _write_local_db(self, data: list):
+        try:
+            with open(self.local_db_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"[LocalDB] Error writing local history: {e}")
+
+    def _read_local_counters(self) -> dict:
+        if not os.path.exists(self.local_counters_path):
+            return {}
+        try:
+            with open(self.local_counters_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[LocalDB] Error reading local counters: {e}")
+            return {}
+
+    def _write_local_counters(self, data: dict):
+        try:
+            with open(self.local_counters_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"[LocalDB] Error writing local counters: {e}")
 
     @staticmethod
     def _build_credentials():
-        """
-        Build Firebase credentials from environment variables.
-
-        Priority:
-        0. FIREBASE_CREDENTIALS_BASE64 — entire service account JSON, base64-encoded (RECOMMENDED for Render)
-        1. Inline env vars (FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + FIREBASE_CLIENT_EMAIL)
-        2. FIREBASE_KEY_PATH env var pointing to a JSON key file
-        3. Legacy fallback: firebase-key.json in app/resources/
-        """
-
-        # --- Option 0: Single base64-encoded JSON blob (works perfectly on Render) ---
         b64_creds = os.getenv("FIREBASE_CREDENTIALS_BASE64", "").strip()
         if b64_creds:
             print("[Firebase] Option 0 — found FIREBASE_CREDENTIALS_BASE64, decoding...")
@@ -79,41 +103,29 @@ class FirebaseHistoryService:
                 cred_json = _b64.b64decode(b64_creds).decode("utf-8")
                 cred_dict = json.loads(cred_json)
                 cred = credentials.Certificate(cred_dict)
-                print(f"[Firebase] Option 0 — credentials decoded successfully "
-                      f"(project: {cred_dict.get('project_id')})")
+                print(f"[Firebase] Option 0 — credentials decoded successfully (project: {cred_dict.get('project_id')})")
                 return cred
             except Exception as e:
                 print(f"[Firebase] Option 0 FAILED: {type(e).__name__}: {e}")
-                # Fall through to other options
 
         project_id   = os.getenv("FIREBASE_PROJECT_ID",   "").strip()
         private_key  = os.getenv("FIREBASE_PRIVATE_KEY",  "").strip()
         client_email = os.getenv("FIREBASE_CLIENT_EMAIL", "").strip()
 
-        print(f"[Firebase] Credential check — "
-              f"project_id={'SET' if project_id else 'MISSING'}, "
-              f"client_email={'SET' if client_email else 'MISSING'}, "
-              f"private_key_length={len(private_key)}")
+        print(f"[Firebase] Credential check — project_id={'SET' if project_id else 'MISSING'}, client_email={'SET' if client_email else 'MISSING'}, private_key_length={len(private_key)}")
 
         if project_id and client_email and private_key:
-            # ── Step 1: Strip surrounding quotes FIRST (before newline replacement).
-            # The .env file wraps the key in double quotes: FIREBASE_PRIVATE_KEY="..."
-            # Render's dashboard may store those quotes as part of the value.
-            if (private_key.startswith('"') and private_key.endswith('"')) or \
-               (private_key.startswith("'") and private_key.endswith("'")):
+            if (private_key.startswith('"') and private_key.endswith('"')) or (private_key.startswith("'") and private_key.endswith("'")):
                 private_key = private_key[1:-1].strip()
                 print("[Firebase] Stripped surrounding quotes from FIREBASE_PRIVATE_KEY")
 
-            # ── Step 2: Replace escaped newlines → real newlines.
-            # (Must happen AFTER quote stripping, not before)
             if "\\n" in private_key:
                 private_key = private_key.replace("\\n", "\n")
-                print("[Firebase] Replaced escaped \\n with real newlines in private key")
+            if "\n" in private_key:
+                private_key = private_key.replace("\n", "\n")
 
-            # ── Step 3: Validate the key looks sane.
             if "BEGIN PRIVATE KEY" not in private_key:
-                print(f"[Firebase] WARNING: private key missing 'BEGIN PRIVATE KEY'. "
-                      f"First 50 chars: {repr(private_key[:50])}")
+                print(f"[Firebase] WARNING: private key missing 'BEGIN PRIVATE KEY'. First 50 chars: {repr(private_key[:50])}")
             else:
                 print("[Firebase] Private key header looks valid — attempting to build credentials")
 
@@ -126,10 +138,7 @@ class FirebaseHistoryService:
                 "client_id": os.getenv("FIREBASE_CLIENT_ID", ""),
                 "auth_uri": os.getenv("FIREBASE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
                 "token_uri": os.getenv("FIREBASE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
-                "auth_provider_x509_cert_url": os.getenv(
-                    "FIREBASE_AUTH_PROVIDER_CERT_URL",
-                    "https://www.googleapis.com/oauth2/v1/certs"
-                ),
+                "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
                 "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL", ""),
             }
             try:
@@ -138,9 +147,7 @@ class FirebaseHistoryService:
                 return cred
             except Exception as e:
                 print(f"[Firebase] Option 1 FAILED: {type(e).__name__}: {e}")
-                # Fall through to file-based options
 
-        # --- Option 2: Key file path from env var ---
         key_path_env = os.getenv("FIREBASE_KEY_PATH", "").strip()
         if key_path_env:
             if not os.path.isabs(key_path_env):
@@ -154,11 +161,7 @@ class FirebaseHistoryService:
             else:
                 print(f"[Firebase] Option 2 — FIREBASE_KEY_PATH set but file not found: {key_path_env}")
 
-        # --- Option 3: Legacy fallback ---
-        legacy_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "resources", "firebase-key.json"
-        )
+        legacy_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "firebase-key.json")
         if os.path.exists(legacy_path):
             print(f"[Firebase] Option 3 — using legacy key file: {legacy_path}")
             try:
@@ -169,15 +172,37 @@ class FirebaseHistoryService:
         print("[Firebase] CRITICAL: No valid credentials found via any option.")
         return None
 
-    def save_history(self, record: Dict[str, Any]) -> str:
-        """Saves a validation report to Firestore."""
+    def save_history(self, record: dict) -> str:
         if not self.enabled:
-            # This prints in Render logs so you can see Firebase is disabled
+            if self.local_fallback:
+                try:
+                    if "timestamp" not in record:
+                        record["timestamp"] = datetime.now(timezone.utc).isoformat()
+                    elif isinstance(record["timestamp"], datetime):
+                        record["timestamp"] = record["timestamp"].isoformat()
+                    
+                    if "deleted" not in record:
+                        record["deleted"] = False
+                        
+                    doc_id = record["validation_id"]
+                    if record.get("file_id"):
+                        doc_id = f"{record['validation_id']}_{record['file_id']}"
+                    
+                    db_data = self._read_local_db()
+                    db_data = [r for r in db_data if r.get("validation_id") != record["validation_id"] or r.get("file_id") != record.get("file_id")]
+                    
+                    sanitized = _sanitize_firestore_doc(record)
+                    db_data.append(sanitized)
+                    self._write_local_db(db_data)
+                    print(f"[LocalDB] Saved local history document: {doc_id}")
+                    return doc_id
+                except Exception as e:
+                    print(f"[LocalDB] Error in save_history: {e}")
+                    return None
             print("[Firebase] SKIPPED save_history: Firebase is disabled (credentials not loaded).")
             return None
 
         try:
-            # Convert timestamp string to native datetime for Firestore
             if "timestamp" not in record:
                 record["timestamp"] = datetime.now(timezone.utc)
             elif isinstance(record["timestamp"], str):
@@ -189,13 +214,8 @@ class FirebaseHistoryService:
             if "deleted" not in record:
                 record["deleted"] = False
 
-            # Sanitize the full record so no Python-only types reach Firestore.
-            # report_json in particular can contain nested datetime objects.
-            # We sanitize everything EXCEPT the timestamp field which Firestore
-            # natively accepts as a Python datetime.
             saved_timestamp = record.get("timestamp")
             sanitized = _sanitize_firestore_doc(record)
-            # Restore the Python datetime so Firestore indexes it as a Timestamp
             sanitized["timestamp"] = saved_timestamp
 
             doc_id = sanitized["validation_id"]
@@ -206,48 +226,76 @@ class FirebaseHistoryService:
             doc_ref.set(sanitized)
             print(f"[Firebase] Saved document: {doc_id}")
             return doc_id
-
         except Exception as e:
             print(f"[Firebase] ERROR in save_history: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
             return None
 
-    def get_history(self, skip: int = 0, limit: int = 5000) -> List[Dict[str, Any]]:
-        """Retrieves history records from Firestore"""
+    def get_history(self, skip: int = 0, limit: int = 5000) -> list:
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    non_deleted = [r for r in db_data if not r.get("deleted", False)]
+                    non_deleted.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                    
+                    results = []
+                    for r in non_deleted[skip:]:
+                        if "origin" not in r or not r["origin"]:
+                            r["origin"] = "Pasted"
+                        results.append(r)
+                        if len(results) >= limit:
+                            break
+                    return results
+                except Exception as e:
+                    print(f"[LocalDB] Error fetching local history: {e}")
+                    return []
             return []
             
         try:
-            # Filter deleted=False in Python to avoid requiring a composite Firestore index.
-            query = self.db.collection("validation_history") \
-                          .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            query = self.db.collection("validation_history")                           .select(["validation_id", "batch_id", "file_id", "timestamp", "message_type", "status", "total_errors", "total_warnings", "execution_time_ms", "deleted", "origin"])                           .order_by("timestamp", direction=firestore.Query.DESCENDING)
             
             docs = query.stream()
             results = []
-            non_deleted_count = 0  # tracks position among non-deleted docs for skip
+            non_deleted_count = 0
             for doc in docs:
                 data = doc.to_dict()
                 if data.get("deleted", False):
-                    continue  # skip soft-deleted records entirely
-
+                    continue
+ 
                 if non_deleted_count >= skip:
-                    # Sanitize Firestore timestamps before serialization
-                    results.append(_sanitize_firestore_doc(data))
+                    sanitized_data = _sanitize_firestore_doc(data)
+                    if "origin" not in sanitized_data or not sanitized_data["origin"]:
+                        sanitized_data["origin"] = "Pasted"
+                    results.append(sanitized_data)
                     if len(results) >= limit:
                         non_deleted_count += 1
                         break
-
+ 
                 non_deleted_count += 1
-
             return results
         except Exception as e:
             print(f"Error fetching Firestore history: {e}")
             return []
 
-    def get_stats(self) -> Dict[str, int]:
-        """Calculates dashboard stats from Firestore"""
+    def get_stats(self) -> dict:
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    non_deleted = [r for r in db_data if not r.get("deleted", False)]
+                    total = len(non_deleted)
+                    passed = sum(1 for r in non_deleted if r.get("status") == "PASS")
+                    failed = sum(1 for r in non_deleted if r.get("status") == "FAIL")
+                    quality = round((passed / total) * 100) if total > 0 else 0
+                    return {
+                        "total_audits": total,
+                        "passed_messages": passed,
+                        "failed_messages": failed,
+                        "validation_quality": quality
+                    }
+                except Exception as e:
+                    print(f"[LocalDB] Error fetching local stats: {e}")
+                    return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
             
         try:
@@ -279,11 +327,25 @@ class FirebaseHistoryService:
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
 
     def delete_record(self, validation_id: str) -> bool:
-        """Deletes a single record or a batch depending on the provided ID"""
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    modified = False
+                    for r in db_data:
+                        if r.get("batch_id") == validation_id or r.get("validation_id") == validation_id:
+                            r["deleted"] = True
+                            modified = True
+                    if modified:
+                        self._write_local_db(db_data)
+                        return True
+                    return False
+                except Exception as e:
+                    print(f"[LocalDB] Error deleting local record: {e}")
+                    return False
             return False
+            
         try:
-            # First, try deleting by batch_id
             docs = list(self.db.collection("validation_history").where("batch_id", "==", validation_id).stream())
             if docs:
                 batch = self.db.batch()
@@ -292,19 +354,30 @@ class FirebaseHistoryService:
                 batch.commit()
                 return True
                 
-            # Fallback to soft deleting by document ID (validation_id)
             self.db.collection("validation_history").document(validation_id).update({"deleted": True})
             return True
         except:
             return False
 
     def delete_all(self) -> int:
-        """Deletes all records from the collection"""
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    count = 0
+                    for r in db_data:
+                        if not r.get("deleted", False):
+                            r["deleted"] = True
+                            count += 1
+                    if count > 0:
+                        self._write_local_db(db_data)
+                    return count
+                except Exception as e:
+                    print(f"[LocalDB] Error soft deleting local all: {e}")
+                    return 0
             return 0
         
         try:
-            # Firestore batch update (up to 500 at a time)
             batch = self.db.batch()
             docs = list(self.db.collection("validation_history").stream())
             count = 0
@@ -318,15 +391,16 @@ class FirebaseHistoryService:
             
             if count % 500 != 0:
                 batch.commit()
-            
             return count
         except Exception as e:
             print(f"Error during batch delete: {e}")
             return 0
 
     def reset_all_counters(self):
-        """Deletes all documents in the validation_counters collection to reset sequences"""
         if not self.enabled:
+            if self.local_fallback:
+                self._write_local_counters({})
+                print("[LocalDB] Reset local counters database.")
             return
         try:
             docs = list(self.db.collection("validation_counters").stream())
@@ -345,16 +419,19 @@ class FirebaseHistoryService:
             print(f"Error resetting counters: {e}")
 
     def hard_delete_all(self) -> int:
-        """
-        HARD deletes all records from validation_history AND resets validation_counters.
-        This is a full wipe — documents are permanently removed from Firestore.
-        """
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    self._write_local_db([])
+                    self.reset_all_counters()
+                    return 1
+                except Exception as e:
+                    print(f"[LocalDB] Error hard deleting local all: {e}")
+                    return 0
             return 0
         
         total_deleted = 0
         try:
-            # 1. Hard delete all validation_history documents
             docs = list(self.db.collection("validation_history").stream())
             batch = self.db.batch()
             count = 0
@@ -368,76 +445,69 @@ class FirebaseHistoryService:
                 batch.commit()
             total_deleted = count
             
-            # 2. Reset all counters
             self.reset_all_counters()
-            
             print(f"Hard deleted {total_deleted} history documents and reset all counters.")
         except Exception as e:
             print(f"Error during hard delete: {e}")
-        
         return total_deleted
 
-    def get_detail(self, validation_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Gets full report and original message for a given validation_id.
-
-        Lookup order:
-        1. Exact document ID match (bare validation_id, e.g. 'VAL100426000001').
-        2. Composite document ID match (e.g. 'VAL100426000001_FILE0001') — used
-           when a batch was submitted with file_id tracking.
-        3. Firestore query by the 'batch_id' field — catches cases where the
-           document was saved under a composite key but the caller only has the
-           batch/validation ID portion.
-        """
+    def get_detail(self, validation_id: str) -> Optional[dict]:
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    for r in db_data:
+                        if r.get("deleted", False):
+                            continue
+                        if r.get("validation_id") == validation_id or r.get("batch_id") == validation_id:
+                            return r
+                    return None
+                except Exception as e:
+                    print(f"[LocalDB] Error fetching local detail: {e}")
+                    return None
             return None
+            
         try:
             collection = self.db.collection("validation_history")
-
-            # --- Attempt 1: exact document ID ---
             doc = collection.document(validation_id).get()
             if doc.exists:
                 data = doc.to_dict()
                 if not data.get("deleted", False):
                     return _sanitize_firestore_doc(data)
 
-            # --- Attempt 2: query by validation_id field (handles composite keys) ---
-            docs = list(
-                collection.where("validation_id", "==", validation_id)
-                          .where("deleted", "==", False)
-                          .limit(1)
-                          .stream()
-            )
+            docs = list(collection.where("validation_id", "==", validation_id).where("deleted", "==", False).limit(1).stream())
             if docs:
                 return _sanitize_firestore_doc(docs[0].to_dict())
 
-            # --- Attempt 3: query by batch_id field ---
-            docs = list(
-                collection.where("batch_id", "==", validation_id)
-                          .where("deleted", "==", False)
-                          .limit(1)
-                          .stream()
-            )
+            docs = list(collection.where("batch_id", "==", validation_id).where("deleted", "==", False).limit(1).stream())
             if docs:
                 return _sanitize_firestore_doc(docs[0].to_dict())
-
             return None
         except Exception as e:
             print(f"Error fetching detail for '{validation_id}': {e}")
             return None
 
     def get_next_sequence(self, date_str: str) -> int:
-        """
-        Atomically increments and returns the sequence number for a given date.
-        This ensures that validation IDs (VAL{DDMMYY}XXXXX) are unique and sequential 
-        across server restarts and multiple instances.
-        """
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    import threading
+                    if not hasattr(self, "_local_counter_lock"):
+                        self._local_counter_lock = threading.Lock()
+                        
+                    with self._local_counter_lock:
+                        counters = self._read_local_counters()
+                        seq = counters.get(date_str, 0) + 1
+                        counters[date_str] = seq
+                        self._write_local_counters(counters)
+                        return seq
+                except Exception as e:
+                    print(f"[LocalDB] Error generating local sequence: {e}")
+                    return None
             return None
             
         doc_ref = self.db.collection("validation_counters").document(date_str)
         try:
-            # Use a transaction to ensure atomicity
             transaction = self.db.transaction()
             
             @firestore.transactional
@@ -450,67 +520,46 @@ class FirebaseHistoryService:
                     new_seq = 1
                     transaction.set(doc_ref, {"seq": 1})
                 return new_seq
-                
             return get_and_increment(transaction)
         except Exception as e:
             print(f"Firebase counter error: {e}")
             return None
 
     def check_duplicate_msg_uetr(self, msg_id: str, uetr: str) -> bool:
-        """
-        Checks Firestore for any existing validation history record with the
-        same MsgId and UETR combination.
-        """
         if not self.enabled:
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    for r in db_data:
+                        if r.get("deleted", False):
+                            continue
+                        report = r.get("report_json", {})
+                        metadata = report.get("metadata", {})
+                        if metadata.get("MsgId") == msg_id and metadata.get("UETR") == uetr:
+                            return True
+                    return False
+                except Exception as e:
+                    print(f"[LocalDB] Error checking local duplicate: {e}")
+                    return False
             return False
             
         try:
-            # Search for documents where message_type contains pacs.009 (optional but narrows search)
-            # and report_json. GrpHdr.MsgId matches OR report_json hasMsgId/UETR at certain paths
-            # Since report_json is a nested dict, Firestore allows querying nested fields.
-            
-            # The most direct way given save_history structure is to query original_message OR the report_json
-            # report_json contains the full report. We can also index MsgId and UETR during save_history for faster lookup.
-            
-            # For now, let's query based on the original structure saved in save_history
-            # MsgId is saved in report_json["GrpHdr"]["MsgId"] (usually)
-            # UETR is saved in report_json["CdtTrfTxInf"]["PmtId"]["UETR"]
-            
-            # However, the record itself has some flattened fields.
-            # Let's check if we have msg_id / uetr in the record. No, they are in report_json.
-            
-            # To make this performant without deep nested queries, 
-            # we should ideally add 'msg_id' and 'uetr' to the record dict in main.py.
-            
-            # Let's try searching via where clauses on properties we know.
-            # We'll use a slightly broader query and filter in Python if needed, 
-            # but Firestore where() is better.
-            
-            query = self.db.collection("validation_history") \
-                        .where("deleted", "==", False) \
-                        .where("report_json.metadata.MsgId", "==", msg_id) \
-                        .stream()
-            
+            query = self.db.collection("validation_history").where("deleted", "==", False).where("report_json.metadata.MsgId", "==", msg_id).stream()
             for doc in query:
                 data = doc.to_dict()
                 report = data.get("report_json", {})
                 metadata = report.get("metadata", {})
-                
                 if metadata.get("UETR") == uetr:
                     return True
-                    
             return False
         except Exception as e:
             print(f"Error checking duplicate MsgId/UETR in Firestore: {e}")
             return False
 
     def test_write(self) -> dict:
-        """
-        Writes a small test document to Firestore and immediately deletes it.
-        Useful for diagnosing Render connectivity — hit /firebase-write-test endpoint.
-        Returns a dict with 'success' and optionally 'error'.
-        """
         if not self.enabled:
+            if self.local_fallback:
+                return {"success": True, "note": "Local JSON database is operational."}
             return {"success": False, "error": "Firebase not enabled — credentials missing or failed to load."}
         try:
             test_id = f"_write_test_{int(datetime.now(timezone.utc).timestamp())}"
@@ -518,14 +567,11 @@ class FirebaseHistoryService:
             doc_ref.set({
                 "_test": True,
                 "timestamp": datetime.now(timezone.utc),
-                "deleted": True  # invisible to normal history queries
+                "deleted": True
             })
-            doc_ref.delete()  # clean up immediately
+            doc_ref.delete()
             print(f"[Firebase] test_write succeeded (doc_id={test_id})")
             return {"success": True, "doc_id": test_id}
         except Exception as e:
             print(f"[Firebase] test_write FAILED: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
             return {"success": False, "error": str(e)}
-

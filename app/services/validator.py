@@ -344,6 +344,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             # STEP 3: Identity & Rejection logic is here
             try:
                 if not await self._run_layer_1(xml_content, report, filename):
+                    report.layer_status['2'] = {"status": "SKIPPED", "time": 0}
+                    report.layer_status['3'] = {"status": "SKIPPED", "time": 0}
                     return self._finalize_report(report, start_time)
             except Exception as e:
                 report.add_issue(ValidationIssue("ERROR", 1, "FATAL_L1", "/", f"Critical failure in Layer 1: {str(e)}", "Check if XML is properly formed."))
@@ -436,12 +438,13 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
 
 
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
-                    if not layer2_success:
-                         # Rejection: If XSD fails, stop here after collecting all errors.
-                         return self._finalize_report(report, start_time)
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))
                     return self._finalize_report(report, start_time)
+            
+            if report.errors > 0:
+                report.layer_status['3'] = {"status": "SKIPPED", "time": 0}
+                return self._finalize_report(report, start_time)
             
             # STEP 5: Canonical Normalization for Rule Execution
             try:
@@ -2361,7 +2364,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             layer_errors = [i for i in report.issues if str(i.get("layer", "")) == layer_str and i.get("severity") == "ERROR"]
             if layer_errors and layer_str in report.layer_status:
                 report.layer_status[layer_str]["status"] = "❌"
-            elif layer_str in report.layer_status:
+            elif layer_str in report.layer_status and report.layer_status[layer_str]["status"] != "SKIPPED":
                  report.layer_status[layer_str]["status"] = "✅"
 
         # 3. Update global report status
