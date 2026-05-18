@@ -721,11 +721,11 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.008.001.13</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.13">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">
 \t\t<FIToFICstmrCdtTrf>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -752,11 +752,11 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 # ── Pacs.009 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = False) -> str:
-    """Generate pacs.009.001.12 (FI Credit Transfer).
+    """Generate pacs.009.001.08 (FI Credit Transfer).
 
     v12 schema differences vs v08:
       - Root element: FICdtTrf  (was FinInstnCdtTrf)
-      - Namespace:    pacs.009.001.12
+      - Namespace:    pacs.009.001.08
       - Dbtr / Cdtr:  MANDATORY, type BranchAndFinancialInstitutionIdentification8
       - UltmtDbtr / UltmtCdtr: also BranchAndFinancialInstitutionIdentification8
       - ChrgsInf:     does NOT exist in CreditTransferTransaction67
@@ -882,8 +882,8 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 """
 
     # ── v12 namespace and root element ──
-    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.009.001.12"
-    msg_def = "pacs.009.001.12"
+    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.009.001.08"
+    msg_def = "pacs.009.001.08"
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -1001,11 +1001,11 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.004.001.14</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.004.001.09</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.004.001.14">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.004.001.09">
 \t\t<PmtRtr>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1019,7 +1019,7 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 \t\t\t\t<RtrId>{xe(rtr_id)}</RtrId>
 \t\t\t\t<OrgnlGrpInf>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInf>
 \t\t\t\t<OrgnlInstrId>{xe(orig_instr_id)}</OrgnlInstrId>
 \t\t\t\t<OrgnlEndToEndId>{xe(orig_e2e)}</OrgnlEndToEndId>
@@ -1138,11 +1138,11 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.003.001.11</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.003.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.003.001.11">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.003.001.08">
 \t\t<FIToFICstmrDrctDbt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1209,11 +1209,11 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pacs.002.001.15</MsgDefIdr>
+\t\t<MsgDefIdr>pacs.002.001.10</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.15">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.10">
 \t\t<FIToFIPmtStsRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1222,7 +1222,7 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 \t\t\t<TxInfAndSts>
 \t\t\t\t<OrgnlGrpInf>
 \t\t\t\t\t<OrgnlMsgId>{xe(orig_msg_id)}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInf>
 \t\t\t\t<OrgnlEndToEndId>{xe(orig_e2e)}</OrgnlEndToEndId>
 \t\t\t\t<OrgnlTxId>{xe(orig_tx)}</OrgnlTxId>
@@ -1239,7 +1239,7 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 
 # ── Pacs.010 Generator ─────────────────────────────────────────────────────────
 
-def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
+def _gen_pacs010(selected: set, idx: int) -> str:
     ccy, country = rng_currency_and_country()
     iban_country = country
     from_bic = rng_bic()
@@ -1255,8 +1255,10 @@ def _gen_pacs010(selected: set, idx: int, v3: bool = False) -> str:
     sttlm_dt = rng_date(1)
     amount = rng_amount(ccy)
 
-    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03" if v3 else "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.06"
-    msg_def = "pacs.010.001.03" if v3 else "pacs.010.001.06"
+    # Both pacs.010 variants (main and v3 / Margin Collection) use the same
+    # CBPR+ namespace; the v3 flag only changes the XML body structure.
+    ns = "urn:iso:std:iso:20022:tech:xsd:pacs.010.001.03"
+    msg_def = "pacs.010.001.03"
 
     # DrctDbtTxInf body: PmtId → PmtTpInf → IntrBkSttlmAmt → IntrBkSttlmDt → UltmtDbtr → Dbtr → DbtrAcct → DbtrAgt → RmtInf
     dd_tx = ""
@@ -1357,11 +1359,11 @@ def _gen_camt057(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.057.001.08</MsgDefIdr>
+\t\t<MsgDefIdr>camt.057.001.06</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.057.001.08">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.057.001.06">
 \t\t<NtfctnToRcv>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1436,11 +1438,11 @@ def _gen_camt052(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.052.001.13</MsgDefIdr>
+\t\t<MsgDefIdr>camt.052.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.13">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.08">
 \t\t<BkToCstmrAcctRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1510,11 +1512,11 @@ def _gen_camt053(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.053.001.13</MsgDefIdr>
+\t\t<MsgDefIdr>camt.053.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.13">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
 \t\t<BkToCstmrStmt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1573,11 +1575,11 @@ def _gen_camt054(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.054.001.13</MsgDefIdr>
+\t\t<MsgDefIdr>camt.054.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.13">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
 \t\t<BkToCstmrDbtCdtNtfctn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1607,7 +1609,7 @@ def _gen_camt055(selected: set, idx: int) -> str:
     if "original_group_information" in selected:
         body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInfAndCxl>
 """
     
@@ -1640,11 +1642,11 @@ def _gen_camt055(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.055.001.12</MsgDefIdr>
+\t\t<MsgDefIdr>camt.055.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.055.001.12">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.055.001.08">
 \t\t<CstmrPmtCxlReq>
 \t\t\t<Assgnmt>
 \t\t\t\t<Id>{xe(rng_id("ASSGNMT", 10))}</Id>
@@ -1673,7 +1675,7 @@ def _gen_camt056(selected: set, idx: int) -> str:
     if "original_group_information" in selected:
         body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.13</OrgnlMsgNmId>
+\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
 \t\t\t\t</OrgnlGrpInfAndCxl>
 """
     if "transaction_information" in selected:
@@ -1708,11 +1710,11 @@ def _gen_camt056(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>camt.056.001.11</MsgDefIdr>
+\t\t<MsgDefIdr>camt.056.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.056.001.11">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.056.001.08">
 \t\t<FIToFIPmtCxlReq>
 \t\t\t<Assgnmt>
 \t\t\t\t<Id>{xe(rng_id("ASSGNMT", 10))}</Id>
@@ -1782,11 +1784,11 @@ def _gen_pain001(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.001.001.12</MsgDefIdr>
+\t\t<MsgDefIdr>pain.001.001.09</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.12">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">
 \t\t<CstmrCdtTrfInitn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1856,11 +1858,11 @@ def _gen_pain002(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.002.001.14</MsgDefIdr>
+\t\t<MsgDefIdr>pain.002.001.10</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.002.001.14">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.002.001.10">
 \t\t<CstmrPmtStsRpt>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1928,11 +1930,11 @@ def _gen_pain008(selected: set, idx: int) -> str:
 \t\t<To>
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
-\t\t<MsgDefIdr>pain.008.001.11</MsgDefIdr>
+\t\t<MsgDefIdr>pain.008.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
-\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.11">
+\t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.08">
 \t\t<CstmrDrctDbtInitn>
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
@@ -1989,10 +1991,10 @@ def generate_single_xml(
         return _gen_pacs003(selected, idx)
     elif "pacs.002" in msg_lower:
         return _gen_pacs002(selected, idx)
-    elif "pacs.010" in msg_lower and ("001.03" in msg_lower or "v3" in msg_lower):
-        return _gen_pacs010(selected, idx, v3=True)
     elif "pacs.010" in msg_lower:
-        return _gen_pacs010(selected, idx, v3=False)
+        # Both pacs.010 variants (Interbank Direct Debit and Margin Collection / v3)
+        # share the CBPR+ pacs.010.001.03 namespace and the same generator.
+        return _gen_pacs010(selected, idx)
     # CAMT generators
     elif "camt.057" in msg_lower:
         return _gen_camt057(selected, idx)
