@@ -191,6 +191,24 @@ async def convert_mt_to_mx(request: schemas.MTConversionRequest):
             report_dict = validation_report.to_dict()
             result["validation_report"] = report_dict
             
+            # Save conversion validation to history if requested
+            if request.store_in_history:
+                record = {
+                    "validation_id": report_dict["validation_id"],
+                    "batch_id": report_dict["validation_id"],
+                    "file_id": "",
+                    "timestamp": report_dict["timestamp"],
+                    "message_type": report_dict["message"],
+                    "status": report_dict["status"],
+                    "total_errors": report_dict["errors"],
+                    "total_warnings": report_dict["warnings"],
+                    "execution_time_ms": report_dict["total_time_ms"],
+                    "report_json": report_dict,
+                    "original_message": mx_message,
+                    "origin": "MT to MX"
+                }
+                history_service.save_history(record)
+            
             # If the generated MX fails schema (L2) or mandatory L3 rules, mark as error
             # but keep the successful conversion parts so the user can see the output
             if report_dict.get("status") != "PASS":

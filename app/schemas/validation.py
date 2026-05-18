@@ -9,7 +9,7 @@ class ValidationRequest(BaseModel):
     store_in_history: bool = True
     batch_id: Optional[str] = None
     file_id: Optional[str] = None
-    origin: Optional[str] = "Generated via Manual Entry"
+    origin: Optional[str] = "Manual Entry"
 
 class BatchInitRequest(BaseModel):
     file_count: int
@@ -17,6 +17,7 @@ class BatchInitRequest(BaseModel):
 class MTConversionRequest(BaseModel):
     mt_message: str
     target_mt_type: Optional[str] = None
+    store_in_history: bool = True
 
 class IssueSchema(BaseModel):
     severity: str
