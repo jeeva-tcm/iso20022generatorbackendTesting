@@ -34,11 +34,25 @@ def _sanitize_firestore_doc(obj: Any) -> Any:
 
 
 class FirebaseHistoryService:
+    # Per-call timeout for any Firestore RPC. The default of 300s caused
+    # the whole site to feel frozen when credentials were bad — every endpoint
+    # waited 5 minutes per call. 10s is plenty for healthy Firestore.
+    FIRESTORE_CALL_TIMEOUT_S = 10.0
+
+    # Circuit breaker — after this many consecutive auth failures we disable
+    # Firestore at runtime and fall back to local JSON. Prevents the same
+    # 300s-timeout dance from repeating endlessly.
+    AUTH_FAILURE_THRESHOLD = 3
+
     def __init__(self):
         self.db = None
         self.enabled = False
         self.local_fallback = True
-        
+        # Circuit-breaker state. self.enabled is the user-visible flag; this
+        # tracks whether we tripped the breaker at runtime due to auth errors.
+        self._auth_failure_count = 0
+        self._circuit_broken_reason: Optional[str] = None
+
         # Local JSON database paths
         self.local_db_path = os.path.join(_backend_root, "validation_history_local.json")
         self.local_counters_path = os.path.join(_backend_root, "validation_counters_local.json")
@@ -52,12 +66,73 @@ class FirebaseHistoryService:
                 self.db = firestore.client()
                 self.enabled = True
                 print("Firebase Firestore initialized successfully.")
+
+                # Boot-time health check: credential parsing succeeded but that
+                # only proves the JSON shape is valid. The actual OAuth
+                # signature is only verified when we make a real RPC. Do a
+                # tiny throwaway read to surface "invalid_grant" / "Invalid
+                # JWT Signature" at boot, BEFORE the first user request
+                # hangs for 5 minutes.
+                self._run_boot_health_check()
             else:
                 print("ALERT: No Firebase credentials found. Falling back to local JSON database.")
                 self.enabled = False
         except Exception as e:
             print(f"CRITICAL: Error initializing Firebase: {str(e)}. Falling back to local JSON database.")
             self.enabled = False
+
+    def _run_boot_health_check(self) -> None:
+        """Issue a single tiny Firestore read to verify the credentials actually
+        work against Google's OAuth endpoint. If it fails, disable Firestore
+        immediately so subsequent calls don't sit on 300-second timeouts."""
+        try:
+            # Limit to 1 doc, short timeout. We don't care about the result —
+            # we only care whether the RPC authenticates and responds.
+            list(self.db.collection("__health_check").limit(1).stream(
+                timeout=self.FIRESTORE_CALL_TIMEOUT_S
+            ))
+            print("[Firebase] Boot health check passed — Firestore reachable.")
+        except Exception as e:
+            msg = f"{type(e).__name__}: {e}"
+            # The common bad-cred error texts. We detect them so the logged
+            # banner gives the operator a clear action item.
+            cred_signals = ("invalid_grant", "Invalid JWT", "Invalid JWT Signature",
+                            "PERMISSION_DENIED", "UNAUTHENTICATED")
+            looks_like_auth = any(s in str(e) for s in cred_signals)
+
+            self.enabled = False
+            self._circuit_broken_reason = msg
+            if looks_like_auth:
+                print("=" * 70)
+                print("[Firebase] CREDENTIALS REJECTED BY GOOGLE.")
+                print(f"[Firebase] Underlying error: {msg}")
+                print("[Firebase] The service-account JSON key is most likely revoked,")
+                print("[Firebase] rotated, or corrupted in the env var. Generate a fresh")
+                print("[Firebase] key in GCP → IAM → Service Accounts and update")
+                print("[Firebase] FIREBASE_CREDENTIALS_BASE64 on Render, then redeploy.")
+                print("[Firebase] Falling back to local JSON for this session.")
+                print("=" * 70)
+            else:
+                print(f"[Firebase] Boot health check failed ({msg}). Falling back to local JSON.")
+
+    def _note_call_outcome(self, success: bool, error: Optional[Exception] = None) -> None:
+        """Update the circuit-breaker state after a Firestore call."""
+        if success:
+            self._auth_failure_count = 0
+            return
+
+        looks_like_auth = error is not None and any(
+            s in str(error) for s in ("invalid_grant", "Invalid JWT",
+                                      "PERMISSION_DENIED", "UNAUTHENTICATED")
+        )
+        if looks_like_auth:
+            self._auth_failure_count += 1
+            if self._auth_failure_count >= self.AUTH_FAILURE_THRESHOLD:
+                self.enabled = False
+                self._circuit_broken_reason = f"{type(error).__name__}: {error}"
+                print(f"[Firebase] 🚨 Circuit breaker tripped after "
+                      f"{self._auth_failure_count} consecutive auth failures. "
+                      f"Disabling Firestore for this session and using local JSON.")
 
     def _read_local_db(self) -> list:
         if not os.path.exists(self.local_db_path):
@@ -253,15 +328,17 @@ class FirebaseHistoryService:
             
         try:
             query = self.db.collection("validation_history")                           .select(["validation_id", "batch_id", "file_id", "timestamp", "message_type", "status", "total_errors", "total_warnings", "execution_time_ms", "deleted", "origin"])                           .order_by("timestamp", direction=firestore.Query.DESCENDING)
-            
-            docs = query.stream()
+
+            # Short timeout — don't let a broken/slow Firestore freeze the
+            # /history endpoint for 5 minutes. 10s is plenty for healthy reads.
+            docs = query.stream(timeout=self.FIRESTORE_CALL_TIMEOUT_S)
             results = []
             non_deleted_count = 0
             for doc in docs:
                 data = doc.to_dict()
                 if data.get("deleted", False):
                     continue
- 
+
                 if non_deleted_count >= skip:
                     sanitized_data = _sanitize_firestore_doc(data)
                     if "origin" not in sanitized_data or not sanitized_data["origin"]:
@@ -270,11 +347,23 @@ class FirebaseHistoryService:
                     if len(results) >= limit:
                         non_deleted_count += 1
                         break
- 
+
                 non_deleted_count += 1
+            self._note_call_outcome(True)
             return results
         except Exception as e:
+            self._note_call_outcome(False, e)
             print(f"Error fetching Firestore history: {e}")
+            # Best-effort fallback to local JSON so the UI gets *something*
+            # rather than an empty list while the operator fixes credentials.
+            if self.local_fallback:
+                try:
+                    db_data = self._read_local_db()
+                    non_deleted = [r for r in db_data if not r.get("deleted", False)]
+                    non_deleted.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+                    return non_deleted[skip:skip + limit]
+                except Exception:
+                    pass
             return []
 
     def get_stats(self) -> dict:
@@ -299,23 +388,26 @@ class FirebaseHistoryService:
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
             
         try:
-            docs = self.db.collection("validation_history").stream()
+            docs = self.db.collection("validation_history").stream(
+                timeout=self.FIRESTORE_CALL_TIMEOUT_S
+            )
             total = 0
             passed = 0
             failed = 0
-            
+
             for doc in docs:
                 data = doc.to_dict()
                 if data.get("deleted", False):
                     continue
-                    
+
                 total += 1
                 if data.get("status") == "PASS":
                     passed += 1
                 elif data.get("status") == "FAIL":
                     failed += 1
-                    
+
             quality = round((passed / total) * 100) if total > 0 else 0
+            self._note_call_outcome(True)
             return {
                 "total_audits": total,
                 "passed_messages": passed,
@@ -323,6 +415,7 @@ class FirebaseHistoryService:
                 "validation_quality": quality
             }
         except Exception as e:
+            self._note_call_outcome(False, e)
             print(f"Error calculating stats from Firestore: {e}")
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
 
@@ -507,22 +600,52 @@ class FirebaseHistoryService:
             return None
             
         doc_ref = self.db.collection("validation_counters").document(date_str)
+
+        # ── PATH 1: idiomatic Firestore transaction ────────────────────────────
+        # Notes:
+        #   - doc_ref is passed as a parameter (recommended pattern; avoids any
+        #     closure quirks the SDK retry decorator sometimes trips on).
+        #   - We use transaction.set() in both branches; if the field is missing
+        #     for any reason we default to 0 so we never crash on None + 1.
+        @firestore.transactional
+        def update_in_transaction(transaction, ref):
+            snapshot = ref.get(transaction=transaction)
+            current = 0
+            if snapshot.exists:
+                val = snapshot.get("seq")
+                if isinstance(val, int):
+                    current = val
+            new_seq = current + 1
+            transaction.set(ref, {"seq": new_seq})
+            return new_seq
+
         try:
             transaction = self.db.transaction()
-            
-            @firestore.transactional
-            def get_and_increment(transaction):
-                snapshot = doc_ref.get(transaction=transaction)
-                if snapshot.exists:
-                    new_seq = snapshot.get("seq") + 1
-                    transaction.update(doc_ref, {"seq": new_seq})
-                else:
-                    new_seq = 1
-                    transaction.set(doc_ref, {"seq": 1})
-                return new_seq
-            return get_and_increment(transaction)
+            return update_in_transaction(transaction, doc_ref)
         except Exception as e:
-            print(f"Firebase counter error: {e}")
+            # The misleading "transaction has no id so it cannot be rolled back"
+            # surfaces here when the first read inside the transaction fails before
+            # Firestore returns a transaction ID — usually a permission, network,
+            # or schema problem. We log it for diagnosis and fall back below.
+            print(f"[Firebase] counter transaction failed ({type(e).__name__}: {e}). "
+                  f"Trying non-transactional Increment fallback.")
+
+        # ── PATH 2: server-side atomic Increment fallback ──────────────────────
+        # firestore.Increment is atomic on the server side — no transaction needed.
+        # The read-back is racy across concurrent writers, but for VAL-id sequencing
+        # we only need uniqueness, not strict ordering, and the caller already has
+        # its own in-memory fallback if this returns None.
+        try:
+            doc_ref.set({"seq": firestore.Increment(1)}, merge=True)
+            snap = doc_ref.get()
+            if snap.exists:
+                val = snap.get("seq")
+                if isinstance(val, int):
+                    return val
+            return None
+        except Exception as e:
+            print(f"[Firebase] counter Increment fallback also failed "
+                  f"({type(e).__name__}: {e}). Caller will use in-memory counter.")
             return None
 
     def check_duplicate_msg_uetr(self, msg_id: str, uetr: str) -> bool:

@@ -9,6 +9,9 @@ from .models import ValidationIssue, ValidationReport
 class Layer2Mixin:
     # Cache: xsd_path → {tag_name: {label, mandatory, repeatable}}
     _xsd_tag_cache: dict = {}
+    # Cache: xsd_path → parsed (xsd_doc, schema) — avoids re-parsing the XSD on every
+    # validation call. XSD files are large and parsing them dominated the L2 wall time.
+    _xsd_schema_cache: dict = {}
 
     async def _run_layer_2(self, xml_content: str, report: ValidationReport, message_type: str) -> bool:
         """
@@ -50,8 +53,16 @@ class Layer2Mixin:
             # Re-parsing via tostring/fromstring was shifting lines by 1 and losing blank lines.
             validation_doc = copy.deepcopy(main_node)
 
-            xsd_doc = etree.parse(xsd_full_path)
-            schema = etree.XMLSchema(xsd_doc)
+            # Use cached parsed XSD if available — XSD files are large (often
+            # hundreds of KB) and parsing them on every validation call dominated
+            # the bulk-generate wall time. XMLSchema objects are reusable.
+            cached = Layer2Mixin._xsd_schema_cache.get(xsd_full_path)
+            if cached is None:
+                xsd_doc = etree.parse(xsd_full_path)
+                schema = etree.XMLSchema(xsd_doc)
+                Layer2Mixin._xsd_schema_cache[xsd_full_path] = (xsd_doc, schema)
+            else:
+                xsd_doc, schema = cached
 
             # Build dynamic tag info for rich error messages (cached per XSD)
             tag_info = self._build_tag_info_from_xsd(xsd_full_path)
@@ -194,9 +205,16 @@ class Layer2Mixin:
                     try:
                         # 1. Prepare clean header for validation (Deepcopy to keep lines)
                         h_val_doc = copy.deepcopy(app_hdr_node)
-                        
-                        h_xsd_raw = etree.parse(h_path)
-                        h_schema = etree.XMLSchema(h_xsd_raw)
+
+                        # Cache header XSD parsing too — same hot-path optimization
+                        # as the payload XSD above.
+                        h_cached = Layer2Mixin._xsd_schema_cache.get(h_path)
+                        if h_cached is None:
+                            h_xsd_raw = etree.parse(h_path)
+                            h_schema = etree.XMLSchema(h_xsd_raw)
+                            Layer2Mixin._xsd_schema_cache[h_path] = (h_xsd_raw, h_schema)
+                        else:
+                            h_xsd_raw, h_schema = h_cached
                         h_xsd_ns = h_xsd_raw.getroot().get("targetNamespace")
 
                         #  Build tag_info from the HEAD.001 XSD (NOT payload XSD)
