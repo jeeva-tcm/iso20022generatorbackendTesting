@@ -1397,8 +1397,9 @@ def _gen_camt052(selected: set, idx: int) -> str:
     acct_iban = rng_iban()
 
     rpt = ""
-    # Account block with nested Ownr/Svcr in v13
+    # Account block with nested Ownr/Svcr and mandatory Ccy
     rpt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>\n"
+    rpt += f"\t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>\n"
     if "account_owner" in selected:
         rpt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
@@ -1426,7 +1427,7 @@ def _gen_camt052(selected: set, idx: int) -> str:
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
 \t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
 \t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
-\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd><Issr>CBPR</Issr></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -1450,6 +1451,10 @@ def _gen_camt052(selected: set, idx: int) -> str:
 \t\t\t</GrpHdr>
 \t\t\t<Rpt>
 \t\t\t\t<Id>{xe(rng_id("RPT", 10))}</Id>
+\t\t\t\t<RptPgntn>
+\t\t\t\t\t<PgNb>1</PgNb>
+\t\t\t\t\t<LastPgInd>true</LastPgInd>
+\t\t\t\t</RptPgntn>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 {rpt}\t\t\t</Rpt>
 \t\t</BkToCstmrAcctRpt>
@@ -1671,36 +1676,45 @@ def _gen_camt056(selected: set, idx: int) -> str:
     cre_dt = rng_datetime()
     ccy = rng_currency()
 
-    body = ""
-    if "original_group_information" in selected:
-        body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
-\t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
-\t\t\t\t</OrgnlGrpInfAndCxl>
-"""
-    if "transaction_information" in selected:
-        body += f"""\t\t\t\t<TxInf>
-\t\t\t\t\t<CxlId>{xe(rng_id("CXLID", 10))}</CxlId>
-\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
-\t\t\t\t\t<OrgnlTxId>{xe(rng_id("ORITX", 10))}</OrgnlTxId>
-\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
-\t\t\t\t\t<OrgnlIntrBkSttlmAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</OrgnlIntrBkSttlmAmt>
-\t\t\t\t\t<OrgnlIntrBkSttlmDt>{rng_date(-1)}</OrgnlIntrBkSttlmDt>
-"""
-        if "cancellation_reason" in selected:
-            reasons = ["DUPL", "CUST", "AGNT", "CURR", "UPAY", "FRAD"]
-            orgtr = party_xml("Orgtr", rng_name(), rng_country(), 6)
-            body += f"""\t\t\t\t\t<CxlRsnInf>
-{orgtr}\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>
+    cxl_id = rng_id("CXLID", 10)
+    case_id = rng_id("CASE", 10)
+    org_msg_id = rng_id("ORIGMSG", 10)
+    e2e_id = rng_id("ORIE2E", 10)
+    uetr = rng_uetr()
+    amt = rng_amount(ccy)
+    settle_dt = rng_date(-1)
+
+    reasons = ["DUPL", "CUST", "AGNT", "CURR", "UPAY", "FRAD"]
+    reason_cd = random.choice(reasons)
+
+    body = f"""\t\t\t\t<TxInf>
+\t\t\t\t\t<CxlId>{xe(cxl_id)}</CxlId>
+\t\t\t\t\t<Case>
+\t\t\t\t\t\t<Id>{xe(case_id)}</Id>
+\t\t\t\t\t\t<Cretr>
+\t\t\t\t\t\t\t<Agt>
+\t\t\t\t\t\t\t\t<FinInstnId>
+\t\t\t\t\t\t\t\t\t<BICFI>{xe(from_bic)}</BICFI>
+\t\t\t\t\t\t\t\t</FinInstnId>
+\t\t\t\t\t\t\t</Agt>
+\t\t\t\t\t\t</Cretr>
+\t\t\t\t\t</Case>
+\t\t\t\t\t<OrgnlGrpInf>
+\t\t\t\t\t\t<OrgnlMsgId>{xe(org_msg_id)}</OrgnlMsgId>
+\t\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
+\t\t\t\t\t</OrgnlGrpInf>
+\t\t\t\t\t<OrgnlEndToEndId>{xe(e2e_id)}</OrgnlEndToEndId>
+\t\t\t\t\t<OrgnlUETR>{xe(uetr)}</OrgnlUETR>
+\t\t\t\t\t<OrgnlIntrBkSttlmAmt Ccy="{xe(ccy)}">{amt}</OrgnlIntrBkSttlmAmt>
+\t\t\t\t\t<OrgnlIntrBkSttlmDt>{settle_dt}</OrgnlIntrBkSttlmDt>
+\t\t\t\t\t<CxlRsnInf>
+\t\t\t\t\t\t<Rsn>
+\t\t\t\t\t\t\t<Cd>{reason_cd}</Cd>
+\t\t\t\t\t\t</Rsn>
 \t\t\t\t\t\t<AddtlInf>FI cancellation requested</AddtlInf>
 \t\t\t\t\t</CxlRsnInf>
+\t\t\t\t</TxInf>
 """
-        if "original_transaction" in selected:
-            body += f"""\t\t\t\t\t<OrgnlTxRef>
-\t\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</IntrBkSttlmAmt>
-\t\t\t\t\t</OrgnlTxRef>
-"""
-        body += "\t\t\t\t</TxInf>\n"
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
