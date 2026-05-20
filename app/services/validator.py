@@ -436,6 +436,10 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     # Global Rule: Name & Address Co-existence (CBPR+)
                     self._validate_name_address_coexistence(xml_content, report)
 
+                    # Global Rule: Empty mandatory containers (e.g. <FinInstnId/>) —
+                    # caught BEFORE Layer 2 so missing identifiers fail validation even
+                    # when the XSD declares all children as minOccurs="0".
+                    self._validate_empty_required_containers(xml_content, report)
 
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                 except Exception as e:
@@ -850,7 +854,116 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     "For CBPR+ compliance, if an address is provided, the name of the party must also be included."
                 ))
 
+    def _validate_empty_required_containers(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        CBPR+ Business Rule — Empty Mandatory Containers.
 
+        Several ISO 20022 complex types declare *all* of their children as
+        ``minOccurs="0"`` (notably ``FinancialInstitutionIdentification18`` used
+        for AppHdr Fr/To and every agent in the payload). XSD validation will
+        therefore happily accept ``<FinInstnId></FinInstnId>`` even though such a
+        message is operationally invalid — it cannot be routed because no party
+        has been identified. CBPR+ network rules require at least one identifier
+        to be present.
+
+        This rule scans the message for known "must-not-be-empty" containers
+        and flags any that have no element children and no text content.
+        It runs BEFORE Layer 2 so the failure is recorded with severity ERROR
+        and the report is marked FAIL even when the XSD itself is satisfied.
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        def local(tag) -> str:
+            return tag.split('}')[-1] if isinstance(tag, str) and '}' in tag else tag
+
+        def is_effectively_empty(elem) -> bool:
+            """True if elem has no element children AND no non-whitespace text."""
+            for child in elem:
+                if isinstance(child.tag, str):
+                    return False  # at least one element child present
+            text = (elem.text or "").strip()
+            return not text
+
+        # Containers that the XSD allows to be empty but CBPR+ does not.
+        # value = human-friendly hint about what must be inside.
+        EMPTY_NOT_ALLOWED = {
+            'FinInstnId':   "BICFI, ClrSysMmbId, LEI, Nm, or Othr",
+            'FIId':         "a FinInstnId block with at least one identifier",
+            'PstlAdr':      "Ctry, TwnNm, StrtNm, BldgNb, PstCd, or AdrLine",
+            'PmtId':        "EndToEndId (and ideally InstrId, TxId, UETR)",
+            'SttlmInf':     "SttlmMtd",
+            'GrpHdr':       "MsgId, CreDtTm, NbOfTxs and SttlmInf",
+            'PmtTpInf':     "SvcLvl, LclInstrm or CtgyPurp",
+            'SchmeNm':      "<Cd> or <Prtry>",
+            'Othr':         "an identifier value <Id>",
+            'ClrSysMmbId':  "MmbId",
+            'OrgId':        "AnyBIC, LEI, or Othr/Id",
+            'PrvtId':       "DtAndPlcOfBirth or Othr/Id",
+        }
+
+        # Party/agent wrappers — must contain *some* identifying child
+        # (Nm, FinInstnId, FIId, Id) that itself isn't empty.
+        AGENT_AND_PARTY = {
+            'Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr', 'InitgPty',
+            'DbtrAgt', 'CdtrAgt', 'InstgAgt', 'InstdAgt',
+            'IntrmyAgt1', 'IntrmyAgt2', 'IntrmyAgt3',
+            'PrvsInstgAgt1', 'PrvsInstgAgt2', 'PrvsInstgAgt3',
+            'FwdgAgt', 'Fr', 'To',
+        }
+
+        # Track elements already reported by path (sourceline + name) to avoid
+        # double-flagging when both the parent (e.g. Fr) and child (FinInstnId)
+        # would qualify.
+        reported = set()
+
+        for elem in root.iter():
+            if not isinstance(elem.tag, str):
+                continue
+            name = local(elem.tag)
+            line = elem.sourceline or 0
+
+            if name in EMPTY_NOT_ALLOWED and is_effectively_empty(elem):
+                key = (line, name)
+                if key in reported:
+                    continue
+                reported.add(key)
+                hint = EMPTY_NOT_ALLOWED[name]
+                report.add_issue(ValidationIssue(
+                    "ERROR", 2, "EMPTY_REQUIRED_CONTAINER", str(line or "?"),
+                    f"<{name}> is present but empty.",
+                    f"Provide {hint}. Empty <{name}> is rejected by CBPR+ "
+                    f"network rules even though the XSD permits it."
+                ))
+                continue
+
+            if name in AGENT_AND_PARTY:
+                # Recurse to verify at least one identifying descendant carries content
+                has_meaningful = False
+                for descendant in elem.iter():
+                    if descendant is elem or not isinstance(descendant.tag, str):
+                        continue
+                    d_name = local(descendant.tag)
+                    if d_name in ('BICFI', 'ClrSysMmbId', 'MmbId', 'LEI', 'Nm',
+                                  'IBAN', 'Othr', 'AnyBIC', 'OrgId', 'PrvtId',
+                                  'Ctry', 'TwnNm', 'StrtNm', 'AdrLine', 'Id'):
+                        if (descendant.text or "").strip():
+                            has_meaningful = True
+                            break
+                if not has_meaningful:
+                    key = (line, name)
+                    if key in reported:
+                        continue
+                    reported.add(key)
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "EMPTY_PARTY_CONTAINER", str(line or "?"),
+                        f"<{name}> contains no identifying information.",
+                        f"Provide at least a BIC, name, or identifier inside <{name}>. "
+                        f"An empty party/agent container is not routable."
+                    ))
 
     def _validate_uetr_in_xml(self, xml_content: str, report: ValidationReport) -> None:
         """
