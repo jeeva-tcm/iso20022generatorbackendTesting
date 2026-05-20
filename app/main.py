@@ -407,6 +407,7 @@ async def bulk_generate(request: dict):
     failure_reasons: dict = {}   # reason_string -> count
     last_failure_details: list = []  # last N failure details for response
     MAX_FAILURE_LOG = 10  # keep last N failure details in response
+    consecutive_failures = 0
 
     # Batch size — how many gen+validate operations to run concurrently. Bulk-gen used
     # to be a strict serial loop (one attempt at a time), which is the main reason it
@@ -475,16 +476,19 @@ async def bulk_generate(request: dict):
                     "status": "VALID",
                     "validation_report": r["report"].to_dict()
                 })
+                consecutive_failures = 0
                 continue
+
             # Failed (validation or exception)
             reason = r["reason"]
             failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+            consecutive_failures += 1
+
             if r["error"]:
                 print(f"[Bulk Gen] 💥 ERROR — {r['error']}")
-                consecutive_failures = 0  # reset on success
-                print(f"[Bulk Gen] Attempt {attempts}: [OK] VALID (Total valid: {current_valid + 1}/{count})")
             else:
                 print(f"[Bulk Gen] ❌ INVALID — {reason[:120]}")
+
             if len(last_failure_details) >= MAX_FAILURE_LOG:
                 last_failure_details.pop(0)
             if r["report"]:
@@ -494,26 +498,9 @@ async def bulk_generate(request: dict):
                     "error_count": r["report"].errors,
                     "reasons": r["error_codes"][:3]
                 })
-                    "status": report.status,
-                    "error_count": report.errors,
-                    "reasons": error_codes[:3]
-                })
-
-                print(f"[Bulk Gen] Attempt {attempts}: [X] INVALID - {reason[:120]}")
-
-                # Log warning every 50 consecutive failures for visibility
-                if consecutive_failures % 50 == 0:
-                    print(f"[Bulk Gen] [!] {consecutive_failures} consecutive failures - still retrying for {count - current_valid} more valid messages")
-
-        except Exception as e:
-            consecutive_failures += 1
-            err_msg = f"Generation exception: {str(e)}"
-            failure_reasons[err_msg] = failure_reasons.get(err_msg, 0) + 1
-            print(f"[Bulk Gen] Attempt {attempts}: [ERR] ERROR - {err_msg}")
-            print(f"[Bulk Gen] Traceback: {tb.format_exc()}")
 
             if consecutive_failures % 50 == 0:
-                print(f"[Bulk Gen] [!] {consecutive_failures} consecutive failures - still retrying")
+                print(f"[Bulk Gen] [!] {consecutive_failures} consecutive failures - still retrying for {count - len(valid_messages)} more valid messages")
 
     # -- Summary Log ----------------------------------------------------------
     print(f"\n{'-'*70}")
