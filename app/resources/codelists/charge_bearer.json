@@ -1,7 +1,8 @@
 {
     "codes": [
-        "SHAR",
         "DEBT",
-        "CRED"
+        "CRED",
+        "SHAR",
+        "SLEV"
     ]
 }

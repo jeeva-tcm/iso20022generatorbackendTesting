@@ -2,6 +2,7 @@ import re
 import os
 import json
 import uuid
+import copy
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
@@ -27,6 +28,106 @@ class MT2MXConverter:
             except Exception:
                 pass
 
+    def _cbpr_datetime(self, dt: datetime = None) -> str:
+        """Return CBPR+ datetime with an explicit offset and no Z/milliseconds."""
+        dt = dt or datetime.utcnow()
+        return dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+    def _normalise_cbpr_datetime_value(self, value: str) -> str:
+        """Normalise generated ISODateTime values to the CBPR+ offset form."""
+        if value is None:
+            return value
+        text = str(value).strip()
+        match = re.match(
+            r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$",
+            text,
+        )
+        if not match:
+            return text
+        base, offset = match.groups()
+        if offset == "Z":
+            offset = "+00:00"
+        elif re.match(r"^[+-]\d{4}$", offset):
+            offset = f"{offset[:3]}:{offset[3:]}"
+        return f"{base}{offset}"
+
+    def _find_child(self, parent: ET.Element, local_name: str):
+        for child in list(parent):
+            if child.tag.split("}")[-1] == local_name:
+                return child
+        return None
+
+    def _has_text_child(self, parent: ET.Element, local_name: str) -> bool:
+        child = self._find_child(parent, local_name)
+        return child is not None and bool(child.text and child.text.strip())
+
+    def _extract_statement_currency(self, stmt: ET.Element) -> str:
+        for elem in stmt.iter():
+            ccy = elem.attrib.get("Ccy")
+            if ccy:
+                return ccy
+            if elem.tag.split("}")[-1] == "Ccy" and elem.text and elem.text.strip():
+                return elem.text.strip()
+        return "USD"
+
+    def _normalise_cbpr_datetimes_in_tree(self, root: ET.Element):
+        for elem in root.iter():
+            local = elem.tag.split("}")[-1]
+            if local in {"CreDt", "CreDtTm", "FrDtTm", "ToDtTm", "IntrBkSttlmTm", "CLSTm", "TillTm", "FrTm", "RjctTm"} and elem.text:
+                elem.text = self._normalise_cbpr_datetime_value(elem.text)
+
+    def _local_path_text(self, root: ET.Element, path: str) -> str:
+        current = root
+        for part in path.split("/"):
+            if current is None:
+                return ""
+            current = self._find_child(current, part)
+        return current.text.strip() if current is not None and current.text else ""
+
+    def _set_balance_type_code(self, bal: ET.Element, code: str, namespaces: dict):
+        tp = self._get_or_create_node(bal, "Tp", namespaces)
+        cd_or_prtry = self._get_or_create_node(tp, "CdOrPrtry", namespaces)
+        cd = self._get_or_create_node(cd_or_prtry, "Cd", namespaces)
+        cd.text = code
+
+    def _create_default_clbd_balance(self, stmt: ET.Element, namespaces: dict):
+        xmlns = namespaces.get("xmlns", "")
+        existing_bal = self._find_child(stmt, "Bal")
+        if existing_bal is not None:
+            new_bal = copy.deepcopy(existing_bal)
+        else:
+            bal_tag = f"{{{xmlns}}}Bal" if xmlns else "Bal"
+            new_bal = ET.Element(bal_tag)
+            self.set_element_attr(new_bal, "Amt", "Ccy", self._extract_statement_currency(stmt), "0.00", namespaces)
+            self.set_element_text(new_bal, "CdtDbtInd", "CRDT", namespaces)
+            self.set_element_text(new_bal, "Dt/Dt", datetime.utcnow().strftime("%Y-%m-%d"), namespaces)
+        self._set_balance_type_code(new_bal, "CLBD", namespaces)
+        stmt.append(new_bal)
+
+    def _enforce_camt053_balance_rules(self, stmt: ET.Element, namespaces: dict):
+        is_last_page = self._local_path_text(stmt, "StmtPgntn/LastPgInd").lower() == "true"
+        balances = [child for child in list(stmt) if child.tag.split("}")[-1] == "Bal"]
+        clbd_balances = []
+
+        for bal in balances:
+            sub_type_code = self._navigate_path(bal, "Tp/SubTp/Cd", namespaces, create_missing=False)
+            if sub_type_code is not None and sub_type_code.text and sub_type_code.text.strip().upper() == "INTM":
+                sub_type_code.text = "OTHR"
+
+            type_code = self._navigate_path(bal, "Tp/CdOrPrtry/Cd", namespaces, create_missing=False)
+            if type_code is not None and type_code.text and type_code.text.strip().upper() == "CLBD":
+                type_code.text = "CLBD"
+                clbd_balances.append(bal)
+
+        if not is_last_page:
+            return
+
+        if not clbd_balances:
+            self._create_default_clbd_balance(stmt, namespaces)
+            return
+
+        for duplicate in clbd_balances[1:]:
+            stmt.remove(duplicate)
 
     def detect_mt_type(self, mt_message: str) -> str:
         """
@@ -630,6 +731,8 @@ class MT2MXConverter:
                 # Path set direct
                 path = rule.get("mx_path")
                 if path:
+                    if rule_type == "timestamp":
+                        val = self._normalise_cbpr_datetime_value(val)
                     overwrite = not rule.get("fallback", False)
                     self.set_element_text(mx_root, path, val, namespaces, overwrite=overwrite)
                 continue
@@ -935,7 +1038,7 @@ class MT2MXConverter:
                     dt = datetime.strptime(dt_part, "%y%m%d%H%M")
                     # Force CreDtTm to be current time to avoid validation errors "Date cannot be in the past"
                     if "CreDtTm" in rule.get("mx_path", ""):
-                        iso_dt = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        iso_dt = self._cbpr_datetime()
                     else:
                         iso_dt = dt.strftime("%Y-%m-%dT%H:%M:%S+00:00")
                     self.set_element_text(mx_root, rule["mx_path"], iso_dt, namespaces)
@@ -965,8 +1068,9 @@ class MT2MXConverter:
                 if rule.get("mx_path_lgl") and stmt_num.isdigit():
                     self.set_element_text(mx_root, rule["mx_path_lgl"], stmt_num, namespaces)
                     
-                if seq_num and rule.get("mx_path_elctrnc") and seq_num.isdigit():
-                    self.set_element_text(mx_root, rule["mx_path_elctrnc"], seq_num, namespaces)
+                if rule.get("mx_path_elctrnc"):
+                    elctrnc_seq = seq_num if seq_num and seq_num.isdigit() else "1"
+                    self.set_element_text(mx_root, rule["mx_path_elctrnc"], elctrnc_seq, namespaces)
 
                 # StmtPgntn is typically mandatory in camt.053 preceding ElctrncSeqNb
                 if rule.get("mx_path_pgntn_pgnb"):
@@ -1169,7 +1273,7 @@ class MT2MXConverter:
         head_sub(app_hdr, "BizMsgIdr", parsed_fields.get("20", "AUTO-B01"))
         head_sub(app_hdr, "MsgDefIdr", mapping["target_mx"])
         head_sub(app_hdr, "BizSvc", mapping.get("biz_svc", "swift.cbprplus.02"))
-        head_sub(app_hdr, "CreDt", datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00"))
+        head_sub(app_hdr, "CreDt", self._cbpr_datetime())
         
         # 4. Mandatory Field Healing (V2) - Already applied above in Step 6
         
@@ -1189,6 +1293,7 @@ class MT2MXConverter:
         
         # Final Global Healing for camt messages (NtryRef and BkTxCd are often mandatory)
         self._heal_camt_mandatory_fields(mx_root, namespaces)
+        self._normalise_cbpr_datetimes_in_tree(envelope)
         
         # Finally sort elements based on sequence rules
         self._sort_xml_recursively(mx_root, target_mx) # Re-sort after healing
@@ -1426,7 +1531,7 @@ class MT2MXConverter:
                 
                 if mapped_from_str == "generated":
                     if "CreDtTm" in field_name:
-                        val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        val = self._cbpr_datetime()
                 elif mapped_from_str == "generated_uetr or block3_121":
                     val = parsed_fields.get("_uetr") or parsed_fields.get("block3_121")
                     if not val:
@@ -1494,7 +1599,7 @@ class MT2MXConverter:
                         if "DtTm" not in field_name and field_name.endswith("Dt"):
                             val = datetime.utcnow().strftime("%Y-%m-%d")
                         else:
-                            val = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                            val = self._cbpr_datetime()
                     # Use shorter placeholder for code fields to avoid length errors
                     elif rule.get("max_length") and rule["max_length"] < 11:
                         val = "NARR"
@@ -1655,7 +1760,7 @@ class MT2MXConverter:
             "InstgAgt": ["FinInstnId", "BrnchId"],
             "InstdAgt": ["FinInstnId", "BrnchId"],
             "Agt": ["FinInstnId", "BrnchId"],
-            "Acct": ["Id", "Tp", "Ccy", "Nm", "Prxy", "Svcr", "Ownr", "SvcrAcct"]
+            "Acct": ["Id", "Tp", "Ccy", "Nm", "Prxy", "Ownr", "Svcr", "SvcrAcct"]
         }
         
         local_tag = element.tag.split('}')[-1]
@@ -1694,6 +1799,50 @@ class MT2MXConverter:
                 all_ntries.append(elem)
         
         xmlns = namespaces.get("xmlns", "")
+
+        # camt.053 CBPR+/MyStandards profile healing for Statement-level mandatory
+        # fields and account structure. These are sequence-sensitive, so the final
+        # recursive sorter will place them in schema order after this method runs.
+        for stmt in root.iter():
+            if stmt.tag.split("}")[-1] != "Stmt":
+                continue
+
+            if not self._has_text_child(stmt, "Id"):
+                self.set_element_text(stmt, "Id", f"STMT-{str(uuid.uuid4())[:12].upper()}", namespaces)
+
+            stmt_pgntn = self._find_child(stmt, "StmtPgntn")
+            if stmt_pgntn is None:
+                stmt_pgntn = self._get_or_create_node(stmt, "StmtPgntn", namespaces)
+            if not self._has_text_child(stmt_pgntn, "PgNb"):
+                self.set_element_text(stmt_pgntn, "PgNb", "1", namespaces)
+            if not self._has_text_child(stmt_pgntn, "LastPgInd"):
+                self.set_element_text(stmt_pgntn, "LastPgInd", "true", namespaces)
+
+            if not self._has_text_child(stmt, "ElctrncSeqNb"):
+                self.set_element_text(stmt, "ElctrncSeqNb", "1", namespaces)
+            if not self._has_text_child(stmt, "LglSeqNb"):
+                statement_id = self._find_child(stmt, "Id")
+                seq_value = "1"
+                if statement_id is not None and statement_id.text:
+                    digit_match = re.search(r"\d+", statement_id.text)
+                    if digit_match:
+                        seq_value = digit_match.group(0)
+                self.set_element_text(stmt, "LglSeqNb", seq_value, namespaces)
+
+            if not self._has_text_child(stmt, "CreDtTm"):
+                self.set_element_text(stmt, "CreDtTm", self._cbpr_datetime(), namespaces)
+
+            acct = self._find_child(stmt, "Acct")
+            if acct is None:
+                acct = self._get_or_create_node(stmt, "Acct", namespaces)
+            if self._find_child(acct, "Id") is None:
+                self.set_element_text(acct, "Id/Othr/Id", "NOTPROVIDED", namespaces)
+            if self._find_child(acct, "Tp") is None:
+                self.set_element_text(acct, "Tp/Cd", "CACC", namespaces)
+            if not self._has_text_child(acct, "Ccy"):
+                self.set_element_text(acct, "Ccy", self._extract_statement_currency(stmt), namespaces)
+
+            self._enforce_camt053_balance_rules(stmt, namespaces)
         
         for ntry in all_ntries:
             # 1. Ensure NtryRef exists

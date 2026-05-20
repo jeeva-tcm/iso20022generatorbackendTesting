@@ -1844,8 +1844,12 @@ def _gen_camt053(selected: set, idx: int) -> str:
     acct_iban = rng_iban(iban_country)
 
     stmt = ""
-    # Account block with nested Ownr/Svcr in v13
-    stmt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>\n"
+    # Account block in CBPR+/schema order: Id, Tp, Ccy, Ownr, Svcr.
+    stmt += f"""\t\t\t\t<Acct>
+\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>
+\t\t\t\t\t<Tp><Cd>CACC</Cd></Tp>
+\t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>
+"""
     if "account_owner" in selected:
         stmt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
@@ -1856,6 +1860,12 @@ def _gen_camt053(selected: set, idx: int) -> str:
     bal_amt = rng_amount(ccy)
     stmt += f"""\t\t\t\t<Bal>
 \t\t\t\t\t<Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+\t\t\t\t\t<Amt Ccy="{xe(ccy)}">{bal_amt}</Amt>
+\t\t\t\t\t<CdtDbtInd>CRDT</CdtDbtInd>
+\t\t\t\t\t<Dt><Dt>{rng_date(0)}</Dt></Dt>
+\t\t\t\t</Bal>
+\t\t\t\t<Bal>
+\t\t\t\t\t<Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
 \t\t\t\t\t<Amt Ccy="{xe(ccy)}">{bal_amt}</Amt>
 \t\t\t\t\t<CdtDbtInd>CRDT</CdtDbtInd>
 \t\t\t\t\t<Dt><Dt>{rng_date(0)}</Dt></Dt>
@@ -1898,10 +1908,16 @@ def _gen_camt053(selected: set, idx: int) -> str:
 \t\t\t</GrpHdr>
 \t\t\t<Stmt>
 \t\t\t\t<Id>{xe(rng_id("STMT", 10))}</Id>
+\t\t\t\t<StmtPgntn>
+\t\t\t\t\t<PgNb>1</PgNb>
+\t\t\t\t\t<LastPgInd>true</LastPgInd>
+\t\t\t\t</StmtPgntn>
+\t\t\t\t<ElctrncSeqNb>1</ElctrncSeqNb>
+\t\t\t\t<LglSeqNb>{idx + 1}</LglSeqNb>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t\t<FrToDt>
-\t\t\t\t\t<FrDtTm>{rng_date(-1)}T00:00:00.000Z</FrDtTm>
-\t\t\t\t\t<ToDtTm>{rng_date(0)}T23:59:59.000Z</ToDtTm>
+\t\t\t\t\t<FrDtTm>{rng_date(-1)}T00:00:00+00:00</FrDtTm>
+\t\t\t\t\t<ToDtTm>{rng_date(0)}T23:59:59+00:00</ToDtTm>
 \t\t\t\t</FrToDt>
 {stmt}\t\t\t</Stmt>
 \t\t</BkToCstmrStmt>
@@ -2393,7 +2409,10 @@ def generate_single_xml(
     elif "camt.057" in msg_lower:
         return _gen_camt057(selected, idx)
     elif "camt.052" in msg_lower:
-        return _gen_camt052(selected, idx)
+        xml = _gen_camt052(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "camt.053" in msg_lower:
         return _gen_camt053(selected, idx)
     elif "camt.054" in msg_lower:
