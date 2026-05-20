@@ -25,6 +25,7 @@ except ImportError as e:
     with open("startup_error.txt", "w") as f:
         f.write(error_msg)
         
+        
 except Exception as e:
     error_msg = f"STARTUP ERROR: {str(e)}\n"
     print(error_msg)
