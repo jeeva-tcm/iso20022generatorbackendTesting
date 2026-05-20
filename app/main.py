@@ -1,3 +1,9 @@
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
@@ -435,7 +441,7 @@ async def bulk_generate(request: dict):
                     "validation_report": report.to_dict()
                 })
                 consecutive_failures = 0  # reset on success
-                print(f"[Bulk Gen] Attempt {attempts}: ✅ VALID (Total valid: {current_valid + 1}/{count})")
+                print(f"[Bulk Gen] Attempt {attempts}: [OK] VALID (Total valid: {current_valid + 1}/{count})")
             else:
                 consecutive_failures += 1
                 # Collect failure reasons from the validation report
@@ -454,30 +460,30 @@ async def bulk_generate(request: dict):
                     "reasons": error_codes[:3]
                 })
 
-                print(f"[Bulk Gen] Attempt {attempts}: ❌ INVALID — {reason[:120]}")
+                print(f"[Bulk Gen] Attempt {attempts}: [X] INVALID - {reason[:120]}")
 
                 # Log warning every 50 consecutive failures for visibility
                 if consecutive_failures % 50 == 0:
-                    print(f"[Bulk Gen] ⚠️  {consecutive_failures} consecutive failures — still retrying for {count - current_valid} more valid messages")
+                    print(f"[Bulk Gen] [!] {consecutive_failures} consecutive failures - still retrying for {count - current_valid} more valid messages")
 
         except Exception as e:
             consecutive_failures += 1
             err_msg = f"Generation exception: {str(e)}"
             failure_reasons[err_msg] = failure_reasons.get(err_msg, 0) + 1
-            print(f"[Bulk Gen] Attempt {attempts}: 💥 ERROR — {err_msg}")
+            print(f"[Bulk Gen] Attempt {attempts}: [ERR] ERROR - {err_msg}")
             print(f"[Bulk Gen] Traceback: {tb.format_exc()}")
 
             if consecutive_failures % 50 == 0:
-                print(f"[Bulk Gen] ⚠️  {consecutive_failures} consecutive failures — still retrying")
+                print(f"[Bulk Gen] [!] {consecutive_failures} consecutive failures - still retrying")
 
-    # ── Summary Log ──────────────────────────────────────────────────────────
-    print(f"\n{'─'*70}")
-    print(f"[Bulk Gen] COMPLETE — Valid: {len(valid_messages)}/{count}, Total attempts: {attempts}")
+    # -- Summary Log ----------------------------------------------------------
+    print(f"\n{'-'*70}")
+    print(f"[Bulk Gen] COMPLETE - Valid: {len(valid_messages)}/{count}, Total attempts: {attempts}")
     if failure_reasons:
         print(f"[Bulk Gen] Failure breakdown:")
         for reason, cnt in sorted(failure_reasons.items(), key=lambda x: -x[1]):
             print(f"           ({cnt}x) {reason[:150]}")
-    print(f"{'─'*70}\n")
+    print(f"{'-'*70}\n")
 
     # ── Build response ───────────────────────────────────────────────────────
     # At this point len(valid_messages) == count ALWAYS (or we raised HTTP 500)

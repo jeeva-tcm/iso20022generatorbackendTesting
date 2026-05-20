@@ -233,6 +233,11 @@ class Layer3Mixin:
 
         # 1. Selector Based Rules (Multiple fields)
         if selector:
+            condition = rule.get("condition")
+            if condition:
+                if not self._evaluate_expression(condition, data, line_map, codelists=codelists, report=report):
+                    return
+
             regex = re.compile(selector)
             matching_keys = [k for k in data.keys() if regex.match(k)]
             
@@ -386,35 +391,29 @@ class Layer3Mixin:
              return str(l) if l else "/"
 
         def check_address(addr_path, data, report, severity, layer, rule_id, desc):
-            # ... (Existing address check logic is fine, keeping it concise for this tool call)
             block_content = {k: v for k, v in data.items() if k.startswith(f"{addr_path}.")}
             if not block_content: return True # Empty block is fine
 
-            mandate_date_str = self.config.get("validation_rules", {}).get("cbpr_plus_mandate_date", "2026-11-01T00:00:00")
-            try:
-                mandate_date = datetime.fromisoformat(mandate_date_str)
-            except:
-                mandate_date = datetime(2026, 11, 1)
-                
-            is_after_2026 = datetime.now() > mandate_date
+            has_adr_line = any(k.startswith(f"{addr_path}.AdrLine") for k in data.keys())
             has_town = any(k.startswith(f"{addr_path}.TownNm") for k in data.keys())
             has_ctry = any(k.startswith(f"{addr_path}.Ctry") for k in data.keys())
             
-            issues_found = []
-            if not has_town: issues_found.append(".TownNm")
-            if not has_ctry: issues_found.append(".Ctry")
+            # Coexistence rule: If AdrLine is absent, TownNm and Ctry must be present
+            if not has_adr_line:
+                issues_found = []
+                if not has_town: issues_found.append(".TownNm")
+                if not has_ctry: issues_found.append(".Ctry")
 
-            if issues_found:
-                for suffix in issues_found:
-                    clean_field_path = (addr_path + suffix).split('.')[-4:]
-                    field_path = ".".join(clean_field_path)
-
-                    if is_after_2026:
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, field_path, f"{desc} (Mandate Active)", "Add this mandatory field to comply with CBPR+ requirements."))
-                    else:
-                        report.add_issue(ValidationIssue("WARNING", layer, rule_id, field_path, f"ADVISORY: {desc} (Future Mandate Nov 2026)", f"Add {suffix[1:]} now to ensure future compatibility."))
-                
-                if is_after_2026: return False
+                if issues_found:
+                    for suffix in issues_found:
+                        clean_field_path = (addr_path + suffix).split('.')[-4:]
+                        field_path = ".".join(clean_field_path)
+                        report.add_issue(ValidationIssue(
+                            "ERROR", 3, "PACS009_POSTAL_ADDRESS", field_path,
+                            "If Postal Address is used, and if Address Line is absent, then Town Name and Country must be present.",
+                            "Add either <AdrLine> or both <TownNm> and <Ctry> tags to comply with ISO 20022 / CBPR+ coexistence rules."
+                        ))
+                    return False
             return True
         def check_bic_match(header_role, doc_role):
             # 1. Find Header BIC

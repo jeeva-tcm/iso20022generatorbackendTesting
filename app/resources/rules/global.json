@@ -27,7 +27,7 @@
     },
     {
         "rule_id": "E001",
-        "description": "Town name mandatory for post-Nov 2026 messages",
+        "description": "Postal Address Coexistence Rule: If Address Line is absent, Town Name and Country must be present.",
         "type": "expression",
         "expression": "check_address(KEY)",
         "selector": ".*PstlAdr$",

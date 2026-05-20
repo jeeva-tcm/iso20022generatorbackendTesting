@@ -371,12 +371,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
 
             # Final check to force COV or ADV variant on report if elements are present
             if report.message_type and report.message_type.startswith("pacs.009") and "cov" not in report.message_type.lower() and "adv" not in report.message_type.lower():
-                if "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
-                    report.message_type = "pacs.009.cov"
-                    detected_type = "pacs.009.cov"
-                elif "<Prtry>ADV</Prtry>" in xml_content:
+                if "<Prtry>ADV</Prtry>" in xml_content:
                     report.message_type = "pacs.009.adv"
                     detected_type = "pacs.009.adv"
+                elif "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
+                    report.message_type = "pacs.009.cov"
+                    detected_type = "pacs.009.cov"
 
             # STEP 4.5: DATE VALIDATION — runs on raw XML before Layer 2
             # so past-date errors are ALWAYS reported even when XSD also fails.
@@ -1429,11 +1429,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             return errors
 
         # ── Helper: validate amount is strictly positive ─────────────────────
-        def _validate_positive_amount(value: str, tag_name: str, line_num) -> list:
+        def _validate_positive_amount(value: str, tag_name: str, line_num, parent_tag: str = "") -> list:
             errors = []
             try:
                 amount = float(value)
-                if amount <= 0:
+                if amount <= 0 and not (amount == 0 and parent_tag == 'ChrgsInf'):
                     errors.append((
                         f"Invalid amount in element <{tag_name}> at line {line_num}: "
                         f"Amount '{value}' must be strictly positive.",
@@ -1457,6 +1457,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             return  # XML parsing handled by Layer 1
 
         def local(tag):
+            if not isinstance(tag, str):
+                return ""
             return tag.split('}')[-1] if '}' in tag else tag
 
         def get_text(elem, *tags):
@@ -1564,7 +1566,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             if tag_name in AMOUNT_TAGS:
                 amount_val = (elem.text or '').strip()
                 if amount_val:
-                    for msg, fix in _validate_positive_amount(amount_val, tag_name, line_num):
+                    parent_tag = local(elem.getparent().tag) if elem.getparent() is not None else ''
+                    for msg, fix in _validate_positive_amount(amount_val, tag_name, line_num, parent_tag):
                         report.add_issue(ValidationIssue(
                             "ERROR", 2, "NON_POSITIVE_AMOUNT", str(line_num), msg, fix
                         ))
@@ -2304,9 +2307,12 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     res = family
                     break
         
-        # FINAL REFINEMENT: Conver variants
-        if res.startswith("pacs.009") and ("cov" in xml_content.lower() or "UndrlygCstmrCdtTrf" in xml_content):
-            return "pacs.009.cov"
+        # FINAL REFINEMENT: Cover variants
+        if res.startswith("pacs.009"):
+            if "<Prtry>ADV</Prtry>" in xml_content:
+                return "pacs.009.adv"
+            elif "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
+                return "pacs.009.cov"
             
         return res
 

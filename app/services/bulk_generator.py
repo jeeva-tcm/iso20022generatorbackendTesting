@@ -219,22 +219,322 @@ def _rng_pstl_adr(indent: int, country: str = None) -> str:
     c = country or rng_country()
     
     xml = f"{t2}<PstlAdr>\n"
-    # Include all requested fields with randomized data IN STRICT XSD ORDER:
-    # StrtNm, BldgNb, BldgNm, PstCd, TwnNm, Ctry, AdrLine
-    xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
-    xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
-    if random.random() > 0.3:
-        xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
-    xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
-    xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-    xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-    xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Ave</AdrLine>\n"
-    xml += f"{t3}<AdrLine>Suite {random.randint(1, 100)}</AdrLine>\n"
+    # Randomly choose between Structured Address (Option 1), Address Line format (Option 2), or both
+    choice = random.choice(["structured", "adrline", "both"])
+    
+    if choice == "structured":
+        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+        if random.random() > 0.3:
+            xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
+        xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+    elif choice == "adrline":
+        # CBPR+: if AdrLine exists with any other element, TwnNm + Ctry are mandatory.
+        # Even Ctry alone counts, so always include TwnNm here.
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street, {xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
+    else:
+        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street, {xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
+        
     xml += f"{t2}</PstlAdr>\n"
     return xml
 
 
-def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
+def _rng_pstl_adr_cov(indent: int, country: str = None) -> str:
+    t2 = tabs(indent)
+    t3 = tabs(indent + 1)
+    c = country or rng_country()
+    
+    xml = f"{t2}<PstlAdr>\n"
+    # Choose between Structured (Option 1), Address Line Only (Option 2), or Mixed (Option 3)
+    choice = random.choice(["structured", "adrline_only", "mixed"])
+    
+    if choice == "structured":
+        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+        if random.random() > 0.3:
+            xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
+        xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+    elif choice == "adrline_only":
+        # CBPR+: if AdrLine exists with any other element, TwnNm + Ctry are mandatory.
+        # Ctry alone is enough to trigger this, so always include TwnNm.
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street</AdrLine>\n"
+        xml += f"{t3}<AdrLine>{xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
+    else: # mixed
+        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
+        xml += f"{t3}<AdrLine>Near Central Park</AdrLine>\n"
+        
+    xml += f"{t2}</PstlAdr>\n"
+    return xml
+
+
+def _validate_postal_address(xml_content: str):
+    from lxml import etree
+    try:
+        parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+        root = etree.fromstring(xml_content.encode('utf-8'), parser)
+    except Exception as e:
+        raise ValueError(f"XML parsing error during pre-validation: {str(e)}")
+
+    pstl_adrs = root.xpath("//*[local-name()='PstlAdr']")
+
+    for pstl_adr in pstl_adrs:
+        all_children = list(pstl_adr)
+        adr_lines = [c for c in all_children if c.tag.split('}')[-1] == 'AdrLine']
+        adr_line_count = len(adr_lines)
+
+        if adr_line_count > 2:
+            raise ValueError(f"Postal Address Validation Error: A maximum of two occurrences of Address Line are allowed. Found {adr_line_count}.")
+
+        # CBPR+: if AdrLine exists with ANY other PstlAdr element → TwnNm + Ctry mandatory.
+        # This includes Ctry alone (not just structured fields like StrtNm/BldgNb).
+        non_adr_children = [c for c in all_children if c.tag.split('}')[-1] != 'AdrLine']
+        if adr_line_count > 0 and len(non_adr_children) > 0:
+            twn_nm = pstl_adr.xpath("*[local-name()='TwnNm']")
+            ctry = pstl_adr.xpath("*[local-name()='Ctry']")
+            if not twn_nm:
+                raise ValueError(
+                    "Postal Address Validation Error: If Address Line is present and any other "
+                    "Postal Address element(s) are present, Town Name is mandatory."
+                )
+            if not ctry:
+                raise ValueError(
+                    "Postal Address Validation Error: If Address Line is present and any other "
+                    "Postal Address element(s) are present, Country is mandatory."
+                )
+
+
+def _normalize_postal_addresses(xml_content: str) -> str:
+    """
+    Post-process any generated XML and ensure every <PstlAdr> block complies with CBPR+ rules:
+      1. Maximum 2 <AdrLine> elements (extras removed).
+      2. If <AdrLine> coexists with structured fields (StrtNm, BldgNb, etc.) then
+         <TwnNm> and <Ctry> are mandatory — add them if missing.
+      3. Re-order all children to match the canonical CBPR+ schema sequence.
+    """
+    from lxml import etree
+    try:
+        parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+        root = etree.fromstring(xml_content.encode('utf-8'), parser)
+    except Exception:
+        return xml_content
+
+    SCHEMA_SEQUENCE = [
+        "Dept", "SubDept", "StrtNm", "BldgNb", "BldgNm", "Flr", "PstCd",
+        "TwnLctnNm", "DstrctNm", "CtrySubDvsn", "TwnNm", "Ctry", "AdrLine"
+    ]
+    seq_map = {name: idx for idx, name in enumerate(SCHEMA_SEQUENCE)}
+
+
+
+    for pstl_adr in root.iter():
+        if not isinstance(pstl_adr.tag, str):
+            continue
+        local = pstl_adr.tag.split('}')[-1] if '}' in pstl_adr.tag else pstl_adr.tag
+        if local != 'PstlAdr':
+            continue
+
+        # Derive namespace prefix for creating new elements
+        ns_prefix = pstl_adr.tag.split('}')[0] + '}' if '}' in pstl_adr.tag else ''
+
+        # Take a snapshot of current children
+        children = list(pstl_adr)
+
+        # --- Step 1: Restrict to max 2 AdrLine entries ---
+        adr_lines = [c for c in children if (c.tag.split('}')[-1] if '}' in c.tag else c.tag) == 'AdrLine']
+        if len(adr_lines) > 2:
+            for extra in adr_lines[2:]:
+                pstl_adr.remove(extra)
+            children = list(pstl_adr)  # refresh after removal
+            adr_lines = adr_lines[:2]
+
+        # --- Step 2: CBPR+ — if AdrLine + ANY other element coexist, TwnNm + Ctry mandatory ---
+        # The rule is: "if AdrLine is present with ANY other postal address element".
+        # This includes Ctry alone, not just structured fields like StrtNm/BldgNb.
+        def _ltag(el):
+            return el.tag.split('}')[-1] if '}' in el.tag else el.tag
+
+        non_adr_children = [c for c in children if _ltag(c) != 'AdrLine']
+        if adr_lines and non_adr_children:
+            def _get(tag_name):
+                return next((c for c in children if _ltag(c) == tag_name), None)
+
+            twn_el = _get('TwnNm')
+            if twn_el is None:
+                twn_el = etree.SubElement(pstl_adr, f'{ns_prefix}TwnNm')
+                twn_el.text = 'New York'
+            elif not twn_el.text or not twn_el.text.strip():
+                twn_el.text = 'New York'
+
+            ctry_el = _get('Ctry')
+            if ctry_el is None:
+                ctry_el = etree.SubElement(pstl_adr, f'{ns_prefix}Ctry')
+                ctry_el.text = 'US'
+            elif not ctry_el.text or not ctry_el.text.strip():
+                ctry_el.text = 'US'
+
+            children = list(pstl_adr)  # refresh after possible additions
+
+        # --- Step 3: Re-order children per CBPR+ schema sequence ---
+        children_sorted = sorted(
+            children,
+            key=lambda c: seq_map.get(c.tag.split('}')[-1] if '}' in c.tag else c.tag, 99)
+        )
+
+        # Only mutate if order differs
+        if [id(c) for c in children] != [id(c) for c in children_sorted]:
+            for c in children:
+                pstl_adr.remove(c)
+            for c in children_sorted:
+                pstl_adr.append(c)
+
+    return etree.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+
+
+def _validate_charges_information(xml_content: str):
+    from lxml import etree
+    try:
+        parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+        root = etree.fromstring(xml_content.encode('utf-8'), parser)
+    except Exception as e:
+        raise ValueError(f"XML parsing error during pre-validation: {str(e)}")
+
+    chrg_br_els = root.xpath("//*[local-name()='ChrgBr']")
+    for chrg_br_el in chrg_br_els:
+        if chrg_br_el.text == "CRED":
+            parent = chrg_br_el.getparent()
+            chrgs_inf = parent.xpath("*[local-name()='ChrgsInf']")
+            if not chrgs_inf:
+                raise ValueError("Charges Information Validation Error: Charge information is mandatory if CRED is present.")
+            
+            for chg in chrgs_inf:
+                amt_els = chg.xpath("*[local-name()='Amt']")
+                if not amt_els:
+                    raise ValueError("Charges Information Validation Error: ChrgsInf must contain Amt.")
+                amt_el = amt_els[0]
+                ccy = amt_el.get("Ccy")
+                if not ccy:
+                    raise ValueError("Charges Information Validation Error: Charges Amt must specify Ccy (Currency).")
+                
+                agt_els = chg.xpath("*[local-name()='Agt']")
+                if not agt_els:
+                    raise ValueError("Charges Information Validation Error: ChrgsInf must contain Agt (Agent Details).")
+                
+                fin_instn = agt_els[0].xpath("*[local-name()='FinInstnId']")
+                if not fin_instn:
+                    raise ValueError("Charges Information Validation Error: Agt must contain FinInstnId.")
+                
+                bic = fin_instn[0].xpath("*[local-name()='BICFI']")
+                if not bic or not bic[0].text:
+                    raise ValueError("Charges Information Validation Error: FinInstnId must contain a valid BICFI.")
+
+
+def _normalize_charges_information(xml_content: str) -> str:
+    from lxml import etree
+    try:
+        parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+        root = etree.fromstring(xml_content.encode('utf-8'), parser)
+    except Exception as e:
+        return xml_content
+
+    chrg_br_els = root.xpath("//*[local-name()='ChrgBr']")
+    for chrg_br_el in chrg_br_els:
+        if chrg_br_el.text == "CRED":
+            parent = chrg_br_el.getparent()
+            ns = ""
+            if parent.tag.startswith('{'):
+                ns = parent.tag.split('}')[0] + '}'
+
+            chrgs_inf_els = parent.xpath("*[local-name()='ChrgsInf']")
+            if not chrgs_inf_els:
+                idx = parent.index(chrg_br_el)
+                ccy = "EUR"
+                amt_els = parent.xpath("//*[local-name()='RtrdIntrBkSttlmAmt']")
+                if amt_els and amt_els[0].get("Ccy"):
+                    ccy = amt_els[0].get("Ccy")
+                
+                new_chg = etree.Element(f"{ns}ChrgsInf")
+                new_amt = etree.Element(f"{ns}Amt", Ccy=ccy)
+                new_amt.text = "0.00"
+                new_chg.append(new_amt)
+                
+                new_agt = etree.Element(f"{ns}Agt")
+                new_fin = etree.Element(f"{ns}FinInstnId")
+                new_bic = etree.Element(f"{ns}BICFI")
+                new_bic.text = "BANKDEFFXXX"
+                new_fin.append(new_bic)
+                new_agt.append(new_fin)
+                new_chg.append(new_agt)
+                
+                parent.insert(idx + 1, new_chg)
+            else:
+                for chg in chrgs_inf_els:
+                    amt_els = chg.xpath("*[local-name()='Amt']")
+                    if not amt_els:
+                        ccy = "EUR"
+                        amt_els_tx = parent.xpath("//*[local-name()='RtrdIntrBkSttlmAmt']")
+                        if amt_els_tx and amt_els_tx[0].get("Ccy"):
+                            ccy = amt_els_tx[0].get("Ccy")
+                        new_amt = etree.Element(f"{ns}Amt", Ccy=ccy)
+                        new_amt.text = "0.00"
+                        chg.insert(0, new_amt)
+                    else:
+                        amt_el = amt_els[0]
+                        if not amt_el.text or not amt_el.text.strip():
+                            amt_el.text = "0.00"
+                        if not amt_el.get("Ccy"):
+                            ccy = "EUR"
+                            amt_els_tx = parent.xpath("//*[local-name()='RtrdIntrBkSttlmAmt']")
+                            if amt_els_tx and amt_els_tx[0].get("Ccy"):
+                                ccy = amt_els_tx[0].get("Ccy")
+                            amt_el.set("Ccy", ccy)
+                    
+                    agt_els = chg.xpath("*[local-name()='Agt']")
+                    if not agt_els:
+                        new_agt = etree.Element(f"{ns}Agt")
+                        new_fin = etree.Element(f"{ns}FinInstnId")
+                        new_bic = etree.Element(f"{ns}BICFI")
+                        new_bic.text = "BANKDEFFXXX"
+                        new_fin.append(new_bic)
+                        new_agt.append(new_fin)
+                        chg.append(new_agt)
+                    else:
+                        agt = agt_els[0]
+                        fin_instn = agt.xpath("*[local-name()='FinInstnId']")
+                        if not fin_instn:
+                            new_fin = etree.Element(f"{ns}FinInstnId")
+                            new_bic = etree.Element(f"{ns}BICFI")
+                            new_bic.text = "BANKDEFFXXX"
+                            new_fin.append(new_bic)
+                            agt.append(new_fin)
+                        else:
+                            fin = fin_instn[0]
+                            bic = fin.xpath("*[local-name()='BICFI']")
+                            if not bic:
+                                new_bic = etree.Element(f"{ns}BICFI")
+                                new_bic.text = "BANKDEFFXXX"
+                                fin.append(new_bic)
+                            elif not bic[0].text or not bic[0].text.strip():
+                                bic[0].text = "BANKDEFFXXX"
+
+    return etree.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+
+
+def agent_xml(tag: str, bic: str, indent: int = 4, is_cov: bool = False, exclude_name_address: bool = False) -> str:
     t = tabs(indent)
     t1 = tabs(indent + 1)
     t2 = tabs(indent + 2)
@@ -245,9 +545,12 @@ def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
     exclude_tags = {"InstgAgt", "InstdAgt"}
     
     # Randomly include Name and Address (must coexist per CBPR+)
-    if tag not in exclude_tags and random.random() < 0.5:
+    if tag not in exclude_tags and not exclude_name_address and random.random() < 0.5:
         xml += f"{t2}<Nm>{xe(random.choice(COMPANY_NAMES))} Bank</Nm>\n"
-        xml += _rng_pstl_adr(indent + 2)
+        if is_cov:
+            xml += _rng_pstl_adr_cov(indent + 2)
+        else:
+            xml += _rng_pstl_adr(indent + 2)
         
     xml += f"{t1}</FinInstnId>\n{t}</{tag}>\n"
     return xml
@@ -772,8 +1075,23 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     uetr = rng_uetr()
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
-    sttlm_mtd = random.choice(SETTLEMENT_METHODS)
+    if is_adv:
+        sttlm_mtd = "COVE"
+    elif is_cov:
+        sttlm_mtd = random.choice(["INDA", "INGA"])
+    else:
+        sttlm_mtd = random.choice(SETTLEMENT_METHODS)
     amount = rng_amount(ccy)
+
+    sttlm_inf = f"\t\t\t\t\t<SttlmMtd>{xe(sttlm_mtd)}</SttlmMtd>"
+    if sttlm_mtd == "COVE":
+        rmbrs_choice = random.choice(["instg", "instd", "both"])
+        if rmbrs_choice in ["instg", "both"]:
+            sttlm_inf += f"\n\t\t\t\t\t<InstgRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(rng_bic())}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstgRmbrsmntAgt>"
+        if rmbrs_choice in ["instd", "both"]:
+            sttlm_inf += f"\n\t\t\t\t\t<InstdRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(rng_bic())}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstdRmbrsmntAgt>"
+    elif sttlm_mtd in ["INDA", "INGA"] and (is_cov or random.random() < 0.5):
+        sttlm_inf += f"\n\t\t\t\t\t<SttlmAcct>\n\t\t\t\t\t\t<Id>\n\t\t\t\t\t\t\t<IBAN>{xe(rng_iban(country))}</IBAN>\n\t\t\t\t\t\t</Id>\n\t\t\t\t\t</SttlmAcct>"
 
     instg_bic = from_bic
     instd_bic = to_bic
@@ -807,52 +1125,52 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 
     # 5. PrvsInstgAgt1/2/3 (optional)
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt1", rng_bic(), 4, is_cov=is_cov)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt2", rng_bic(), 4, is_cov=is_cov)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt3", rng_bic(), 4, is_cov=is_cov)
 
     # 6. InstgAgt / InstdAgt (optional)
-    if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", instg_bic, 4)
-    if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", instd_bic, 4)
+    if "instructing_agent" in selected or is_adv or is_cov:
+        tx += agent_xml("InstgAgt", instg_bic, 4, is_cov=is_cov)
+    if "instructed_agent" in selected or is_adv or is_cov:
+        tx += agent_xml("InstdAgt", instd_bic, 4, is_cov=is_cov)
 
     # 7. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt1", rng_bic(), 4, is_cov=is_cov)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt2", rng_bic(), 4, is_cov=is_cov)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt3", rng_bic(), 4, is_cov=is_cov)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
     # 9. Dbtr — MANDATORY in v12, FI type (BranchAndFinancialInstitutionIdentification8)
-    tx += agent_xml("Dbtr", debtor_bic, 4)
+    tx += agent_xml("Dbtr", debtor_bic, 4, is_cov=is_cov)
 
     # 10. DbtrAcct (optional)
     if "debtor_account" in selected:
         tx += account_xml("DbtrAcct", rng_iban(country), 4)
     # 11. DbtrAgt (optional)
-    if "debtor_agent" in selected:
-        tx += agent_xml("DbtrAgt", rng_bic(), 4)
+    if "debtor_agent" in selected or is_adv or is_cov:
+        tx += agent_xml("DbtrAgt", rng_bic(), 4, is_cov=is_cov)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 12. CdtrAgt (optional)
-    if "creditor_agent" in selected:
-        tx += agent_xml("CdtrAgt", rng_bic(), 4)
+    if "creditor_agent" in selected or is_adv or is_cov:
+        tx += agent_xml("CdtrAgt", rng_bic(), 4, is_cov=is_cov)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 13. Cdtr — MANDATORY in v12, FI type (BranchAndFinancialInstitutionIdentification8)
-    tx += agent_xml("Cdtr", creditor_bic, 4)
+    tx += agent_xml("Cdtr", creditor_bic, 4, is_cov=is_cov)
 
     # 14. CdtrAcct (optional)
     if "creditor_account" in selected:
@@ -870,12 +1188,20 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
         cov_cdtr_iban = rng_iban()
         cov_dbtr_bic = rng_bic()
         cov_cdtr_bic = rng_bic()
+        cov_dbtr_addr = _rng_pstl_adr_cov(5, rng_country())
+        cov_cdtr_addr = _rng_pstl_adr_cov(5, rng_country())
         tx += f"""\t\t\t\t<UndrlygCstmrCdtTrf>
-\t\t\t\t\t<Dbtr><Nm>{xe(cov_dbtr)}</Nm><PstlAdr><Ctry>{rng_country()}</Ctry></PstlAdr></Dbtr>
+\t\t\t\t\t<Dbtr>
+\t\t\t\t\t\t<Nm>{xe(cov_dbtr)}</Nm>
+{cov_dbtr_addr.rstrip()}
+\t\t\t\t\t</Dbtr>
 \t\t\t\t\t<DbtrAcct><Id><IBAN>{xe(cov_dbtr_iban)}</IBAN></Id></DbtrAcct>
 \t\t\t\t\t<DbtrAgt><FinInstnId><BICFI>{xe(cov_dbtr_bic)}</BICFI></FinInstnId></DbtrAgt>
 \t\t\t\t\t<CdtrAgt><FinInstnId><BICFI>{xe(cov_cdtr_bic)}</BICFI></FinInstnId></CdtrAgt>
-\t\t\t\t\t<Cdtr><Nm>{xe(cov_cdtr)}</Nm><PstlAdr><Ctry>{rng_country()}</Ctry></PstlAdr></Cdtr>
+\t\t\t\t\t<Cdtr>
+\t\t\t\t\t\t<Nm>{xe(cov_cdtr)}</Nm>
+{cov_cdtr_addr.rstrip()}
+\t\t\t\t\t</Cdtr>
 \t\t\t\t\t<CdtrAcct><Id><IBAN>{xe(cov_cdtr_iban)}</IBAN></Id></CdtrAcct>
 \t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('COVREF', 10))}</Ustrd></RmtInf>
 \t\t\t\t</UndrlygCstmrCdtTrf>
@@ -904,7 +1230,7 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
 \t\t\t\t<SttlmInf>
-\t\t\t\t\t<SttlmMtd>{xe(sttlm_mtd)}</SttlmMtd>
+{sttlm_inf}
 \t\t\t\t</SttlmInf>
 \t\t\t</GrpHdr>
 \t\t\t<CdtTrfTxInf>
@@ -946,8 +1272,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     tx = ""
 
     # -- ChrgsInf (optional) -- XSD pos after IntrBkSttlmDt
-    if "charges_information" in selected:
-        chg_amt = rng_amount(ccy)
+    if "charges_information" in selected or charge_br == "CRED":
+        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
         chg_bic = rng_bic()
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
@@ -956,9 +1282,9 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 
     # -- InstgAgt / InstdAgt -- XSD pos after ChrgsInf
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4)
+        tx += agent_xml("InstgAgt", from_bic, 4, exclude_name_address=True)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4)
+        tx += agent_xml("InstdAgt", to_bic, 4, exclude_name_address=True)
 
     # -- RtrChain (TransactionParties11) -- XSD pos after InstdAgt
     # XSD sequence inside RtrChain: UltmtDbtr → Dbtr → DbtrAcct → ... → DbtrAgt → ... → CdtrAgt → ... → Cdtr → CdtrAcct → UltmtCdtr
@@ -972,9 +1298,9 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     if "debtor_account" in selected:
         chain += account_xml("DbtrAcct", rng_iban(iban_country), 5)
     if "debtor_agent" in selected:
-        chain += agent_xml("DbtrAgt", rng_bic(), 5)
+        chain += agent_xml("DbtrAgt", rng_bic(), 5, exclude_name_address=True)
     if "creditor_agent" in selected:
-        chain += agent_xml("CdtrAgt", rng_bic(), 5)
+        chain += agent_xml("CdtrAgt", rng_bic(), 5, exclude_name_address=True)
 
     # Cdtr is ALSO Mandatory in TransactionParties11
     chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
@@ -1169,38 +1495,81 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 # ── Pacs.002 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs002(selected: set, idx: int) -> str:
+    """
+    Generate a valid pacs.002.001.10 (FI-to-FI Payment Status Report) message.
+
+    CBPR+ rules enforced:
+      - AppHdr/Fr BICFI == TxInfAndSts/InstgAgt BICFI  (when CpyDplct absent)
+      - AppHdr/To BICFI == TxInfAndSts/InstdAgt BICFI  (when CpyDplct absent)
+      - TxInfAndSts element order:
+            OrgnlGrpInf → OrgnlEndToEndId → OrgnlTxId → OrgnlUETR →
+            TxSts → StsRsnInf (if RJCT) → InstgAgt → InstdAgt → OrgnlTxRef
+      - InstgAgt / InstdAgt are NEVER placed inside GrpHdr for pacs.002.
+    """
     ccy, country = rng_currency_and_country()
-    iban_country = country
+    # Shared BICs: AppHdr Fr == InstgAgt, AppHdr To == InstdAgt (CBPR+ BAH rule)
     from_bic = rng_bic()
-    to_bic = rng_bic()
-    biz_msg_id = rng_id("BIZ", 16)
-    msg_id = rng_id("MSG", 16)
-    cre_dt = rng_datetime()
+    to_bic   = rng_bic()
+    biz_msg_id  = rng_id("BIZ", 16)
+    msg_id      = rng_id("MSG", 16)
+    cre_dt      = rng_datetime()
     orig_msg_id = rng_id("ORIGMSG", 10)
-    orig_e2e = rng_id("ORIE2E", 10)
-    orig_tx = rng_id("ORITX", 10)
-    orig_uetr = rng_uetr()
+    orig_e2e    = rng_id("ORIE2E", 10)
+    orig_tx     = rng_id("ORITX", 10)
+    orig_uetr   = rng_uetr()
     status_codes = ["ACSC", "ACCP", "ACSP", "RJCT", "PDNG"]
     status = random.choice(status_codes)
 
-    grphdr_tx = ""
-    if "instructing_agent" in selected:
-        grphdr_tx += agent_xml("InstgAgt", from_bic, 4)
-    if "instructed_agent" in selected:
-        grphdr_tx += agent_xml("InstdAgt", to_bic, 4)
-
-    # Original parties belong in OrgnlTxRef (pos 16 in TxInfAndSts)
-    orgnl_tx_ref = ""
-    if "debtor" in selected:
-        orgnl_tx_ref += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Dbtr>\n"
-    if "creditor" in selected:
-        orgnl_tx_ref += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Cdtr>\n"
-
+    # ── StsRsnInf — only for RJCT ──────────────────────────────────────────────
     reject_reason = ""
     if status == "RJCT":
         reasons = ["AM04", "AC01", "FF01", "AG01"]
-        reject_reason = f"\t\t\t\t<StsRsnInf>\n\t\t\t\t\t<Rsn>\n\t\t\t\t\t\t<Cd>{random.choice(reasons)}</Cd>\n\t\t\t\t\t</Rsn>\n\t\t\t\t</StsRsnInf>\n"
+        reject_reason = (
+            "\t\t\t\t<StsRsnInf>\n"
+            "\t\t\t\t\t<Rsn>\n"
+            f"\t\t\t\t\t\t<Cd>{random.choice(reasons)}</Cd>\n"
+            "\t\t\t\t\t</Rsn>\n"
+            "\t\t\t\t</StsRsnInf>\n"
+        )
 
+    # ── InstgAgt / InstdAgt inside TxInfAndSts (with BAH-matched BICs) ─────────
+    # These MUST use the same BICs as AppHdr/Fr and AppHdr/To respectively.
+    tx_instg_agt = ""
+    tx_instd_agt = ""
+    if "instructing_agent" in selected:
+        tx_instg_agt = (
+            "\t\t\t\t<InstgAgt>\n"
+            "\t\t\t\t\t<FinInstnId>\n"
+            f"\t\t\t\t\t\t<BICFI>{xe(from_bic)}</BICFI>\n"
+            "\t\t\t\t\t</FinInstnId>\n"
+            "\t\t\t\t</InstgAgt>\n"
+        )
+    if "instructed_agent" in selected:
+        tx_instd_agt = (
+            "\t\t\t\t<InstdAgt>\n"
+            "\t\t\t\t\t<FinInstnId>\n"
+            f"\t\t\t\t\t\t<BICFI>{xe(to_bic)}</BICFI>\n"
+            "\t\t\t\t\t</FinInstnId>\n"
+            "\t\t\t\t</InstdAgt>\n"
+        )
+
+    # ── OrgnlTxRef — optional parties at end of TxInfAndSts ────────────────────
+    orgnl_tx_ref_body = ""
+    if "debtor" in selected:
+        orgnl_tx_ref_body += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Dbtr>\n"
+    if "creditor" in selected:
+        orgnl_tx_ref_body += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Cdtr>\n"
+
+    orgnl_tx_ref = ""
+    if orgnl_tx_ref_body:
+        orgnl_tx_ref = (
+            "\t\t\t\t<OrgnlTxRef>\n"
+            f"{orgnl_tx_ref_body}"
+            "\t\t\t\t</OrgnlTxRef>\n"
+        )
+
+    # ── Assemble ────────────────────────────────────────────────────────────────
+    # GrpHdr contains ONLY: MsgId, CreDtTm — NO InstgAgt/InstdAgt here.
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
@@ -1218,7 +1587,7 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
-{grphdr_tx}\t\t\t</GrpHdr>
+\t\t\t</GrpHdr>
 \t\t\t<TxInfAndSts>
 \t\t\t\t<OrgnlGrpInf>
 \t\t\t\t\t<OrgnlMsgId>{xe(orig_msg_id)}</OrgnlMsgId>
@@ -1228,13 +1597,12 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 \t\t\t\t<OrgnlTxId>{xe(orig_tx)}</OrgnlTxId>
 \t\t\t\t<OrgnlUETR>{xe(orig_uetr)}</OrgnlUETR>
 \t\t\t\t<TxSts>{xe(status)}</TxSts>
-{reject_reason}\t\t\t\t<OrgnlTxRef>
-{orgnl_tx_ref}\t\t\t\t</OrgnlTxRef>
-\t\t\t</TxInfAndSts>
+{reject_reason}{tx_instg_agt}{tx_instd_agt}{orgnl_tx_ref}\t\t\t</TxInfAndSts>
 \t\t</FIToFIPmtStsRpt>
 \t</Document>
 </BusMsgEnvlp>"""
     return xml
+
 
 
 # ── Pacs.010 Generator ─────────────────────────────────────────────────────────
@@ -1980,13 +2348,21 @@ def generate_single_xml(
     if "pacs.008" in msg_lower:
         return _gen_pacs008(selected, idx)
     elif "pacs.009" in msg_lower and "cov" in msg_lower:
-        return _gen_pacs009(selected, idx, is_cov=True)
+        xml = _gen_pacs009(selected, idx, is_cov=True)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "pacs.009" in msg_lower and "adv" in msg_lower:
         return _gen_pacs009(selected, idx, is_cov=False, is_adv=True)
     elif "pacs.009" in msg_lower:
         return _gen_pacs009(selected, idx, is_cov=False)
     elif "pacs.004" in msg_lower:
-        return _gen_pacs004(selected, idx)
+        xml = _gen_pacs004(selected, idx)
+        xml = _normalize_charges_information(xml)
+        _validate_charges_information(xml)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "pacs.003" in msg_lower:
         return _gen_pacs003(selected, idx)
     elif "pacs.002" in msg_lower:
