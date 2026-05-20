@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import asyncio
 import json
 import os
 import csv
@@ -395,66 +396,104 @@ async def bulk_generate(request: dict):
     print(f"[Bulk Gen] START — Type: {message_type}, Requested: {count}, Blocks: {selected_blocks}")
     print(f"{'='*70}")
 
-    valid_messages = []
+    valid_messages: list = []
     attempts = 0
-    consecutive_failures = 0
-    # Catastrophic safety valve — prevents truly infinite loops due to systemic bugs
-    # This is intentionally very high (count * 50) so normal generation never hits it
-    catastrophic_limit = count * 50
+    # Catastrophic safety valve — prevents truly infinite loops due to systemic bugs.
+    # Lowered from 50× to 10× since the XSD cache makes each attempt much cheaper,
+    # and 10× still gives huge headroom for normal generation noise.
+    catastrophic_limit = max(count * 10, 50)
 
     # Track failure reasons for debugging
     failure_reasons: dict = {}   # reason_string -> count
     last_failure_details: list = []  # last N failure details for response
     MAX_FAILURE_LOG = 10  # keep last N failure details in response
 
+    # Batch size — how many gen+validate operations to run concurrently. Bulk-gen used
+    # to be a strict serial loop (one attempt at a time), which is the main reason it
+    # felt slow. asyncio.gather lets us issue many attempts concurrently against the
+    # validator's event-loop-friendly internals.
+    BATCH_SIZE = 16
+
+    async def _one_attempt(attempt_idx: int):
+        """Generate one XML candidate and run the full validation pipeline.
+
+        Returns a dict with keys: ok (bool), xml (str), report (ValidationReport |
+        None), error (str | None), reason (str), error_codes (list[str]).
+        """
+        try:
+            xml = generate_single_xml(message_type, selected_blocks, attempt_idx)
+            report = await validator.validate(xml, mode="Full 1-3", message_type="Auto-detect")
+            if report.status == "PASS":
+                return {"ok": True, "xml": xml, "report": report,
+                        "error": None, "reason": "", "error_codes": []}
+            issues = report.to_dict().get("details", [])
+            error_codes = [f"{iss.get('code', 'UNKNOWN')}: {iss.get('message', '')[:80]}"
+                           for iss in issues if iss.get("severity") in ("ERROR", "CRITICAL")]
+            reason = "; ".join(error_codes[:3]) if error_codes else "Unknown validation failure"
+            return {"ok": False, "xml": xml, "report": report,
+                    "error": None, "reason": reason, "error_codes": error_codes}
+        except Exception as exc:
+            err = f"Generation exception: {exc}"
+            return {"ok": False, "xml": "", "report": None,
+                    "error": err, "reason": err, "error_codes": []}
+
     # ── EXACT-COUNT LOOP: keep going until we have exactly `count` valid messages ──
     while len(valid_messages) < count:
-        attempts += 1
-        current_valid = len(valid_messages)
-
         # ── Catastrophic safety valve ──
-        if attempts > catastrophic_limit:
+        if attempts >= catastrophic_limit:
             summary = "; ".join(f"({v}x) {k[:100]}" for k, v in sorted(failure_reasons.items(), key=lambda x: -x[1])[:3])
             error_detail = (
                 f"CRITICAL: Could not generate {count} valid {message_type} messages "
-                f"after {attempts - 1} attempts (produced {len(valid_messages)}). "
+                f"after {attempts} attempts (produced {len(valid_messages)}). "
                 f"This indicates a systemic generation or validation issue. "
                 f"Top failure reasons: {summary}"
             )
             print(f"[Bulk Gen] 🚨 CATASTROPHIC LIMIT HIT: {error_detail}")
             raise HTTPException(status_code=500, detail=error_detail)
 
-        try:
-            # 1. Generate XML
-            xml = generate_single_xml(message_type, selected_blocks, current_valid + 1)
+        # How many more do we need? Run a concurrent batch sized to either the gap
+        # or the configured batch size, whichever is smaller — never burn budget
+        # for messages we no longer need.
+        remaining = count - len(valid_messages)
+        batch_n = min(BATCH_SIZE, remaining)
+        # Don't issue more attempts than the catastrophic budget allows.
+        batch_n = min(batch_n, catastrophic_limit - attempts)
+        if batch_n <= 0:
+            break
 
-            # 2. Run Full Validation (Async) — L1, L2 (XSD), L3 (Business Rules)
-            report = await validator.validate(xml, mode="Full 1-3", message_type="Auto-detect")
+        batch_start = attempts + 1
+        coros = [_one_attempt(batch_start + i) for i in range(batch_n)]
+        results = await asyncio.gather(*coros)
+        attempts += batch_n
 
-            # 3. Check result
-            if report.status == "PASS":
+        for r in results:
+            if r["ok"] and len(valid_messages) < count:
                 valid_messages.append({
-                    "index": current_valid + 1,
-                    "xml": xml,
+                    "index": len(valid_messages) + 1,
+                    "xml": r["xml"],
                     "message_type": message_type,
                     "status": "VALID",
-                    "validation_report": report.to_dict()
+                    "validation_report": r["report"].to_dict()
                 })
+                continue
+            # Failed (validation or exception)
+            reason = r["reason"]
+            failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+            if r["error"]:
+                print(f"[Bulk Gen] 💥 ERROR — {r['error']}")
                 consecutive_failures = 0  # reset on success
                 print(f"[Bulk Gen] Attempt {attempts}: [OK] VALID (Total valid: {current_valid + 1}/{count})")
             else:
-                consecutive_failures += 1
-                # Collect failure reasons from the validation report
-                issues = report.to_dict().get("details", [])
-                error_codes = [f"{iss.get('code', 'UNKNOWN')}: {iss.get('message', '')[:80]}" for iss in issues if iss.get("severity") in ("ERROR", "CRITICAL")]
-                reason = "; ".join(error_codes[:3]) if error_codes else "Unknown validation failure"
-                failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
-
-                # Keep last N failure details
-                if len(last_failure_details) >= MAX_FAILURE_LOG:
-                    last_failure_details.pop(0)
+                print(f"[Bulk Gen] ❌ INVALID — {reason[:120]}")
+            if len(last_failure_details) >= MAX_FAILURE_LOG:
+                last_failure_details.pop(0)
+            if r["report"]:
                 last_failure_details.append({
                     "attempt": attempts,
+                    "status": r["report"].status,
+                    "error_count": r["report"].errors,
+                    "reasons": r["error_codes"][:3]
+                })
                     "status": report.status,
                     "error_count": report.errors,
                     "reasons": error_codes[:3]
