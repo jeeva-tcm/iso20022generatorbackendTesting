@@ -463,10 +463,10 @@ def _normalize_charges_information(xml_content: str) -> str:
             if not chrgs_inf_els:
                 idx = parent.index(chrg_br_el)
                 ccy = "EUR"
-                amt_els = parent.xpath("//*[local-name()='RtrdIntrBkSttlmAmt']")
+                amt_els = parent.xpath("./*[local-name()='IntrBkSttlmAmt' or local-name()='InstdAmt' or local-name()='RtrdIntrBkSttlmAmt']")
                 if amt_els and amt_els[0].get("Ccy"):
                     ccy = amt_els[0].get("Ccy")
-                
+
                 new_chg = etree.Element(f"{ns}ChrgsInf")
                 new_amt = etree.Element(f"{ns}Amt", Ccy=ccy)
                 new_amt.text = "0.00"
@@ -932,18 +932,19 @@ def _gen_pacs008(selected: set, idx: int) -> str:
         tx += f"\t\t\t\t<SttlmTmReq>\n\t\t\t\t\t<CLSTm>14:00:00+00:00</CLSTm>\n\t\t\t\t</SttlmTmReq>\n"
 
     # 4b. InstdAmt — MANDATORY when ChrgsInf is present (CBPR+ rule)
-    if "charges_information" in selected:
-        instd_amt = rng_amount(ccy)
+    charge_br = random.choice(["CRED", "DEBT"])
+    needs_chrgs_inf = "charges_information" in selected or charge_br == "CRED"
+    if needs_chrgs_inf:
+        instd_amt = amount if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
         tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{instd_amt}</InstdAmt>\n"
 
     # 5. ChrgBr (MANDATORY in pacs.008) — exclude SHAR/SLEV per business rules
-    charge_br = random.choice(["CRED", "DEBT"])
     tx += el("ChrgBr", charge_br, 4)
 
-    # 6. ChrgsInf (optional)
-    if "charges_information" in selected:
+    # 6. ChrgsInf (mandatory when ChrgBr=CRED, optional otherwise)
+    if needs_chrgs_inf:
         chg_ccy = ccy
-        chg_amt = rng_amount(chg_ccy)
+        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(chg_ccy)
         chg_bic = rng_bic()
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(chg_ccy)}\">{chg_amt}</Amt>\n"
@@ -2360,7 +2361,10 @@ def generate_single_xml(
     selected_blocks_ctx.set(selected)
     msg_lower = message_type.lower()
     if "pacs.008" in msg_lower:
-        return _gen_pacs008(selected, idx)
+        xml = _gen_pacs008(selected, idx)
+        xml = _normalize_charges_information(xml)
+        _validate_charges_information(xml)
+        return xml
     elif "pacs.009" in msg_lower and "cov" in msg_lower:
         xml = _gen_pacs009(selected, idx, is_cov=True)
         xml = _normalize_postal_addresses(xml)
