@@ -372,8 +372,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             # Final check to force COV or ADV variant on report if elements are present
             if report.message_type and report.message_type.startswith("pacs.009") and "cov" not in report.message_type.lower() and "adv" not in report.message_type.lower():
                 if "<Prtry>ADV</Prtry>" in xml_content:
-                    report.message_type = "pacs.009.adv"
-                    detected_type = "pacs.009.adv"
+                    report.message_type = "pacs.009.001.08_ADV"
+                    detected_type = "pacs.009.001.08_ADV"
                 elif "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
                     report.message_type = "pacs.009.cov"
                     detected_type = "pacs.009.cov"
@@ -2598,7 +2598,7 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         # FINAL REFINEMENT: Cover variants
         if res.startswith("pacs.009"):
             if "<Prtry>ADV</Prtry>" in xml_content:
-                return "pacs.009.adv"
+                return "pacs.009.001.08_ADV"
             elif "UndrlygCstmrCdtTrf" in xml_content or "cov" in xml_content.lower():
                 return "pacs.009.cov"
             
@@ -2692,8 +2692,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         # Special handling for internal refined types
         if message_type == "pacs.009.cov":
             message_type = "pacs.009.001.08" # Use standard version for XSD
-        elif message_type == "pacs.009.adv":
-            message_type = "pacs.009.001.12"
+        elif message_type in ["pacs.009.adv", "pacs.009.001.08_ADV"]:
+            message_type = "pacs.009.001.08_ADV"
 
         # 1. Exact Match
         exact_xsd = f"{message_type}.xsd"

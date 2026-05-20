@@ -59,7 +59,8 @@ class Layer3Mixin:
                     print(f"Error loading family rules: {e}")
 
         # 3. Load Message Specific (e.g., pacs.008.json)
-        # Try pacs.008 first
+        # Try pacs.008 first, then also load full variant files such as
+        # pacs.009.001.08_ADV.json when present.
         specific_name = ".".join(parts[:2]) if len(parts) >= 2 else message_type
         specific_file = os.path.join(self.rules_path, f"{specific_name}.json")
         
@@ -73,6 +74,20 @@ class Layer3Mixin:
                     rules.extend(json.load(f))
             except Exception as e: 
                 print(f"Error loading specific rules: {e}")
+
+        full_rule_names = [message_type]
+        if message_type == "pacs.009.adv":
+            full_rule_names.append("pacs.009.001.08_ADV")
+
+        for full_name in full_rule_names:
+            full_specific_file = os.path.join(self.rules_path, f"{full_name}.json")
+            if full_specific_file == specific_file or not os.path.exists(full_specific_file):
+                continue
+            try:
+                with open(full_specific_file, "r", encoding='utf-8-sig') as f:
+                    rules.extend(json.load(f))
+            except Exception as e:
+                print(f"Error loading full specific rules: {e}")
             
         return rules
 

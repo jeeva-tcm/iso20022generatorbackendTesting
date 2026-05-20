@@ -1,5 +1,15 @@
 [
     {
+        "rule_id": "ADV_STTLM_MTD_COVE_ONLY",
+        "description": "Settlement Method (SttlmMtd) for pacs.009 ADV must be COVE.",
+        "selector": ".*\\.GrpHdr\\.SttlmInf\\.SttlmMtd$",
+        "expression": "VALUE == 'COVE'",
+        "errorMessage": "For pacs.009 ADV messages, Settlement Method must be COVE. INDA, INGA, and CLRG are not allowed.",
+        "fix": "Change <SttlmMtd> to COVE and provide the required reimbursement agent details.",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
         "rule_id": "ADV_MSG_ID_NOT_BLANK",
         "description": "Message ID (MsgId) must not be blank.",
         "selector": ".*\\.MsgId$",
