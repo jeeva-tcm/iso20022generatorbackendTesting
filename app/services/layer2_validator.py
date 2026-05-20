@@ -790,8 +790,21 @@ class Layer2Mixin:
                     # Fix: use a ±15-line context window when error_line is available;
                     # only flag as duplicate if the same tag appears twice nearby.
                     _MULTI_LEVEL_TAGS = {
+                        # Short generic tags re-used at every hierarchy level
                         'Id', 'Cd', 'Nm', 'Tp', 'Ref', 'Dt', 'Amt', 'Inf',
-                        'Issr', 'Sts', 'Rsn', 'Agt', 'Pty', 'Acct', 'Ctry', 'Ccy'
+                        'Issr', 'Sts', 'Rsn', 'Agt', 'Pty', 'Acct', 'Ctry', 'Ccy',
+                        # Address-component tags — appear in every party's PstlAdr
+                        # (Dbtr / Cdtr / each Agent / UltmtDbtr / UltmtCdtr / etc.)
+                        'TwnNm', 'StrtNm', 'BldgNb', 'BldgNm', 'PstCd', 'AdrLine',
+                        'CtrySubDvsn', 'TwnLctnNm', 'DstrctNm', 'Flr', 'PstBx', 'Room',
+                        'Dept', 'SubDept', 'AdrTp',
+                        # Identification tags appearing per party/agent
+                        'BICFI', 'AnyBIC', 'LEI', 'MmbId', 'IBAN', 'BBAN',
+                        'FinInstnId', 'OrgId', 'PrvtId', 'BrnchId', 'ClrSysMmbId',
+                        # Timing / amount sub-tags
+                        'CreDtTm', 'IntrBkSttlmDt', 'ReqdExctnDt', 'XchgRate',
+                        # Misc multi-level
+                        'BizMsgIdr', 'EndToEndId', 'InstrId', 'TxId', 'UETR',
                     }
                     tag_pattern = re.compile(f'<{re.escape(found_elem)}[\\s/>]', re.IGNORECASE)
                     if found_elem in _MULTI_LEVEL_TAGS:

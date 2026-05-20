@@ -441,6 +441,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     # when the XSD declares all children as minOccurs="0".
                     self._validate_empty_required_containers(xml_content, report)
 
+                    # HEAD001_MSGDEFIDR_MATCHES_PAYLOAD + BizSvc format + tz drift.
+                    # XSD cannot catch this because header and payload validate against
+                    # different schemas; this is a frequent integration/routing bug.
+                    self._validate_apphdr_payload_match(xml_content, report)
+
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))
@@ -891,18 +896,49 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
         # Containers that the XSD allows to be empty but CBPR+ does not.
         # value = human-friendly hint about what must be inside.
         EMPTY_NOT_ALLOWED = {
-            'FinInstnId':   "BICFI, ClrSysMmbId, LEI, Nm, or Othr",
-            'FIId':         "a FinInstnId block with at least one identifier",
-            'PstlAdr':      "Ctry, TwnNm, StrtNm, BldgNb, PstCd, or AdrLine",
-            'PmtId':        "EndToEndId (and ideally InstrId, TxId, UETR)",
-            'SttlmInf':     "SttlmMtd",
-            'GrpHdr':       "MsgId, CreDtTm, NbOfTxs and SttlmInf",
-            'PmtTpInf':     "SvcLvl, LclInstrm or CtgyPurp",
-            'SchmeNm':      "<Cd> or <Prtry>",
-            'Othr':         "an identifier value <Id>",
-            'ClrSysMmbId':  "MmbId",
-            'OrgId':        "AnyBIC, LEI, or Othr/Id",
-            'PrvtId':       "DtAndPlcOfBirth or Othr/Id",
+            # ── Identification containers (XSD declares every choice as optional) ──
+            'FinInstnId':       "BICFI, ClrSysMmbId, LEI, Nm, or Othr",
+            'FIId':              "a FinInstnId block with at least one identifier",
+            'ClrSysMmbId':       "MmbId",
+            'OrgId':             "AnyBIC, LEI, or Othr/Id",
+            'PrvtId':            "DtAndPlcOfBirth or Othr/Id",
+            'SchmeNm':           "<Cd> or <Prtry>",
+            'Othr':              "an identifier value <Id>",
+            'ClrSys':            "<Cd> or <Prtry>",
+            # ── Postal address (all children optional in XSD) ──
+            'PstlAdr':           "Ctry, TwnNm, StrtNm, BldgNb, PstCd, or AdrLine",
+            # ── Payment identification & group header ──
+            'PmtId':             "EndToEndId (and ideally InstrId, TxId, UETR)",
+            'GrpHdr':            "MsgId, CreDtTm, NbOfTxs and SttlmInf",
+            'SttlmInf':          "SttlmMtd",
+            # ── Payment type info (choice containers) ──
+            'PmtTpInf':          "SvcLvl, LclInstrm, CtgyPurp, InstrPrty, or ClrChanl",
+            'SvcLvl':            "<Cd> or <Prtry>",
+            'LclInstrm':         "<Cd> or <Prtry>",
+            'CtgyPurp':          "<Cd> or <Prtry>",
+            'Purp':              "<Cd> or <Prtry>",
+            # ── Settlement timing ──
+            'SttlmTmIndctn':     "DbtDtTm or CdtDtTm",
+            'SttlmTmReq':        "CLSTm, TillTm, FrTm, or RjctTm",
+            # ── Remittance & ancillary ──
+            'RmtInf':            "<Ustrd> or <Strd>",
+            'Strd':              "RfrdDocInf, RfrdDocAmt, CdtrRefInf, Invcr, Invcee, TaxRmt, GrnshmtRmt, or AddtlRmtInf",
+            'CdtrRefInf':        "Tp or Ref",
+            'RgltryRptg':        "DbtCdtRptgInd, Authrty, or Dtls",
+            'Tax':               "Cdtr, Dbtr, AdmstnZn, RefNb, Mtd, TtlTaxblBaseAmt, TtlTaxAmt, Dt, SeqNb, or Rcrd",
+            'TaxRcrd':           "Tp, Ctgy, CtgyDtls, DbtrSts, CertId, FrmsCd, Prd, TaxAmt, or AddtlInf",
+            'Chrgs':             "Amt and Agt",
+            'ChrgsInf':          "Amt and Agt",
+            'ChrgsBrkdwn':       "Amt, Tp, or CdtDbtInd",
+            # ── Instruction wrappers ──
+            'InstrForCdtrAgt':   "Cd or InstrInf",
+            'InstrForNxtAgt':    "Cd or InstrInf",
+            # ── Statement / report common (camt) ──
+            'Bal':               "Tp, Amt, CdtDbtInd, and Dt",
+            'NtryDtls':          "TxDtls or Btch",
+            'TxDtls':            "Refs, Amt, or RltdPties",
+            # ── Account identification choice ──
+            'AcctId':            "<IBAN> or <Othr> with an identifier",
         }
 
         # Party/agent wrappers — must contain *some* identifying child
@@ -914,6 +950,36 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
             'PrvsInstgAgt1', 'PrvsInstgAgt2', 'PrvsInstgAgt3',
             'FwdgAgt', 'Fr', 'To',
         }
+
+        # Account containers — their <Id> child must carry IBAN or Othr/Id.
+        # The bare <Id> tag is too generic to flag globally (it appears in many
+        # non-account contexts), so we walk these specific parents instead.
+        ACCOUNT_CONTAINERS = {
+            'DbtrAcct', 'CdtrAcct',
+            'DbtrAgtAcct', 'CdtrAgtAcct',
+            'IntrmyAgt1Acct', 'IntrmyAgt2Acct', 'IntrmyAgt3Acct',
+            'InstgAgtAcct', 'InstdAgtAcct',
+            'SttlmAcct', 'RcvgAgtAcct', 'DlvrgAgtAcct',
+            'ChrgsAcct',
+        }
+
+        def has_acct_identifier(acct_elem) -> bool:
+            """An account container is valid only if its <Id> carries IBAN text
+            or an Othr/Id text value (or, in older XSDs, a direct text on <Id>)."""
+            for descendant in acct_elem.iter():
+                if descendant is acct_elem or not isinstance(descendant.tag, str):
+                    continue
+                d_name = local(descendant.tag)
+                if d_name in ('IBAN', 'BBAN'):
+                    if (descendant.text or "").strip():
+                        return True
+                elif d_name == 'Id':
+                    # Othr/Id is the proprietary identifier; require text content
+                    parent = descendant.getparent()
+                    p_name = local(parent.tag) if parent is not None else ""
+                    if p_name == 'Othr' and (descendant.text or "").strip():
+                        return True
+            return False
 
         # Track elements already reported by path (sourceline + name) to avoid
         # double-flagging when both the parent (e.g. Fr) and child (FinInstnId)
@@ -964,6 +1030,109 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                         f"Provide at least a BIC, name, or identifier inside <{name}>. "
                         f"An empty party/agent container is not routable."
                     ))
+                continue
+
+            if name in ACCOUNT_CONTAINERS:
+                # Account container present but no IBAN/BBAN/Othr identifier
+                if not has_acct_identifier(elem):
+                    key = (line, name)
+                    if key in reported:
+                        continue
+                    reported.add(key)
+                    report.add_issue(ValidationIssue(
+                        "ERROR", 2, "EMPTY_ACCOUNT_CONTAINER", str(line or "?"),
+                        f"<{name}> is present but carries no account identifier.",
+                        f"Inside <{name}> provide either <Id><IBAN>...</IBAN></Id> "
+                        f"or <Id><Othr><Id>...</Id></Othr></Id>. An account container "
+                        f"without an identifier is not processable."
+                    ))
+
+    def _validate_apphdr_payload_match(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        CBPR+ rule HEAD001_MSGDEFIDR_MATCHES_PAYLOAD —
+
+        The AppHdr's <MsgDefIdr> must reference the *same* message type as the
+        <Document>'s namespace. A header that claims ``pacs.008.001.13`` while the
+        Document namespace is ``pacs.009.001.12`` is a common integration bug
+        (often caused by routing/mapping mistakes) and produces a perfectly
+        XSD-valid but operationally meaningless message. lxml's XSD validator
+        cannot catch this because the header and the payload are validated
+        against different schemas.
+
+        Also checks BizSvc format ("swift.<service>.NN") and AppHdr CreDt vs
+        Document CreDtTm timezone consistency (warning only).
+        """
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        app_hdr = root.find(".//{*}AppHdr")
+        document = root.find(".//{*}Document")
+        if app_hdr is None or document is None:
+            # Nothing to compare — either header or payload missing; other rules will handle it
+            return
+
+        # 1. MsgDefIdr vs Document namespace
+        msg_def_idr_el = app_hdr.find(".//{*}MsgDefIdr")
+        msg_def_idr = (msg_def_idr_el.text or "").strip() if msg_def_idr_el is not None else ""
+
+        doc_ns = etree.QName(document).namespace or ""
+        # Extract the trailing message identifier from the namespace
+        # e.g. urn:iso:std:iso:20022:tech:xsd:pacs.008.001.13 → pacs.008.001.13
+        doc_msg_id = doc_ns.split(":")[-1] if ":" in doc_ns else doc_ns
+
+        if msg_def_idr and doc_msg_id and msg_def_idr != doc_msg_id:
+            line = str(msg_def_idr_el.sourceline or "?")
+            report.add_issue(ValidationIssue(
+                "ERROR", 2, "HEAD001_MSGDEFIDR_MISMATCH", line,
+                f"AppHdr.MsgDefIdr '{msg_def_idr}' does not match the Document namespace "
+                f"'{doc_msg_id}'.",
+                f"Either update <MsgDefIdr> in the AppHdr to '{doc_msg_id}', or change the "
+                f"Document namespace to 'urn:iso:std:iso:20022:tech:xsd:{msg_def_idr}'. "
+                f"Header and payload must reference the same ISO 20022 message definition."
+            ))
+
+        # 2. BizSvc format (CBPR+ uses 'swift.cbprplus.NN', HVPS+ uses 'swift.hvps.NN', etc.)
+        biz_svc_el = app_hdr.find(".//{*}BizSvc")
+        if biz_svc_el is not None and biz_svc_el.text:
+            biz_svc = biz_svc_el.text.strip()
+            if not re.match(r'^swift\.[a-z]+(\.[0-9]+)?$', biz_svc):
+                line = str(biz_svc_el.sourceline or "?")
+                report.add_issue(ValidationIssue(
+                    "WARNING", 2, "HEAD001_BIZSVC_FORMAT", line,
+                    f"AppHdr.BizSvc '{biz_svc}' does not match the SWIFT business service "
+                    f"pattern 'swift.<service>.NN'.",
+                    "Use a recognised value such as 'swift.cbprplus.02' (CBPR+ SR2025), "
+                    "'swift.cbprplus.01', 'swift.hvps.01', or 'swift.csp.02'."
+                ))
+
+        # 3. Timezone consistency (warning) — both header CreDt and payload CreDtTm should
+        # carry the same offset for downstream timing/cut-off calculations to be correct.
+        cre_dt_el = app_hdr.find(".//{*}CreDt")
+        # First CreDtTm under Document (typically in GrpHdr)
+        cre_dt_tm_el = document.find(".//{*}CreDtTm")
+
+        def _extract_offset(value: str) -> str:
+            if not value:
+                return ""
+            # Match ±HH:MM or 'Z'
+            m = re.search(r'(Z|[+-]\d{2}:\d{2})$', value)
+            return m.group(1) if m else ""
+
+        if cre_dt_el is not None and cre_dt_tm_el is not None:
+            h_off = _extract_offset((cre_dt_el.text or "").strip())
+            p_off = _extract_offset((cre_dt_tm_el.text or "").strip())
+            if h_off and p_off and h_off != p_off:
+                line = str(cre_dt_tm_el.sourceline or "?")
+                report.add_issue(ValidationIssue(
+                    "WARNING", 2, "HEAD001_TZ_DRIFT", line,
+                    f"AppHdr CreDt timezone offset '{h_off}' differs from Document "
+                    f"CreDtTm timezone offset '{p_off}'.",
+                    "For consistency, use the same UTC offset in both header and payload "
+                    "timestamps (e.g. both '+00:00' or both '+05:30')."
+                ))
 
     def _validate_uetr_in_xml(self, xml_content: str, report: ValidationReport) -> None:
         """
