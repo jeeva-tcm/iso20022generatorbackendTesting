@@ -8,5 +8,37 @@
         ],
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "CAMT057_ITM_REQUIRED",
+        "description": "Notification must contain at least one Item (Ntfctn.Itm).",
+        "condition": "exists(Document.NtfctnToRcv.Ntfctn)",
+        "mandatory_fields": [
+            "Document.NtfctnToRcv.Ntfctn.Itm"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Notification to Receive must list at least one expected item (<Itm>).",
+        "fix": "Add at least one <Itm> block describing the funds to be received."
+    },
+    {
+        "rule_id": "CAMT057_ITM_AMT_REQUIRED",
+        "description": "Each Item must carry an Amt.",
+        "selector": "^Document\\.NtfctnToRcv\\.Ntfctn\\.Itm(\\[\\d+\\])?$",
+        "type": "expression",
+        "expression": "exists(KEY + '.Amt')",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Each <Itm> must contain <Amt> (the expected amount).",
+        "fix": "Add <Amt Ccy=\"USD\">12345.67</Amt> inside the <Itm> block."
+    },
+    {
+        "rule_id": "CAMT057_ITM_EXPCTDVALDT_NOT_PAST",
+        "description": "Expected Value Date should not be in the past (operational warning).",
+        "selector": "^Document\\.NtfctnToRcv\\.Ntfctn\\.Itm(\\[\\d+\\])?\\.XpctdValDt$",
+        "type": "regex",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "severity": "WARNING",
+        "layer": 3
     }
 ]

@@ -2,9 +2,9 @@
     {
         "rule_id": "CBPR_001",
         "description": "If Settlement Method is CLRG, Clearing System Code is mandatory.",
-        "condition": "exists(Document.CdtTrfTxInf.SttlmInf.SttlmMtd) and Document.CdtTrfTxInf.SttlmInf.SttlmMtd == 'CLRG'",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.GrpHdr.SttlmInf.SttlmMtd) and Document.FIToFICstmrCdtTrf.GrpHdr.SttlmInf.SttlmMtd == 'CLRG'",
         "mandatory_fields": [
-            "Document.CdtTrfTxInf.SttlmInf.ClrSys.Cd"
+            "Document.FIToFICstmrCdtTrf.GrpHdr.SttlmInf.ClrSys.Cd"
         ],
         "severity": "ERROR",
         "layer": 3
@@ -12,25 +12,25 @@
     {
         "rule_id": "CBPR_002",
         "description": "Interbank Settlement Amount must be greater than zero.",
-        "condition": "exists(Document.CdtTrfTxInf.IntrBkSttlmAmt)",
-        "expression": "float(Document.CdtTrfTxInf.IntrBkSttlmAmt) > 0",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt)",
+        "expression": "float(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt) > 0",
         "severity": "ERROR",
         "layer": 3
     },
     {
         "rule_id": "CBPR_003",
         "description": "Instructing Agent and Instructed Agent should not be the same (Loop check).",
-        "condition": "exists(Document.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI) and exists(Document.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI)",
-        "expression": "Document.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI != Document.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI) and exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI)",
+        "expression": "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI != Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI",
         "severity": "WARNING",
         "layer": 3
     },
     {
         "rule_id": "CBPR_004",
         "description": "CBPR+: Debtor Agent must contain BICFI.",
-        "condition": "exists(Document.CdtTrfTxInf.DbtrAgt)",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt)",
         "mandatory_fields": [
-            "Document.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI"
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI"
         ],
         "severity": "ERROR",
         "layer": 3
@@ -38,9 +38,9 @@
     {
         "rule_id": "CBPR_005",
         "description": "CBPR+: Creditor Agent must contain BICFI.",
-        "condition": "exists(Document.CdtTrfTxInf.CdtrAgt)",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt)",
         "mandatory_fields": [
-            "Document.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI"
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI"
         ],
         "severity": "ERROR",
         "layer": 3
@@ -48,9 +48,188 @@
     {
         "rule_id": "CBPR_006",
         "description": "Interbank Settlement Amount is mandatory for pacs.008.",
-        "condition": "exists(Document.CdtTrfTxInf)",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
         "mandatory_fields": [
-            "Document.CdtTrfTxInf.IntrBkSttlmAmt"
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_UETR_REQUIRED",
+        "description": "CBPR+: UETR is mandatory in pacs.008 even though the XSD declares it optional.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.PmtId.UETR"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "UETR (Unique End-to-End Transaction Reference) is mandatory in pacs.008 under CBPR+.",
+        "fix": "Add a valid UUID v4 to <PmtId><UETR> (e.g., 4a1a0945-5772-409a-83ba-240e666e0267)."
+    },
+    {
+        "rule_id": "PACS008_DBTR_REQUIRED",
+        "description": "CBPR+: Debtor is mandatory in pacs.008.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Dbtr"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_CDTR_REQUIRED",
+        "description": "CBPR+: Creditor is mandatory in pacs.008.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Cdtr"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_DBTR_NM_REQUIRED",
+        "description": "CBPR+: Debtor Name is mandatory in pacs.008.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Dbtr)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Dbtr.Nm"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_CDTR_NM_REQUIRED",
+        "description": "CBPR+: Creditor Name is mandatory in pacs.008.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Cdtr)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.Cdtr.Nm"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_DBTRACCT_REQUIRED",
+        "description": "CBPR+: Debtor Account is mandatory in customer credit transfers (pacs.008).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAcct"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "DbtrAcct is mandatory in pacs.008 — every customer payment must reference a debtor account.",
+        "fix": "Add <DbtrAcct><Id><IBAN>...</IBAN></Id></DbtrAcct> (or <Othr><Id>...</Id></Othr> for non-IBAN accounts)."
+    },
+    {
+        "rule_id": "PACS008_CDTRACCT_REQUIRED",
+        "description": "CBPR+: Creditor Account is mandatory in customer credit transfers (pacs.008).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAcct"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "CdtrAcct is mandatory in pacs.008 — every customer payment must reference a creditor account.",
+        "fix": "Add <CdtrAcct><Id><IBAN>...</IBAN></Id></CdtrAcct> (or <Othr><Id>...</Id></Othr> for non-IBAN accounts)."
+    },
+    {
+        "rule_id": "PACS008_CHRGBR_REQUIRED",
+        "description": "CBPR+: ChrgBr (Charge Bearer) is mandatory in pacs.008.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgBr"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_INTRBKSTTLMDT_REQUIRED",
+        "description": "CBPR+: Interbank Settlement Date is mandatory.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmDt"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_INSTRPRTY_VALID",
+        "description": "Instruction Priority (InstrPrty) must be HIGH or NORM.",
+        "selector": "^Document\\.FIToFICstmrCdtTrf\\.CdtTrfTxInf(\\[\\d+\\])?\\.PmtTpInf\\.InstrPrty$",
+        "type": "codelist",
+        "list_name": "instrpr_enum",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_NO_LOOPBACK_BIC",
+        "description": "Debtor Agent BIC and Creditor Agent BIC must not be identical in pacs.008 (loopback).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI) and exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI)",
+        "expression": "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI != Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI",
+        "severity": "WARNING",
+        "layer": 3,
+        "errorMessage": "Debtor Agent BIC equals Creditor Agent BIC — verify this is not a loopback payment.",
+        "fix": "If you intend a same-bank transfer, this is acceptable; otherwise correct one of the agents."
+    },
+    {
+        "rule_id": "PACS008_INSTDAMT_REQUIRES_XCHGRATE",
+        "description": "If InstdAmt currency differs from IntrBkSttlmAmt currency, XchgRate must be present (FX transfer).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAmt) and exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt) and Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAmt@Ccy != Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt@Ccy",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.XchgRate"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "InstdAmt currency differs from IntrBkSttlmAmt currency but no XchgRate provided.",
+        "fix": "Add <XchgRate> with the FX rate used to derive IntrBkSttlmAmt from InstdAmt."
+    },
+    {
+        "rule_id": "PACS008_NO_XCHGRATE_IF_SAME_CCY",
+        "description": "If InstdAmt currency equals IntrBkSttlmAmt currency, XchgRate must NOT be present (no FX).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAmt) and exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt) and exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.XchgRate) and Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAmt@Ccy == Document.FIToFICstmrCdtTrf.CdtTrfTxInf.IntrBkSttlmAmt@Ccy",
+        "expression": "False",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "XchgRate provided but InstdAmt and IntrBkSttlmAmt share the same currency — exchange rate not applicable.",
+        "fix": "Remove <XchgRate> when the instructed and settlement amounts are in the same currency."
+    },
+    {
+        "rule_id": "PACS008_CHRGSINF_REQUIRES_AGT",
+        "description": "If ChrgsInf is present, an Agt (charge-bearing agent) must be inside it.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgsInf)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgsInf.Agt"
+        ],
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Charges Information block present without <Agt> (the charge-bearing agent).",
+        "fix": "Add <Agt><FinInstnId><BICFI>...</BICFI></FinInstnId></Agt> inside <ChrgsInf>."
+    },
+    {
+        "rule_id": "PACS008_NBOFTXS_EQ_TX_COUNT",
+        "description": "NbOfTxs must equal the actual number of <CdtTrfTxInf> elements.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.GrpHdr.NbOfTxs)",
+        "expression": "int(Document.FIToFICstmrCdtTrf.GrpHdr.NbOfTxs) == sum(1 for k in DATA.keys() if k.startswith('Document.FIToFICstmrCdtTrf.CdtTrfTxInf') and k.endswith('.PmtId.EndToEndId'))",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Group Header NbOfTxs does not match the actual number of CdtTrfTxInf blocks.",
+        "fix": "Update <NbOfTxs> to equal the count of <CdtTrfTxInf> transaction blocks present."
+    },
+    {
+        "rule_id": "PACS008_DBTRAGTACCT_REQUIRES_DBTRAGT",
+        "description": "DbtrAgtAcct may only be present if DbtrAgt is also present.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgtAcct)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "PACS008_CDTRAGTACCT_REQUIRES_CDTRAGT",
+        "description": "CdtrAgtAcct may only be present if CdtrAgt is also present.",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgtAcct)",
+        "mandatory_fields": [
+            "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt"
         ],
         "severity": "ERROR",
         "layer": 3

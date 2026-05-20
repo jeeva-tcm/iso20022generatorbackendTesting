@@ -31,6 +31,34 @@
         "expression": "True",
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "CAMT055_CXLRSN_VALID",
+        "description": "Cancellation reason code (CxlRsnInf.Rsn.Cd) must be a valid ExternalCancellationReason code.",
+        "selector": ".*\\.CxlRsnInf(\\[\\d+\\])?\\.Rsn\\.Cd$",
+        "type": "codelist",
+        "list_name": "cancellation_reason",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "CAMT055_ASSGNR_REQUIRED",
+        "description": "Cancellation request must identify the Assigner (Assgnmt.Assgnr).",
+        "condition": "exists(Document.CstmrPmtCxlReq.Assgnmt)",
+        "mandatory_fields": [
+            "Document.CstmrPmtCxlReq.Assgnmt.Assgnr"
+        ],
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
+        "rule_id": "CAMT055_ASSGNE_REQUIRED",
+        "description": "Cancellation request must identify the Assignee (Assgnmt.Assgne).",
+        "condition": "exists(Document.CstmrPmtCxlReq.Assgnmt)",
+        "mandatory_fields": [
+            "Document.CstmrPmtCxlReq.Assgnmt.Assgne"
+        ],
+        "severity": "ERROR",
+        "layer": 3
     }
 ]
-
