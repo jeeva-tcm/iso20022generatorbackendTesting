@@ -941,6 +941,10 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                 continue
 
             if name in AGENT_AND_PARTY:
+                # For pain.008, these fields might not require identification in this context
+                if "pain.008" in report.message_type and name in ('Dbtr', 'Cdtr', 'UltmtDbtr', 'UltmtCdtr'):
+                    continue
+
                 # Recurse to verify at least one identifying descendant carries content
                 has_meaningful = False
                 for descendant in elem.iter():
@@ -1953,6 +1957,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                 has_addr = find_child(party, 'PstlAdr') is not None
                 # Only enforce for Dbtr/Cdtr (main parties), not agents
                 if ptag in ['Dbtr', 'Cdtr'] and not has_id and not has_addr:
+                    if "pain.008" in report.message_type:
+                        continue
                     report.add_issue(ValidationIssue(
                         "WARNING", 3, "PARTY_NO_ID_OR_ADDR", str(line),
                         f"{ptag} does not contain either an Identification or Postal Address.",
