@@ -106,7 +106,7 @@
         "expression": "check_msg_uetr_duplicate(DATA.get('Document.FICdtTrf.GrpHdr.MsgId'), DATA.get('Document.FICdtTrf.CdtTrfTxInf.PmtId.UETR'))",
         "errorMessage": "Duplicate MsgId and UETR combination detected in history.",
         "fix": "Ensure the combination of Message ID and UETR is unique for every transaction.",
-        "severity": "ERROR",
+        "severity": "WARNING",
         "layer": 3
     }
 ]

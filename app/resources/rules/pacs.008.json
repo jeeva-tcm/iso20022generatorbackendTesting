@@ -193,6 +193,17 @@
         "fix": "Remove <XchgRate> when the instructed and settlement amounts are in the same currency."
     },
     {
+        "rule_id": "PACS008_CHRGSINF_REQUIRED",
+        "description": "CBPR+ mandates ChrgsInf (Charges Information) in every CdtTrfTxInf of a pacs.008 message.",
+        "condition": "True",
+        "type": "expression",
+        "expression": "any(re.match(r'.*\\.CdtTrfTxInf(\\[\\d+\\])?\\.ChrgsInf', k) for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "ChrgsInf (Charges Information) is missing from CdtTrfTxInf. CBPR+ requires at least one ChrgsInf block per transaction (typically ChrgBr=SHAR).",
+        "fix": "Add <ChrgsInf><Amt Ccy=\"USD\">0.00</Amt><Agt><FinInstnId><BICFI>BANKBICXXX</BICFI></FinInstnId></Agt></ChrgsInf> inside <CdtTrfTxInf>."
+    },
+    {
         "rule_id": "PACS008_CHRGSINF_REQUIRES_AGT",
         "description": "If ChrgsInf is present, an Agt (charge-bearing agent) must be inside it.",
         "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgsInf)",

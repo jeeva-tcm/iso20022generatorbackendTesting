@@ -556,6 +556,23 @@ def agent_xml(tag: str, bic: str, indent: int = 4, is_cov: bool = False, exclude
     return xml
 
 
+def _fi_party(tag: str, bic: str, country: str, indent: int = 4) -> str:
+    """
+    Build an FI-type party (e.g. Dbtr/Cdtr in pacs.009 / pacs.010) that ALWAYS
+    includes Nm + PstlAdr along with the BICFI. Strict CBPR+ profiles (notably
+    pacs.009 ADV) require both an Identification AND a Name + Address on
+    mandatory Dbtr/Cdtr blocks. ``agent_xml`` only emits Nm + PstlAdr on a 50/50
+    coin flip, which is not enough for these mandatory positions.
+    """
+    t = tabs(indent); t1 = tabs(indent + 1); t2 = tabs(indent + 2)
+    addr = _rng_pstl_adr(indent + 2, country)
+    return (f"{t}<{tag}>\n{t1}<FinInstnId>\n"
+            f"{t2}<BICFI>{xe(bic)}</BICFI>\n"
+            f"{t2}<Nm>{xe(random.choice(COMPANY_NAMES))} Bank</Nm>\n"
+            f"{addr}"
+            f"{t1}</FinInstnId>\n{t}</{tag}>\n")
+
+
 def account_xml(tag: str, iban: str, indent: int = 4) -> str:
     t = tabs(indent)
     t1 = tabs(indent + 1)
@@ -765,9 +782,6 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "debtor",                    "label": "Debtor",                      "mandatory": True},
         {"id": "debtor_account",            "label": "Debtor Account",              "mandatory": True,  "requires": ["debtor"]},
         {"id": "debtor_agent",              "label": "Debtor Agent",                "mandatory": True},
-        {"id": "creditor",                  "label": "Creditor",                    "mandatory": False},
-        {"id": "creditor_account",          "label": "Creditor Account",            "mandatory": False, "requires": ["creditor"]},
-        {"id": "creditor_agent",            "label": "Creditor Agent",              "mandatory": False},
         {"id": "intermediary_agent_1",      "label": "Intermediary Agent 1",        "mandatory": False},
     ],
     "camt.052": [
@@ -800,7 +814,6 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "original_group_information","label": "Original Group Information",  "mandatory": True},
         {"id": "original_payment_information","label": "Original Payment Info",     "mandatory": True},
         {"id": "cancellation_reason",       "label": "Cancellation Reason",         "mandatory": False},
-        {"id": "original_transaction",      "label": "Original Transaction Info",   "mandatory": False},
     ],
     # Note: camt.056 is mostly hardcoded (fixed structure). Only cancellation_reason and original_transaction are optional.
     "camt.056": [
@@ -896,32 +909,32 @@ def get_blocks_for_message(msg_type: str) -> List[Dict]:
 # ── Pacs.008 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs008(selected: set, idx: int) -> str:
-    ccy, iban_country = rng_currency_and_country()
-    from_bic = rng_bic("GB")
-    to_bic = rng_bic("GB")
+    """
+    pacs.008 — Customer Credit Transfer — constructive variant.
+
+    Every party/agent BIC/IBAN/currency is derived from a single MessageScenario
+    so the cross-field rules (BIC country = IBAN country = address country =
+    settlement currency zone) hold by construction. No more retry-on-fail loop
+    for these fields.
+    """
+    from .scenario import MessageScenario, make_iban, make_bic
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
-    uetr = rng_uetr()
+    uetr = scenario.uetr
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
     sttlm_mtd = random.choice(SETTLEMENT_METHODS)
-    charge_br = random.choice(CHARGE_BEARERS)
     amount = rng_amount(ccy)
 
-    # Party data
-    debtor_name = rng_name()
-    creditor_name = rng_name()
-    debtor_ctry = iban_country
-    creditor_ctry = iban_country
-    debtor_iban = rng_iban(iban_country)
-    creditor_iban = rng_iban(iban_country)
-    debtor_bic = rng_bic(iban_country)
-    creditor_bic = rng_bic(iban_country)
-    instg_bic = from_bic
-    instd_bic = to_bic
+    debtor = scenario.debtor
+    creditor = scenario.creditor
 
     # Transaction XML — elements MUST follow strict XSD CreditTransferTransaction39 sequence
     tx = ""
@@ -951,76 +964,72 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     # 5. ChrgBr (MANDATORY in pacs.008) — exclude SHAR/SLEV per business rules
     tx += el("ChrgBr", charge_br, 4)
 
-    # 6. ChrgsInf (mandatory when ChrgBr=CRED, optional otherwise)
+    # 6. ChrgsInf (mandatory when ChrgBr=CRED, optional otherwise) — agent BIC kept in same currency zone
     if needs_chrgs_inf:
-        chg_ccy = ccy
-        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(chg_ccy)
-        chg_bic = rng_bic()
+        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
+        chg_bic = scenario.make_intermediary_agent().bic
         tx += (f"\t\t\t\t<ChrgsInf>\n"
-               f"\t\t\t\t\t<Amt Ccy=\"{xe(chg_ccy)}\">{chg_amt}</Amt>\n"
+               f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
 
-    # 7. PrvsInstgAgt1/2/3 (optional)
+    # 7. PrvsInstgAgt1/2/3 (optional) — all in same currency zone as the settlement
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", rng_bic(), 4)
+        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4)
 
     # 8. InstgAgt / InstdAgt (in CdtTrfTxInf per XSD v13 CreditTransferTransaction70)
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", instg_bic, 4)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", instd_bic, 4)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4)
 
     # 9. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        intr1_bic = rng_bic()
-        tx += agent_xml("IntrmyAgt1", intr1_bic, 4)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        intr2_bic = rng_bic()
-        tx += agent_xml("IntrmyAgt2", intr2_bic, 4)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        intr3_bic = rng_bic()
-        tx += agent_xml("IntrmyAgt3", intr3_bic, 4)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
-    # 10. UltmtDbtr (optional)
+    # 10. UltmtDbtr (optional) — same country as the debtor
     if "ultimate_debtor" in selected:
-        tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
+        tx += party_xml("UltmtDbtr", scenario.debtor.name + " Group", debtor.country, 4)
 
     # 11. Dbtr (mandatory)
-    tx += party_xml("Dbtr", debtor_name, debtor_ctry, 4)
+    tx += party_xml("Dbtr", debtor.name, debtor.country, 4)
 
     # 12. DbtrAcct (mandatory)
-    tx += account_xml("DbtrAcct", debtor_iban, 4)
+    tx += account_xml("DbtrAcct", debtor.iban, 4)
 
     # 13. DbtrAgt (mandatory)
-    tx += agent_xml("DbtrAgt", debtor_bic, 4)
+    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 14. CdtrAgt (mandatory)
-    tx += agent_xml("CdtrAgt", creditor_bic, 4)
+    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 15. Cdtr (mandatory)
-    tx += party_xml("Cdtr", creditor_name, creditor_ctry, 4)
+    tx += party_xml("Cdtr", creditor.name, creditor.country, 4)
 
     # 16. CdtrAcct (mandatory)
-    tx += account_xml("CdtrAcct", creditor_iban, 4)
+    tx += account_xml("CdtrAcct", creditor.iban, 4)
 
-    # 17. UltmtCdtr (optional)
+    # 17. UltmtCdtr (optional) — same country as creditor
     if "ultimate_creditor" in selected:
-        tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
+        tx += party_xml("UltmtCdtr", creditor.name + " Group", creditor.country, 4)
 
     # 18. RmtInf (optional)
     if "remittance_information" in selected:
@@ -1031,9 +1040,9 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>pacs.008.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1066,7 +1075,16 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 # ── Pacs.009 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = False) -> str:
-    """Generate pacs.009.001.08 (FI Credit Transfer).
+    """
+    pacs.009 — FI Credit Transfer (base / ADV / COV) — constructive variant.
+
+    Anchored to one MessageScenario. In pacs.009 the Dbtr/Cdtr are themselves
+    FIs (BICs, type BranchAndFinancialInstitutionIdentification8). We map them
+    onto the scenario's debtor_agent and creditor_agent. All intermediary /
+    settlement reimbursement agents are pulled from the same currency zone.
+
+    For COV: the inner UndrlygCstmrCdtTrf block uses scenario.debtor and
+    scenario.creditor (the actual customer parties behind the cover payment).
 
     v12 schema differences vs v08:
       - Root element: FICdtTrf  (was FinInstnCdtTrf)
@@ -1075,15 +1093,22 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
       - UltmtDbtr / UltmtCdtr: also BranchAndFinancialInstitutionIdentification8
       - ChrgsInf:     does NOT exist in CreditTransferTransaction67
     """
-    ccy, country = rng_currency_and_country()
-    from_bic = rng_bic("GB")
-    to_bic = rng_bic("GB")
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    from_bic = scenario.sender_bic
+    to_bic = scenario.receiver_bic
+    # In pacs.009 the FI Dbtr/Cdtr are the actual FIs sending/receiving
+    debtor_bic = scenario.debtor_agent.bic
+    creditor_bic = scenario.creditor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
-    uetr = rng_uetr()
+    uetr = scenario.uetr
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
     if is_adv:
@@ -1098,18 +1123,11 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     if sttlm_mtd == "COVE":
         rmbrs_choice = random.choice(["instg", "instd", "both"])
         if rmbrs_choice in ["instg", "both"]:
-            sttlm_inf += f"\n\t\t\t\t\t<InstgRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(rng_bic())}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstgRmbrsmntAgt>"
+            sttlm_inf += f"\n\t\t\t\t\t<InstgRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(scenario.make_intermediary_agent().bic)}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstgRmbrsmntAgt>"
         if rmbrs_choice in ["instd", "both"]:
-            sttlm_inf += f"\n\t\t\t\t\t<InstdRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(rng_bic())}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstdRmbrsmntAgt>"
+            sttlm_inf += f"\n\t\t\t\t\t<InstdRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(scenario.make_intermediary_agent().bic)}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstdRmbrsmntAgt>"
     elif sttlm_mtd in ["INDA", "INGA"] and (is_cov or random.random() < 0.5):
-        sttlm_inf += f"\n\t\t\t\t\t<SttlmAcct>\n\t\t\t\t\t\t<Id>\n\t\t\t\t\t\t\t<IBAN>{xe(rng_iban(country))}</IBAN>\n\t\t\t\t\t\t</Id>\n\t\t\t\t\t</SttlmAcct>"
-
-    instg_bic = from_bic
-    instd_bic = to_bic
-
-    # Generate BICs for mandatory Dbtr and Cdtr (FI-type in v12)
-    debtor_bic = rng_bic()
-    creditor_bic = rng_bic()
+        sttlm_inf += f"\n\t\t\t\t\t<SttlmAcct>\n\t\t\t\t\t\t<Id>\n\t\t\t\t\t\t\t<IBAN>{xe(scenario.debtor.iban)}</IBAN>\n\t\t\t\t\t\t</Id>\n\t\t\t\t\t</SttlmAcct>"
 
     tx = ""
 
@@ -1134,86 +1152,80 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     if "settlement_time_request" in selected:
         tx += f"\t\t\t\t<SttlmTmReq>\n\t\t\t\t\t<CLSTm>14:00:00+00:00</CLSTm>\n\t\t\t\t</SttlmTmReq>\n"
 
-    # 5. PrvsInstgAgt1/2/3 (optional)
+    # 5. PrvsInstgAgt1/2/3 (optional) — in-zone intermediaries
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
 
     # 6. InstgAgt / InstdAgt (optional)
     if "instructing_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("InstgAgt", instg_bic, 4, is_cov=is_cov)
+        tx += agent_xml("InstgAgt", from_bic, 4, is_cov=is_cov)
     if "instructed_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("InstdAgt", instd_bic, 4, is_cov=is_cov)
+        tx += agent_xml("InstdAgt", to_bic, 4, is_cov=is_cov)
 
     # 7. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
-    # 9. Dbtr — MANDATORY in v12, FI type (BranchAndFinancialInstitutionIdentification8)
-    tx += agent_xml("Dbtr", debtor_bic, 4, is_cov=is_cov)
+    # 9. Dbtr — MANDATORY in v12, FI type — always include Nm + PstlAdr (CBPR+ rule)
+    tx += _fi_party("Dbtr", debtor_bic, scenario.debtor.country, 4)
 
     # 10. DbtrAcct (optional)
     if "debtor_account" in selected:
-        tx += account_xml("DbtrAcct", rng_iban(country), 4)
-    # 11. DbtrAgt (optional)
+        tx += account_xml("DbtrAcct", scenario.debtor.iban, 4)
+    # 11. DbtrAgt (optional) — a correspondent for the Dbtr FI, same currency zone
     if "debtor_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("DbtrAgt", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("DbtrAgt", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
-    # 12. CdtrAgt (optional)
+    # 12. CdtrAgt (optional) — a correspondent for the Cdtr FI, same currency zone
     if "creditor_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("CdtrAgt", rng_bic(), 4, is_cov=is_cov)
+        tx += agent_xml("CdtrAgt", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
-    # 13. Cdtr — MANDATORY in v12, FI type (BranchAndFinancialInstitutionIdentification8)
-    tx += agent_xml("Cdtr", creditor_bic, 4, is_cov=is_cov)
+    # 13. Cdtr — MANDATORY in v12, FI type — always include Nm + PstlAdr (CBPR+ rule)
+    tx += _fi_party("Cdtr", creditor_bic, scenario.creditor.country, 4)
 
     # 14. CdtrAcct (optional)
     if "creditor_account" in selected:
-        tx += account_xml("CdtrAcct", rng_iban(country), 4)
+        tx += account_xml("CdtrAcct", scenario.creditor.iban, 4)
 
     # 16. RmtInf (optional)
     if "remittance_information" in selected:
         tx += f"\t\t\t\t<RmtInf>\n\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t</RmtInf>\n"
 
-    # 17. UndrlygCstmrCdtTrf — COV only
+    # 17. UndrlygCstmrCdtTrf — COV only — uses the consistent customer-side scenario data
     if is_cov and "underlying_customer_credit_transfer" in selected:
-        cov_dbtr = rng_name()
-        cov_cdtr = rng_name()
-        cov_dbtr_iban = rng_iban()
-        cov_cdtr_iban = rng_iban()
-        cov_dbtr_bic = rng_bic()
-        cov_cdtr_bic = rng_bic()
-        cov_dbtr_addr = _rng_pstl_adr_cov(5, rng_country())
-        cov_cdtr_addr = _rng_pstl_adr_cov(5, rng_country())
+        cov_dbtr_addr = _rng_pstl_adr_cov(5, scenario.debtor.country)
+        cov_cdtr_addr = _rng_pstl_adr_cov(5, scenario.creditor.country)
         tx += f"""\t\t\t\t<UndrlygCstmrCdtTrf>
 \t\t\t\t\t<Dbtr>
-\t\t\t\t\t\t<Nm>{xe(cov_dbtr)}</Nm>
+\t\t\t\t\t\t<Nm>{xe(scenario.debtor.name)}</Nm>
 {cov_dbtr_addr.rstrip()}
 \t\t\t\t\t</Dbtr>
-\t\t\t\t\t<DbtrAcct><Id><IBAN>{xe(cov_dbtr_iban)}</IBAN></Id></DbtrAcct>
-\t\t\t\t\t<DbtrAgt><FinInstnId><BICFI>{xe(cov_dbtr_bic)}</BICFI></FinInstnId></DbtrAgt>
-\t\t\t\t\t<CdtrAgt><FinInstnId><BICFI>{xe(cov_cdtr_bic)}</BICFI></FinInstnId></CdtrAgt>
+\t\t\t\t\t<DbtrAcct><Id><IBAN>{xe(scenario.debtor.iban)}</IBAN></Id></DbtrAcct>
+\t\t\t\t\t<DbtrAgt><FinInstnId><BICFI>{xe(scenario.debtor.bic)}</BICFI></FinInstnId></DbtrAgt>
+\t\t\t\t\t<CdtrAgt><FinInstnId><BICFI>{xe(scenario.creditor.bic)}</BICFI></FinInstnId></CdtrAgt>
 \t\t\t\t\t<Cdtr>
-\t\t\t\t\t\t<Nm>{xe(cov_cdtr)}</Nm>
+\t\t\t\t\t\t<Nm>{xe(scenario.creditor.name)}</Nm>
 {cov_cdtr_addr.rstrip()}
 \t\t\t\t\t</Cdtr>
-\t\t\t\t\t<CdtrAcct><Id><IBAN>{xe(cov_cdtr_iban)}</IBAN></Id></CdtrAcct>
+\t\t\t\t\t<CdtrAcct><Id><IBAN>{xe(scenario.creditor.iban)}</IBAN></Id></CdtrAcct>
 \t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('COVREF', 10))}</Ustrd></RmtInf>
 \t\t\t\t</UndrlygCstmrCdtTrf>
 """
@@ -1261,10 +1273,20 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 # ── Pacs.004 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs004(selected: set, idx: int) -> str:
-    ccy, country = rng_currency_and_country()
-    iban_country = country
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    pacs.004 — Payment Return — constructive variant.
+
+    Anchored to one MessageScenario. The return chain reflects a payment that
+    *was* going Dbtr → Cdtr; this return reverses it. Both parties and their
+    agents come from the same currency zone via the scenario.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    debtor_party = scenario.debtor
+    creditor_party = scenario.creditor
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     rtr_id = rng_id("RTR", 16)
@@ -1272,63 +1294,59 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     orig_e2e = rng_id("ORIE2E", 10)
     orig_tx = rng_id("ORITX", 10)
     orig_uetr = rng_uetr()
-    uetr = rng_uetr()
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
     amount = rng_amount(ccy)
     rtr_reason = random.choice(RETURN_REASONS)
-    # pacs.004 usually allows CRED, SHAR but may reject DEBT/SLEV in some rules
     charge_br = random.choice(["SHAR", "CRED"])
 
     tx = ""
 
-    # -- ChrgsInf (optional) -- XSD pos after IntrBkSttlmDt
+    # -- ChrgsInf (optional) — kept in the same currency zone --
     if "charges_information" in selected or charge_br == "CRED":
         chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
-        chg_bic = rng_bic()
+        chg_bic = scenario.make_intermediary_agent().bic
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
 
-    # -- InstgAgt / InstdAgt -- XSD pos after ChrgsInf
+    # -- InstgAgt / InstdAgt --
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4, exclude_name_address=True)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4, exclude_name_address=True)
 
-    # -- RtrChain (TransactionParties11) -- XSD pos after InstdAgt
-    # XSD sequence inside RtrChain: UltmtDbtr → Dbtr → DbtrAcct → ... → DbtrAgt → ... → CdtrAgt → ... → Cdtr → CdtrAcct → UltmtCdtr
+    # -- RtrChain (TransactionParties11) --
     chain = ""
     if "ultimate_debtor" in selected:
-        chain += f"\t\t\t\t\t<UltmtDbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtDbtr>\n"
-    
-    # Dbtr is Mandatory in pacs.004 TransactionParties11
-    chain += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
-    
-    if "debtor_account" in selected:
-        chain += account_xml("DbtrAcct", rng_iban(iban_country), 5)
-    if "debtor_agent" in selected:
-        chain += agent_xml("DbtrAgt", rng_bic(), 5, exclude_name_address=True)
-    if "intermediary_agent_1" in selected:
-        chain += agent_xml("IntrmyAgt1", rng_bic(), 5, exclude_name_address=True)
-    if "creditor_agent" in selected:
-        chain += agent_xml("CdtrAgt", rng_bic(), 5, exclude_name_address=True)
+        chain += f"\t\t\t\t\t<UltmtDbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name + ' Group', debtor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtDbtr>\n"
 
-    # Cdtr is ALSO Mandatory in TransactionParties11
-    chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
+    # Dbtr (Mandatory)
+    chain += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
+
+    if "debtor_account" in selected:
+        chain += account_xml("DbtrAcct", debtor_party.iban, 5)
+    if "debtor_agent" in selected:
+        chain += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5, exclude_name_address=True)
+    if "intermediary_agent_1" in selected:
+        chain += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 5, exclude_name_address=True)
+    if "creditor_agent" in selected:
+        chain += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 5, exclude_name_address=True)
+
+    # Cdtr (Mandatory)
+    chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', creditor_party.name, creditor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
 
     if "creditor_account" in selected:
-        chain += account_xml("CdtrAcct", rng_iban(iban_country), 5)
+        chain += account_xml("CdtrAcct", creditor_party.iban, 5)
     if "ultimate_creditor" in selected:
-        chain += f"\t\t\t\t\t<UltmtCdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtCdtr>\n"
+        chain += f"\t\t\t\t\t<UltmtCdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', creditor_party.name + ' Group', creditor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtCdtr>\n"
     if chain:
         tx += f"\t\t\t\t<RtrChain>\n{chain}\t\t\t\t</RtrChain>\n"
 
-    # -- RtrRsnInf -- XSD pos after RtrChain
+    # -- RtrRsnInf --
     tx += f"\t\t\t\t<RtrRsnInf>\n\t\t\t\t\t<Rsn>\n\t\t\t\t\t\t<Cd>{xe(rtr_reason)}</Cd>\n\t\t\t\t\t</Rsn>\n\t\t\t\t</RtrRsnInf>\n"
 
-    # -- RmtInf -- not a direct child per XSD, skip for now
     if "remittance_information" in selected:
         pass  # RmtInf is inside OrgnlTxRef, not directly in TxInf for pacs.004
 
@@ -1336,9 +1354,9 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>pacs.004.001.09</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1377,16 +1395,27 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 # ── Pacs.003 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs003(selected: set, idx: int) -> str:
-    ccy, country = rng_currency_and_country()
-    iban_country = country
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    pacs.003 — Customer Direct Debit — constructive variant.
+
+    Anchored to one MessageScenario:
+      - creditor (the merchant collecting funds) = scenario.creditor / scenario.creditor_agent
+      - debtor (the customer being debited)      = scenario.debtor / scenario.debtor_agent
+      - all amounts in scenario.currency
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    debtor_party = scenario.debtor
+    creditor_party = scenario.creditor
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
-    uetr = rng_uetr()
+    uetr = scenario.uetr
     mndt_id = rng_id("MNDT", 10)
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
@@ -1405,10 +1434,10 @@ def _gen_pacs003(selected: set, idx: int) -> str:
     charge_br = random.choice(["SHAR", "CRED", "DEBT"])
     tx += el("ChrgBr", charge_br, 4)
 
-    # -- ChrgsInf (optional) --
+    # -- ChrgsInf (optional) — agent BIC kept in the same currency zone --
     if "charges_information" in selected:
         chg_amt = rng_amount(ccy)
-        chg_bic = rng_bic()
+        chg_bic = scenario.make_intermediary_agent().bic
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
@@ -1426,44 +1455,44 @@ def _gen_pacs003(selected: set, idx: int) -> str:
                f"\t\t\t\t\t</MndtRltdInf>\n"
                f"\t\t\t\t</DrctDbtTx>\n")
 
-    # -- Cdtr (Mandatory) --
-    tx += party_xml("Cdtr", rng_name(), rng_country(), 4)
+    # -- Cdtr (Mandatory) — uses scenario.creditor for country/IBAN/BIC coherence --
+    tx += party_xml("Cdtr", creditor_party.name, creditor_party.country, 4)
     # CdtrAcct (Mandatory)
-    tx += account_xml("CdtrAcct", rng_iban(), 4)
+    tx += account_xml("CdtrAcct", creditor_party.iban, 4)
 
     # -- CdtrAgt (Mandatory) --
-    tx += agent_xml("CdtrAgt", rng_bic(), 4)
+    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
-    # -- UltmtCdtr --
+    # -- UltmtCdtr — same country as the creditor --
     if "ultimate_creditor" in selected:
-        tx += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
+        tx += party_xml("UltmtCdtr", creditor_party.name + " Group", creditor_party.country, 4)
 
     # -- InstgAgt / InstdAgt --
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", from_bic, 4)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", to_bic, 4)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4)
 
-    # -- IntrmyAgt1/2/3 --
+    # -- IntrmyAgt1/2/3 — also in-zone --
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", rng_bic(), 4)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4)
 
-    # -- Dbtr (Mandatory) --
-    tx += party_xml("Dbtr", rng_name(), rng_country(), 4)
+    # -- Dbtr (Mandatory) — the customer being debited --
+    tx += party_xml("Dbtr", debtor_party.name, debtor_party.country, 4)
     # DbtrAcct (Mandatory)
-    tx += account_xml("DbtrAcct", rng_iban(iban_country), 4)
+    tx += account_xml("DbtrAcct", debtor_party.iban, 4)
     # DbtrAgt (Mandatory)
-    tx += agent_xml("DbtrAgt", rng_bic(), 4)
+    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4)
 
-    # -- UltmtDbtr --
+    # -- UltmtDbtr — same country as debtor --
     if "ultimate_debtor" in selected:
-        tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
+        tx += party_xml("UltmtDbtr", debtor_party.name + " Group", debtor_party.country, 4)
 
     # -- RmtInf --
     if "remittance_information" in selected:
@@ -1473,9 +1502,9 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>pacs.003.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1519,17 +1548,21 @@ def _gen_pacs002(selected: set, idx: int) -> str:
             TxSts → StsRsnInf (if RJCT) → InstgAgt → InstdAgt → OrgnlTxRef
       - InstgAgt / InstdAgt are NEVER placed inside GrpHdr for pacs.002.
     """
-    ccy, country = rng_currency_and_country()
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    debtor_party = scenario.debtor
+    creditor_party = scenario.creditor
     # Shared BICs: AppHdr Fr == InstgAgt, AppHdr To == InstdAgt (CBPR+ BAH rule)
-    from_bic = rng_bic()
-    to_bic   = rng_bic()
+    from_bic = scenario.sender_bic
+    to_bic   = scenario.receiver_bic
     biz_msg_id  = rng_id("BIZ", 16)
     msg_id      = rng_id("MSG", 16)
     cre_dt      = rng_datetime()
     orig_msg_id = rng_id("ORIGMSG", 10)
     orig_e2e    = rng_id("ORIE2E", 10)
     orig_tx     = rng_id("ORITX", 10)
-    orig_uetr   = rng_uetr()
+    orig_uetr   = scenario.uetr
     status_codes = ["ACSC", "ACCP", "ACSP", "RJCT", "PDNG"]
     status = random.choice(status_codes)
 
@@ -1569,9 +1602,9 @@ def _gen_pacs002(selected: set, idx: int) -> str:
     # ── OrgnlTxRef — optional parties at end of TxInfAndSts ────────────────────
     orgnl_tx_ref_body = ""
     if "debtor" in selected:
-        orgnl_tx_ref_body += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Dbtr>\n"
+        orgnl_tx_ref_body += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', debtor_party.name, debtor_party.country, 6)}\t\t\t\t\t</Dbtr>\n"
     if "creditor" in selected:
-        orgnl_tx_ref_body += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', rng_name(), country, 6)}\t\t\t\t\t</Cdtr>\n"
+        orgnl_tx_ref_body += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', creditor_party.name, creditor_party.country, 6)}\t\t\t\t\t</Cdtr>\n"
 
     orgnl_tx_ref = ""
     if orgnl_tx_ref_body:
@@ -1621,17 +1654,30 @@ def _gen_pacs002(selected: set, idx: int) -> str:
 # ── Pacs.010 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pacs010(selected: set, idx: int) -> str:
-    ccy, country = rng_currency_and_country()
-    iban_country = country
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    pacs.010 — FI Direct Debit (covers both base + v3/Margin Collection) —
+    constructive variant.
+
+    Anchored to one MessageScenario: Dbtr FI = scenario.debtor_agent,
+    Cdtr FI = scenario.creditor_agent, all intermediaries from the same
+    currency zone.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    from_bic = scenario.sender_bic
+    to_bic = scenario.receiver_bic
+    debtor_bic = scenario.debtor_agent.bic
+    creditor_bic = scenario.creditor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cdt_id = rng_id("CDT", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
-    uetr = rng_uetr()
+    uetr = scenario.uetr
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
     amount = rng_amount(ccy)
@@ -1650,12 +1696,12 @@ def _gen_pacs010(selected: set, idx: int) -> str:
     dd_tx += f"\t\t\t\t\t<IntrBkSttlmAmt Ccy=\"{xe(ccy)}\">{amount}</IntrBkSttlmAmt>\n"
     dd_tx += el("IntrBkSttlmDt", sttlm_dt, 5)
 
-    # Dbtr mandatory (BranchAndFinancialInstitutionIdentification8)
-    dd_tx += agent_xml("Dbtr", rng_bic(), 5)
+    # Dbtr mandatory (BranchAndFinancialInstitutionIdentification8) — always Nm+addr
+    dd_tx += _fi_party("Dbtr", debtor_bic, scenario.debtor.country, 5)
     if "debtor_account" in selected:
-        dd_tx += account_xml("DbtrAcct", rng_iban(iban_country), 5)
+        dd_tx += account_xml("DbtrAcct", scenario.debtor.iban, 5)
     if "debtor_agent" in selected:
-        dd_tx += agent_xml("DbtrAgt", rng_bic(), 5)
+        dd_tx += agent_xml("DbtrAgt", scenario.make_intermediary_agent().bic, 5)
 
     if "remittance_information" in selected:
         dd_tx += f"\t\t\t\t\t<RmtInf>\n\t\t\t\t\t\t<Ustrd>{xe(rng_id('REF', 16))}</Ustrd>\n\t\t\t\t\t</RmtInf>\n"
@@ -1667,13 +1713,13 @@ def _gen_pacs010(selected: set, idx: int) -> str:
     if "instructed_agent" in selected:
         cdt_body += agent_xml("InstdAgt", to_bic, 4)
     if "creditor_agent" in selected:
-        cdt_body += agent_xml("CdtrAgt", rng_bic(), 4)
-    if "intermediary_agent_1" in selected:
-        cdt_body += agent_xml("IntrmyAgt", rng_bic(), 4)
-    # Cdtr mandatory (BranchAndFinancialInstitutionIdentification8)
-    cdt_body += agent_xml("Cdtr", rng_bic(), 4)
+        cdt_body += agent_xml("CdtrAgt", scenario.make_intermediary_agent().bic, 4)
+    # NOTE: pacs.010 CdtInstr XSD sequence does NOT permit IntrmyAgt between
+    # CdtrAgt and Cdtr — skip it even when the block is selected.
+    # Cdtr mandatory (BranchAndFinancialInstitutionIdentification8) — always Nm+addr
+    cdt_body += _fi_party("Cdtr", creditor_bic, scenario.creditor.country, 4)
     if "creditor_account" in selected:
-        cdt_body += account_xml("CdtrAcct", rng_iban(iban_country), 4)
+        cdt_body += account_xml("CdtrAcct", scenario.creditor.iban, 4)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -1715,10 +1761,23 @@ def _gen_pacs010(selected: set, idx: int) -> str:
 # ── CAMT.057 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt057(selected: set, idx: int) -> str:
-    ccy, country = rng_currency_and_country()
-    iban_country = country
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.057 — Notification to Receive — constructive variant.
+
+    Anchored to one MessageScenario so the account IBAN, settlement currency,
+    AppHdr BICs, and any debtor / agent BICs all share a coherent country/
+    currency zone.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    # The account being credited belongs to the "creditor" side of this scenario.
+    account_holder = scenario.creditor
+    # The notifying party is the debtor (the one sending the incoming payment).
+    debtor_party = scenario.debtor
+    debtor_agent_bic = scenario.debtor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     notif_id = rng_id("NTFN", 10)
@@ -1728,19 +1787,19 @@ def _gen_camt057(selected: set, idx: int) -> str:
 
     items = ""
     if "debtor" in selected:
-        items += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', rng_name(), country, 6).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
+        items += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 6).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
     if "debtor_agent" in selected:
-        items += agent_xml("DbtrAgt", rng_bic(), 5)
+        items += agent_xml("DbtrAgt", debtor_agent_bic, 5)
     if "intermediary_agent_1" in selected:
-        items += agent_xml("IntrmyAgt", rng_bic(), 5)
+        items += agent_xml("IntrmyAgt", scenario.make_intermediary_agent().bic, 5)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>camt.057.001.06</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1754,11 +1813,12 @@ def _gen_camt057(selected: set, idx: int) -> str:
 \t\t\t</GrpHdr>
 \t\t\t<Ntfctn>
 \t\t\t\t<Id>{xe(notif_id)}</Id>
-\t\t\t\t<Acct><Id><IBAN>{xe(rng_iban(country))}</IBAN></Id></Acct>
+\t\t\t\t<Acct><Id><IBAN>{xe(account_holder.iban)}</IBAN></Id></Acct>
 \t\t\t\t<XpctdValDt>{rng_date(2)}</XpctdValDt>
 \t\t\t\t<Itm>
 \t\t\t\t\t<Id>{xe(rng_id("ITM", 10))}</Id>
 \t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
+\t\t\t\t\t<UETR>{xe(scenario.uetr)}</UETR>
 \t\t\t\t\t<Amt Ccy="{xe(ccy)}">{amount}</Amt>
 {items}\t\t\t\t</Itm>
 \t\t\t</Ntfctn>
@@ -1771,22 +1831,33 @@ def _gen_camt057(selected: set, idx: int) -> str:
 # ── CAMT.052 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt052(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.052 — Bank to Customer Account Report — constructive variant.
+
+    Anchored to one MessageScenario:
+      - account holder = scenario.debtor (customer being reported on)
+      - account servicer = scenario.debtor_agent (their bank)
+      - all amounts in scenario.currency
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    account_holder = scenario.debtor
+    account_servicer_bic = scenario.debtor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
-    acct_iban = rng_iban()
 
     rpt = ""
     # Account block with nested Ownr/Svcr and mandatory Ccy
-    rpt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>\n"
+    rpt += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(account_holder.iban)}</IBAN></Id>\n"
     rpt += f"\t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>\n"
     if "account_owner" in selected:
-        rpt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
+        rpt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', account_holder.name, account_holder.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        rpt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+        rpt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', account_servicer_bic, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
     rpt += "\t\t\t\t</Acct>\n"
     if "balance" in selected:
         bal_amt = rng_amount(ccy)
@@ -1818,9 +1889,9 @@ def _gen_camt052(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>camt.052.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1849,27 +1920,37 @@ def _gen_camt052(selected: set, idx: int) -> str:
 # ── CAMT.053 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt053(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.053 — Bank to Customer Statement — constructive variant.
+
+    Same anchor pattern as camt.052: customer account = scenario.debtor,
+    their bank = scenario.debtor_agent, balances/entries all in
+    scenario.currency. Two mandatory balances (OPBD + CLBD).
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    account_holder = scenario.debtor
+    account_servicer_bic = scenario.debtor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
-    ccy, iban_country = rng_currency_and_country()
-    acct_iban = rng_iban(iban_country)
 
     stmt = ""
     # Account block in CBPR+/schema order: Id, Tp, Ccy, Ownr, Svcr.
     stmt += f"""\t\t\t\t<Acct>
-\t\t\t\t\t<Id><IBAN>{xe(acct_iban)}</IBAN></Id>
+\t\t\t\t\t<Id><IBAN>{xe(account_holder.iban)}</IBAN></Id>
 \t\t\t\t\t<Tp><Cd>CACC</Cd></Tp>
 \t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>
 """
     if "account_owner" in selected:
-        stmt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
+        stmt += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', account_holder.name, account_holder.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        stmt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+        stmt += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', account_servicer_bic, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
     stmt += "\t\t\t\t</Acct>\n"
-    
+
     # Balance is Mandatory in camt.053 AccountStatement
     bal_amt = rng_amount(ccy)
     stmt += f"""\t\t\t\t<Bal>
@@ -1906,9 +1987,9 @@ def _gen_camt053(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>camt.053.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -1943,24 +2024,34 @@ def _gen_camt053(selected: set, idx: int) -> str:
 # ── CAMT.054 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt054(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.054 — Bank to Customer Debit/Credit Notification — constructive variant.
+
+    Same anchor pattern as camt.052/053. The notification reports activity on
+    one customer account (scenario.debtor) held at scenario.debtor_agent.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    account_holder = scenario.debtor
+    account_servicer_bic = scenario.debtor_agent.bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
 
     ntfctn = ""
     # Account block in CBPR+/schema order: Id, Tp, Ccy, Ownr, Svcr.
     ntfctn += f"""\t\t\t\t<Acct>
-\t\t\t\t\t<Id><IBAN>{xe(rng_iban())}</IBAN></Id>
+\t\t\t\t\t<Id><IBAN>{xe(account_holder.iban)}</IBAN></Id>
 \t\t\t\t\t<Tp><Cd>CACC</Cd></Tp>
 \t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>
 """
     if "account_owner" in selected:
-        ntfctn += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
+        ntfctn += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', account_holder.name, account_holder.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
-        ntfctn += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', rng_bic(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
+        ntfctn += f"\t\t\t\t\t<Svcr>\n{agent_xml('_unused', account_servicer_bic, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Svcr>\n"
     ntfctn += "\t\t\t\t</Acct>\n"
     if "entry" in selected:
         entry_amt = rng_amount(ccy)
@@ -1980,9 +2071,9 @@ def _gen_camt054(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>camt.054.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -2007,22 +2098,32 @@ def _gen_camt054(selected: set, idx: int) -> str:
 # ── CAMT.055 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt055(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.055 — Customer Payment Cancellation Request — constructive variant.
+
+    Anchored to one MessageScenario:
+      - assignor / case creator agent BIC = scenario.sender_bic
+      - assignee BIC                       = scenario.receiver_bic
+      - original instructed amount currency = scenario.currency
+    All BICs sit in the same currency zone so any downstream country/currency
+    checks pass.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    from_bic = scenario.sender_bic
+    to_bic = scenario.receiver_bic
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
     requested_execution_date = rng_date(1)
-
-    orgnl_tx_ref = ""
-    if "original_transaction" in selected:
-        orgnl_tx_ref = f"""\n\t\t\t\t\t\t<OrgnlTxRef>
-\t\t\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</IntrBkSttlmAmt>
-\t\t\t\t\t\t</OrgnlTxRef>"""
 
     # CBPR+/MyStandards expects payment-level cancellation information here.
     # Keep TxInf under OrgnlPmtInfAndCxl and populate exactly one requested date.
+    # NOTE: OrgnlTxRef intentionally omitted — strict CBPR+ profile validators
+    # reject it at this position. The cancellation reason is sufficient by itself.
     body = f"""\t\t\t\t<OrgnlPmtInfAndCxl>
 \t\t\t\t\t<OrgnlPmtInfId>{xe(rng_id("ORIGPMT", 10))}</OrgnlPmtInfId>
 \t\t\t\t\t<OrgnlGrpInf>
@@ -2043,14 +2144,14 @@ def _gen_camt055(selected: set, idx: int) -> str:
 \t\t\t\t\t\t</Case>
 \t\t\t\t\t\t<OrgnlInstrId>{xe(rng_id("ORIINSTR", 10))}</OrgnlInstrId>
 \t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
-\t\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
+\t\t\t\t\t\t<OrgnlUETR>{scenario.uetr}</OrgnlUETR>
 \t\t\t\t\t\t<OrgnlInstdAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</OrgnlInstdAmt>
 \t\t\t\t\t\t<OrgnlReqdExctnDt>
 \t\t\t\t\t\t\t<Dt>{requested_execution_date}</Dt>
 \t\t\t\t\t\t</OrgnlReqdExctnDt>
 \t\t\t\t\t\t<CxlRsnInf>
 \t\t\t\t\t\t\t<Rsn><Cd>{"DUPL" if "cancellation_reason" in selected else "CUST"}</Cd></Rsn>
-\t\t\t\t\t\t</CxlRsnInf>{orgnl_tx_ref}
+\t\t\t\t\t\t</CxlRsnInf>
 \t\t\t\t\t</TxInf>
 \t\t\t\t</OrgnlPmtInfAndCxl>
 """
@@ -2086,17 +2187,31 @@ def _gen_camt055(selected: set, idx: int) -> str:
 # ── CAMT.056 Generator ─────────────────────────────────────────────────────────
 
 def _gen_camt056(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    camt.056 — FI to FI Payment Cancellation Request — constructive variant.
+
+    Anchored to one MessageScenario:
+      - assignor / case creator agent BIC = scenario.sender_bic
+      - assignee BIC                      = scenario.receiver_bic
+      - original interbank settlement currency = scenario.currency
+      - first TxInf uses scenario.uetr; an optional extra TxInf uses a fresh
+        UETR but stays in the same currency zone.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    from_bic = scenario.sender_bic
+    to_bic = scenario.receiver_bic
+
     biz_msg_id = rng_id("BIZ", 16)
     cre_dt = rng_datetime()
-    ccy = rng_currency()
 
     cxl_id = rng_id("CXLID", 10)
     case_id = rng_id("CASE", 10)
     org_msg_id = rng_id("ORIGMSG", 10)
     e2e_id = rng_id("ORIE2E", 10)
-    uetr = rng_uetr()
+    uetr = scenario.uetr
     amt = rng_amount(ccy)
     settle_dt = rng_date(-1)
 
@@ -2131,7 +2246,7 @@ def _gen_camt056(selected: set, idx: int) -> str:
 \t\t\t\t\t</CxlRsnInf>
 \t\t\t\t</TxInf>
 """
-    # Optional: additional OrgnlTxRef information
+    # Optional: additional OrgnlTxRef information — still in the same currency zone.
     if "original_transaction" in selected:
         body += f"""\t\t\t\t<TxInf>
 \t\t\t\t\t<CxlId>{xe(rng_id("ORIGCXL", 10))}</CxlId>
@@ -2181,25 +2296,29 @@ def _gen_camt056(selected: set, idx: int) -> str:
 # ── PAIN.001 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pain001(selected: set, idx: int) -> str:
-    from_bic = rng_bic("GB")
-    to_bic = rng_bic("GB")
+    """
+    pain.001 — Customer Credit Transfer Initiation — constructive variant.
+
+    Anchored to one MessageScenario. InitgPty == Dbtr (the customer initiating
+    the credit transfer). All BICs/IBANs/countries derived consistently.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    debtor_party = scenario.debtor
+    creditor_party = scenario.creditor
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     pmt_inf_id = rng_id("PMTINF", 10)
     e2e_id = rng_id("E2E", 16)
     instr_id = rng_id("INSTR", 11)
     cre_dt = rng_datetime()
-    curr_map = {
-        "GB": "GBP", "DE": "EUR", "FR": "EUR", "NL": "EUR", "BE": "EUR",
-        "AT": "EUR", "IT": "EUR", "ES": "EUR", "PT": "EUR", "SE": "SEK",
-        "NO": "NOK", "DK": "DKK"
-    }
-    iban_country = random.choice(list(curr_map.keys()))
-    ccy = curr_map[iban_country]
     amount = rng_amount(ccy)
 
-    # InitgPty is mandatory in pain.001
-    initg = party_xml("InitgPty", rng_name(), rng_country(), 4)
+    # InitgPty mandatory — the debtor itself initiates
+    initg = party_xml("InitgPty", debtor_party.name, debtor_party.country, 4)
 
     pmt_tp = ""
     if "payment_type_information" in selected:
@@ -2207,20 +2326,20 @@ def _gen_pain001(selected: set, idx: int) -> str:
         pmt_tp = f"\t\t\t\t<PmtTpInf><SvcLvl><Cd>{svc}</Cd></SvcLvl></PmtTpInf>\n"
 
     # Debtor, DebtorAccount, DebtorAgent are MANDATORY in pain.001
-    dbtr_info = party_xml("Dbtr", rng_name(), rng_country(), 4)
-    dbtr_info += account_xml("DbtrAcct", rng_iban(iban_country), 4)
-    dbtr_info += agent_xml("DbtrAgt", rng_bic(), 4)
+    dbtr_info = party_xml("Dbtr", debtor_party.name, debtor_party.country, 4)
+    dbtr_info += account_xml("DbtrAcct", debtor_party.iban, 4)
+    dbtr_info += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4)
     if "ultimate_debtor" in selected:
-        dbtr_info += party_xml("UltmtDbtr", rng_name(), rng_country(), 4)
+        dbtr_info += party_xml("UltmtDbtr", debtor_party.name + " Group", debtor_party.country, 4)
 
     cdt_tf = ""
     # CdtrAgt, Cdtr, CdtrAcct are MANDATORY in pain.001
-    cdt_tf += agent_xml("CdtrAgt", rng_bic(), 5)
-    cdt_tf += party_xml("Cdtr", rng_name(), rng_country(), 5)
-    cdt_tf += account_xml("CdtrAcct", rng_iban(iban_country), 5)
-    
+    cdt_tf += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 5)
+    cdt_tf += party_xml("Cdtr", creditor_party.name, creditor_party.country, 5)
+    cdt_tf += account_xml("CdtrAcct", creditor_party.iban, 5)
+
     if "ultimate_creditor" in selected:
-        cdt_tf += party_xml("UltmtCdtr", rng_name(), rng_country(), 5)
+        cdt_tf += party_xml("UltmtCdtr", creditor_party.name + " Group", creditor_party.country, 5)
     if "remittance_information" in selected:
         cdt_tf += f"\t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('REF', 16))}</Ustrd></RmtInf>\n"
 
@@ -2228,9 +2347,9 @@ def _gen_pain001(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>pain.001.001.09</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>
@@ -2265,8 +2384,18 @@ def _gen_pain001(selected: set, idx: int) -> str:
 # ── PAIN.002 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pain002(selected: set, idx: int) -> str:
-    from_bic = rng_bic()
-    to_bic = rng_bic()
+    """
+    pain.002 — Customer Payment Status Report — constructive variant.
+
+    Anchored to one MessageScenario so AppHdr BICs stay in the same currency
+    zone (no body amounts to mismatch, but the BAH consistency matters for
+    L3 country/BIC rules).
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    from_bic = scenario.sender_bic
+    to_bic = scenario.receiver_bic
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
@@ -2291,10 +2420,17 @@ def _gen_pain002(selected: set, idx: int) -> str:
 \t\t\t\t\t</StsRsnInf>
 """
         if "original_transaction" in selected:
+            # If status is RJCT we must also emit a StsRsnInf block (PAIN002_RJCT_REQUIRES_RSN).
+            tx_rsn = ""
+            if status == "RJCT":
+                reasons = ["AM04", "AC01", "FF01", "AG01"]
+                tx_rsn = (f"\t\t\t\t\t\t<StsRsnInf>\n"
+                          f"\t\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>\n"
+                          f"\t\t\t\t\t\t</StsRsnInf>\n")
             body += f"""\t\t\t\t\t<TxInfAndSts>
 \t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
 \t\t\t\t\t\t<TxSts>{status}</TxSts>
-\t\t\t\t\t</TxInfAndSts>
+{tx_rsn}\t\t\t\t\t</TxInfAndSts>
 """
         body += "\t\t\t\t</OrgnlPmtInfAndSts>\n"
 
@@ -2325,8 +2461,19 @@ def _gen_pain002(selected: set, idx: int) -> str:
 # ── PAIN.008 Generator ─────────────────────────────────────────────────────────
 
 def _gen_pain008(selected: set, idx: int) -> str:
-    from_bic = rng_bic("GB")
-    to_bic = rng_bic("GB")
+    """
+    pain.008 — Customer Direct Debit Initiation — constructive variant.
+
+    Anchored to one MessageScenario. The creditor (merchant) initiates the DD
+    against the debtor (customer). All parties/agents/currency consistent.
+    """
+    from .scenario import MessageScenario
+
+    scenario = MessageScenario.random()
+    ccy = scenario.currency
+    debtor_party = scenario.debtor
+    creditor_party = scenario.creditor
+
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     pmt_inf_id = rng_id("PMTINF", 10)
@@ -2334,17 +2481,10 @@ def _gen_pain008(selected: set, idx: int) -> str:
     instr_id = rng_id("INSTR", 11)
     mndt_id = rng_id("MNDT", 10)
     cre_dt = rng_datetime()
-    curr_map = {
-        "GB": "GBP", "DE": "EUR", "FR": "EUR", "NL": "EUR", "BE": "EUR",
-        "AT": "EUR", "IT": "EUR", "ES": "EUR", "PT": "EUR", "SE": "SEK",
-        "NO": "NOK", "DK": "DKK"
-    }
-    iban_country = random.choice(list(curr_map.keys()))
-    ccy = curr_map[iban_country]
     amount = rng_amount(ccy)
 
-    # InitgPty is mandatory in pain.008
-    initg = party_xml("InitgPty", rng_name(), rng_country(), 4)
+    # InitgPty is the creditor (merchant) initiating the DD collection
+    initg = party_xml("InitgPty", creditor_party.name, creditor_party.country, 4)
 
     pmt_tp = ""
     if "payment_type_information" in selected:
@@ -2353,20 +2493,20 @@ def _gen_pain008(selected: set, idx: int) -> str:
 
     pmt_body = ""
     # Cdtr, CdtrAcct, CdtrAgt are MANDATORY in pain.008
-    pmt_body += party_xml("Cdtr", rng_name(), rng_country(), 4)
-    pmt_body += account_xml("CdtrAcct", rng_iban(iban_country), 4)
-    pmt_body += agent_xml("CdtrAgt", rng_bic(), 4)
+    pmt_body += party_xml("Cdtr", creditor_party.name, creditor_party.country, 4)
+    pmt_body += account_xml("CdtrAcct", creditor_party.iban, 4)
+    pmt_body += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
     if "ultimate_creditor" in selected:
-        pmt_body += party_xml("UltmtCdtr", rng_name(), rng_country(), 4)
+        pmt_body += party_xml("UltmtCdtr", creditor_party.name + " Group", creditor_party.country, 4)
 
     dd_tx = ""
     # DbtrAgt, Dbtr, DbtrAcct are MANDATORY in pain.008
-    dd_tx += agent_xml("DbtrAgt", rng_bic(), 5)
-    dd_tx += party_xml("Dbtr", rng_name(), rng_country(), 5)
-    dd_tx += account_xml("DbtrAcct", rng_iban(iban_country), 5)
-    
+    dd_tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5)
+    dd_tx += party_xml("Dbtr", debtor_party.name, debtor_party.country, 5)
+    dd_tx += account_xml("DbtrAcct", debtor_party.iban, 5)
+
     if "ultimate_debtor" in selected:
-        dd_tx += party_xml("UltmtDbtr", rng_name(), rng_country(), 5)
+        dd_tx += party_xml("UltmtDbtr", debtor_party.name + " Group", debtor_party.country, 5)
     if "remittance_information" in selected:
         dd_tx += f"\t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('REF', 16))}</Ustrd></RmtInf>\n"
 
@@ -2374,9 +2514,9 @@ def _gen_pain008(selected: set, idx: int) -> str:
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
 \t\t<Fr>
-{apphdr_fi(from_bic)}\t\t</Fr>
+{apphdr_fi(scenario.sender_bic)}\t\t</Fr>
 \t\t<To>
-{apphdr_fi(to_bic)}\t\t</To>
+{apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>pain.008.001.08</MsgDefIdr>
 \t\t<BizSvc>swift.cbprplus.02</BizSvc>

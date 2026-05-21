@@ -338,6 +338,17 @@
         "layer": 3,
         "errorMessage": "Settlement / execution date is more than 1 year in the future.",
         "fix": "Verify the date is correct. Future-dated payments beyond 12 months are unusual and may be rejected by clearing systems."
+    },
+    {
+        "rule_id": "GLOBAL_INTRMY_AGT1_REQUIRES_CDTR_AGT",
+        "description": "When IntrmyAgt1 is present, CdtrAgt must also be present. CBPR+ dependency rule: an intermediary agent requires a creditor agent to define the end of the payment chain.",
+        "condition": "any(re.search(r'\\.IntrmyAgt1[\\[.]', k) for k in DATA.keys())",
+        "type": "expression",
+        "expression": "any(re.search(r'\\.CdtrAgt[\\[.]', k) for k in DATA.keys())",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "IntrmyAgt1 (Intermediary Agent 1) is present but CdtrAgt (Creditor Agent) is missing. Per CBPR+ rules, a Creditor Agent must be present whenever an Intermediary Agent is specified.",
+        "fix": "Add <CdtrAgt><FinInstnId><BICFI>CREDITOR_BIC</BICFI></FinInstnId></CdtrAgt> to the transaction, or remove <IntrmyAgt1> if no intermediary routing is required."
     }
 ]
 

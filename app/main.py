@@ -399,9 +399,11 @@ async def bulk_generate(request: dict):
     valid_messages: list = []
     attempts = 0
     # Catastrophic safety valve — prevents truly infinite loops due to systemic bugs.
-    # Lowered from 50× to 10× since the XSD cache makes each attempt much cheaper,
-    # and 10× still gives huge headroom for normal generation noise.
-    catastrophic_limit = max(count * 10, 50)
+    # Generators are being migrated to constructive (valid-by-construction) per the
+    # bulk-generate revamp, so the per-message attempt ratio should converge to ~1.
+    # Lowered from 10× to 3× — anything more than that indicates the generator for
+    # this message type still needs migration; raising 500 quickly is the right call.
+    catastrophic_limit = max(count * 3, 30)
 
     # Track failure reasons for debugging
     failure_reasons: dict = {}   # reason_string -> count
@@ -522,6 +524,123 @@ async def bulk_generate(request: dict):
     }
 
     return response
+
+
+@app.post("/bulk-generate/stream")
+async def bulk_generate_stream(request: dict):
+    """
+    SSE variant of /bulk-generate. Streams per-attempt progress events so the
+    UI can show "Generated X/Y, retrying Z failures..." in real time instead
+    of one big blocking POST.
+
+    Event types (each is one Server-Sent Event with `event: <type>` and
+    `data: <json>`):
+      - start    : { requested, message_type }
+      - progress : { produced, attempts, failure_top: [{reason, count}, ...] }
+      - message  : { index, xml, validation_report }   (only for VALID messages)
+      - done     : { count, total_attempts, failure_summary: {...} }
+      - error    : { detail }                          (terminal — stream closes)
+    """
+    message_type = request.get("message_type")
+    count = int(request.get("count", 1))
+    selected_blocks = request.get("selected_blocks", [])
+
+    if count < 1 or (count > 500 and not os.environ.get("UNLIMITED_BULK")):
+        raise HTTPException(status_code=400, detail="count must be between 1 and 500")
+    if not message_type:
+        raise HTTPException(status_code=400, detail="message_type is required")
+
+    def _sse(event: str, payload: dict) -> str:
+        return f"event: {event}\ndata: {json.dumps(payload, default=str)}\n\n"
+
+    async def generate_events():
+        # Start
+        yield _sse("start", {"requested": count, "message_type": message_type})
+
+        produced = 0
+        attempts = 0
+        catastrophic_limit = max(count * 3, 30)
+        failure_reasons: dict[str, int] = {}
+        BATCH_SIZE = 16
+        last_progress_emit = -1  # emit progress at most after every change
+
+        async def _one_attempt(i: int):
+            try:
+                xml = generate_single_xml(message_type, selected_blocks, i)
+                report = await validator.validate(xml, mode="Full 1-3", message_type="Auto-detect")
+                if report.status == "PASS":
+                    return {"ok": True, "xml": xml, "report": report, "reason": ""}
+                issues = report.to_dict().get("details", [])
+                error_codes = [f"{iss.get('code', 'UNKNOWN')}: {iss.get('message', '')[:80]}"
+                               for iss in issues if iss.get("severity") in ("ERROR", "CRITICAL")]
+                return {"ok": False, "xml": xml, "report": report,
+                        "reason": "; ".join(error_codes[:3]) if error_codes else "Unknown validation failure"}
+            except Exception as exc:
+                return {"ok": False, "xml": "", "report": None,
+                        "reason": f"Generation exception: {exc}"}
+
+        while produced < count:
+            if attempts >= catastrophic_limit:
+                top3 = sorted(failure_reasons.items(), key=lambda x: -x[1])[:3]
+                summary = "; ".join(f"({v}x) {k[:120]}" for k, v in top3)
+                yield _sse("error", {
+                    "detail": (
+                        f"Could not generate {count} valid {message_type} messages "
+                        f"after {attempts} attempts (produced {produced}). "
+                        f"Top failure reasons: {summary}"
+                    ),
+                    "produced": produced,
+                    "attempts": attempts,
+                    "failure_top": [{"reason": r, "count": c} for r, c in top3],
+                })
+                return
+
+            remaining = count - produced
+            batch_n = max(1, min(BATCH_SIZE, remaining, catastrophic_limit - attempts))
+            batch_start = attempts + 1
+            results = await asyncio.gather(*[_one_attempt(batch_start + i) for i in range(batch_n)])
+            attempts += batch_n
+
+            for r in results:
+                if r["ok"] and produced < count:
+                    produced += 1
+                    yield _sse("message", {
+                        "index": produced,
+                        "xml": r["xml"],
+                        "message_type": message_type,
+                        "status": "VALID",
+                        "validation_report": r["report"].to_dict(),
+                    })
+                else:
+                    failure_reasons[r["reason"]] = failure_reasons.get(r["reason"], 0) + 1
+
+            # Progress event (one per batch is enough)
+            if produced != last_progress_emit:
+                top3 = sorted(failure_reasons.items(), key=lambda x: -x[1])[:3]
+                yield _sse("progress", {
+                    "produced": produced,
+                    "attempts": attempts,
+                    "failure_top": [{"reason": r, "count": c} for r, c in top3],
+                })
+                last_progress_emit = produced
+
+        # Done
+        full_top = sorted(failure_reasons.items(), key=lambda x: -x[1])
+        yield _sse("done", {
+            "count": produced,
+            "total_attempts": attempts,
+            "failure_summary": {r: c for r, c in full_top},
+        })
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",  # tell nginx not to buffer
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.get("/codelists/{list_name}")

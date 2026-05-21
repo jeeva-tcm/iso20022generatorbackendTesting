@@ -42,6 +42,17 @@
         "layer": 3
     },
     {
+        "rule_id": "CAMT055_NO_ORGNLTXREF_IN_TXINF",
+        "description": "OrgnlTxRef must not appear inside TxInf in camt.055 CustomerPaymentCancellationRequest. CBPR+ forbids original transaction reference at TxInf level.",
+        "errorMessage": "OrgnlTxRef is not allowed inside TxInf of a camt.055 message. Remove the OrgnlTxRef block from TxInf — it is not permitted at this level in camt.055.001.08.",
+        "fix": "Remove the <OrgnlTxRef> block from within <TxInf>. Original transaction reference data is not permitted at the TxInf level in CustomerPaymentCancellationRequest (camt.055.001.08).",
+        "condition": "any(re.match(r'.*\\.TxInf(\\[\\d+\\])?\\.OrgnlTxRef', k) for k in DATA.keys())",
+        "type": "expression",
+        "expression": "False",
+        "severity": "ERROR",
+        "layer": 3
+    },
+    {
         "rule_id": "CAMT055_ASSGNR_REQUIRED",
         "description": "Cancellation request must identify the Assigner (Assgnmt.Assgnr).",
         "condition": "exists(Document.CstmrPmtCxlReq.Assgnmt)",
