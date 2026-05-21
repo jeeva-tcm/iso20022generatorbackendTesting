@@ -1898,7 +1898,7 @@ def _gen_camt053(selected: set, idx: int) -> str:
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
 \t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
 \t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
-\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd><Issr>CBPR</Issr></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -1951,8 +1951,12 @@ def _gen_camt054(selected: set, idx: int) -> str:
     ccy = rng_currency()
 
     ntfctn = ""
-    # Account block with nested Ownr/Svcr in v13
-    ntfctn += f"\t\t\t\t<Acct>\n\t\t\t\t\t<Id><IBAN>{xe(rng_iban())}</IBAN></Id>\n"
+    # Account block in CBPR+/schema order: Id, Tp, Ccy, Ownr, Svcr.
+    ntfctn += f"""\t\t\t\t<Acct>
+\t\t\t\t\t<Id><IBAN>{xe(rng_iban())}</IBAN></Id>
+\t\t\t\t\t<Tp><Cd>CACC</Cd></Tp>
+\t\t\t\t\t<Ccy>{xe(ccy)}</Ccy>
+"""
     if "account_owner" in selected:
         ntfctn += f"\t\t\t\t\t<Ownr>\n{party_xml('_unused', rng_name(), rng_country(), 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t</Ownr>\n"
     if "account_servicer" in selected:
@@ -1962,12 +1966,13 @@ def _gen_camt054(selected: set, idx: int) -> str:
         entry_amt = rng_amount(ccy)
         cdt_dbt = random.choice(["CRDT", "DBIT"])
         ntfctn += f"""\t\t\t\t<Ntry>
+\t\t\t\t\t<NtryRef>{xe(rng_id("NTRY", 12))}</NtryRef>
 \t\t\t\t\t<Amt Ccy="{xe(ccy)}">{entry_amt}</Amt>
 \t\t\t\t\t<CdtDbtInd>{cdt_dbt}</CdtDbtInd>
 \t\t\t\t\t<Sts><Cd>BOOK</Cd></Sts>
-\t\t\t\t\t<BookgDt><Dt>{rng_date(0)}</Dt></BookgDt>
-\t\t\t\t\t<ValDt><Dt>{rng_date(0)}</Dt></ValDt>
-\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd></Prtry></BkTxCd>
+\t\t\t\t\t<BookgDt><DtTm>{rng_date(0)}T10:00:00+00:00</DtTm></BookgDt>
+\t\t\t\t\t<ValDt><DtTm>{rng_date(0)}T10:00:00+00:00</DtTm></ValDt>
+\t\t\t\t\t<BkTxCd><Prtry><Cd>VALL</Cd><Issr>CBPR</Issr></Prtry></BkTxCd>
 \t\t\t\t</Ntry>
 """
 
@@ -2007,30 +2012,42 @@ def _gen_camt055(selected: set, idx: int) -> str:
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
+    ccy = rng_currency()
+    requested_execution_date = rng_date(1)
 
-    body = ""
-    # In v12, Underlying is: OrgnlGrpInfAndCxl, then OrgnlPmtInfAndCxl
-    if "original_group_information" in selected:
-        body += f"""\t\t\t\t<OrgnlGrpInfAndCxl>
-\t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
-\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
-\t\t\t\t</OrgnlGrpInfAndCxl>
-"""
-    
-    
     orgnl_tx_ref = ""
     if "original_transaction" in selected:
         orgnl_tx_ref = f"""\n\t\t\t\t\t\t<OrgnlTxRef>
-\t\t\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(rng_currency())}">{rng_amount("USD")}</IntrBkSttlmAmt>
+\t\t\t\t\t\t\t<IntrBkSttlmAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</IntrBkSttlmAmt>
 \t\t\t\t\t\t</OrgnlTxRef>"""
 
-    # Tx details must be inside OrgnlPmtInfAndCxl -> TxInf
-    body += f"""\t\t\t\t<OrgnlPmtInfAndCxl>
+    # CBPR+/MyStandards expects payment-level cancellation information here.
+    # Keep TxInf under OrgnlPmtInfAndCxl and populate exactly one requested date.
+    body = f"""\t\t\t\t<OrgnlPmtInfAndCxl>
 \t\t\t\t\t<OrgnlPmtInfId>{xe(rng_id("ORIGPMT", 10))}</OrgnlPmtInfId>
+\t\t\t\t\t<OrgnlGrpInf>
+\t\t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
+\t\t\t\t\t\t<OrgnlMsgNmId>pain.001.001.09</OrgnlMsgNmId>
+\t\t\t\t\t</OrgnlGrpInf>
 \t\t\t\t\t<TxInf>
 \t\t\t\t\t\t<CxlId>{xe(rng_id("CXLID", 10))}</CxlId>
+\t\t\t\t\t\t<Case>
+\t\t\t\t\t\t\t<Id>{xe(rng_id("CASE", 10))}</Id>
+\t\t\t\t\t\t\t<Cretr>
+\t\t\t\t\t\t\t\t<Agt>
+\t\t\t\t\t\t\t\t\t<FinInstnId>
+\t\t\t\t\t\t\t\t\t\t<BICFI>{xe(from_bic)}</BICFI>
+\t\t\t\t\t\t\t\t\t</FinInstnId>
+\t\t\t\t\t\t\t\t</Agt>
+\t\t\t\t\t\t\t</Cretr>
+\t\t\t\t\t\t</Case>
+\t\t\t\t\t\t<OrgnlInstrId>{xe(rng_id("ORIINSTR", 10))}</OrgnlInstrId>
 \t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
 \t\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
+\t\t\t\t\t\t<OrgnlInstdAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</OrgnlInstdAmt>
+\t\t\t\t\t\t<OrgnlReqdExctnDt>
+\t\t\t\t\t\t\t<Dt>{requested_execution_date}</Dt>
+\t\t\t\t\t\t</OrgnlReqdExctnDt>
 \t\t\t\t\t\t<CxlRsnInf>
 \t\t\t\t\t\t\t<Rsn><Cd>{"DUPL" if "cancellation_reason" in selected else "CUST"}</Cd></Rsn>
 \t\t\t\t\t\t</CxlRsnInf>{orgnl_tx_ref}
