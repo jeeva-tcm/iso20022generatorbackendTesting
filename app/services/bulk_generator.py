@@ -632,7 +632,7 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "previous_instructing_agent_1","label": "Previous Instructing Agent 1","mandatory": False},
         {"id": "previous_instructing_agent_2","label": "Previous Instructing Agent 2","mandatory": False, "requires": ["previous_instructing_agent_1"]},
         {"id": "previous_instructing_agent_3","label": "Previous Instructing Agent 3","mandatory": False, "requires": ["previous_instructing_agent_2"]},
-        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False, "requires": ["creditor_agent"]},
         {"id": "intermediary_agent_1_account","label": "Intermediary Agent 1 Account","mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
@@ -656,7 +656,7 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "previous_instructing_agent_1","label": "Previous Instructing Agent 1","mandatory": False},
         {"id": "previous_instructing_agent_2","label": "Previous Instructing Agent 2","mandatory": False, "requires": ["previous_instructing_agent_1"]},
         {"id": "previous_instructing_agent_3","label": "Previous Instructing Agent 3","mandatory": False, "requires": ["previous_instructing_agent_2"]},
-        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False, "requires": ["creditor_agent"]},
         {"id": "intermediary_agent_1_account","label": "Intermediary Agent 1 Account","mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
@@ -678,12 +678,16 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "creditor",                   "label": "Creditor (FI)",               "mandatory": True},
         {"id": "creditor_account",           "label": "Creditor Account",            "mandatory": False},
         {"id": "previous_instructing_agent_1","label": "Previous Instructing Agent 1","mandatory": False},
-        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
+        {"id": "previous_instructing_agent_2","label": "Previous Instructing Agent 2","mandatory": False, "requires": ["previous_instructing_agent_1"]},
+        {"id": "previous_instructing_agent_3","label": "Previous Instructing Agent 3","mandatory": False, "requires": ["previous_instructing_agent_2"]},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False, "requires": ["creditor_agent"]},
         {"id": "intermediary_agent_1_account","label": "Intermediary Agent 1 Account","mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
         {"id": "intermediary_agent_2_account","label": "Intermediary Agent 2 Account","mandatory": False, "requires": ["intermediary_agent_2"]},
         {"id": "intermediary_agent_3",       "label": "Intermediary Agent 3",        "mandatory": False, "requires": ["intermediary_agent_2"]},
+        {"id": "intermediary_agent_3_account","label": "Intermediary Agent 3 Account","mandatory": False, "requires": ["intermediary_agent_3"]},
         {"id": "underlying_customer_credit_transfer", "label": "Underlying Customer Credit Transfer (COV)", "mandatory": True},
+        {"id": "settlement_time_request",    "label": "Settlement Time Request",     "mandatory": False},
         {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
         {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
     ],
@@ -712,6 +716,10 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "creditor",                   "label": "Creditor",                    "mandatory": True},
         {"id": "creditor_account",           "label": "Creditor Account",            "mandatory": True,  "requires": ["creditor"]},
         {"id": "creditor_agent_account",     "label": "Creditor Agent Account",      "mandatory": False, "requires": ["creditor_agent"]},
+        {"id": "direct_debit_transaction",   "label": "Direct Debit Transaction",    "mandatory": False},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
+        {"id": "intermediary_agent_2",       "label": "Intermediary Agent 2",        "mandatory": False, "requires": ["intermediary_agent_1"]},
+        {"id": "intermediary_agent_3",       "label": "Intermediary Agent 3",        "mandatory": False, "requires": ["intermediary_agent_2"]},
         {"id": "ultimate_debtor",            "label": "Ultimate Debtor",             "mandatory": False},
         {"id": "ultimate_creditor",          "label": "Ultimate Creditor",           "mandatory": False},
         {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
@@ -723,7 +731,6 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "instructed_agent",           "label": "Instructed Agent",            "mandatory": True},
         {"id": "debtor",                     "label": "Debtor",                      "mandatory": False},
         {"id": "creditor",                   "label": "Creditor",                    "mandatory": False},
-        {"id": "charges_information",        "label": "Charges Information",         "mandatory": False},
     ],
     "pacs.010": [
         {"id": "instructing_agent",          "label": "Instructing Agent",           "mandatory": True},
@@ -735,6 +742,7 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "creditor",                   "label": "Creditor",                    "mandatory": False},
         {"id": "creditor_account",           "label": "Creditor Account",            "mandatory": False, "requires": ["creditor"]},
         {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
         {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
     ],
     "pacs.010.v3": [
@@ -746,6 +754,8 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "creditor_agent",             "label": "Creditor Agent",              "mandatory": False},
         {"id": "creditor",                   "label": "Creditor",                    "mandatory": False},
         {"id": "creditor_account",           "label": "Creditor Account",            "mandatory": False, "requires": ["creditor"]},
+        {"id": "payment_type_information",   "label": "Payment Type Information",    "mandatory": False},
+        {"id": "intermediary_agent_1",       "label": "Intermediary Agent 1",        "mandatory": False},
         {"id": "remittance_information",     "label": "Remittance Information",      "mandatory": False},
     ],
 
@@ -792,12 +802,12 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
         {"id": "cancellation_reason",       "label": "Cancellation Reason",         "mandatory": False},
         {"id": "original_transaction",      "label": "Original Transaction Info",   "mandatory": False},
     ],
+    # Note: camt.056 is mostly hardcoded (fixed structure). Only cancellation_reason and original_transaction are optional.
     "camt.056": [
         {"id": "group_header",              "label": "Group Header (Assignment)",   "mandatory": True},
         {"id": "original_group_information","label": "Original Group Information",  "mandatory": True},
         {"id": "transaction_information",   "label": "Transaction Information",     "mandatory": True},
         {"id": "cancellation_reason",       "label": "Cancellation Reason",         "mandatory": False},
-        {"id": "original_transaction",      "label": "Original Transaction Info",   "mandatory": False},
     ],
 
     # ── PAIN Messages ──────────────────────────────────────────────────────────
@@ -1300,6 +1310,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
         chain += account_xml("DbtrAcct", rng_iban(iban_country), 5)
     if "debtor_agent" in selected:
         chain += agent_xml("DbtrAgt", rng_bic(), 5, exclude_name_address=True)
+    if "intermediary_agent_1" in selected:
+        chain += agent_xml("IntrmyAgt1", rng_bic(), 5, exclude_name_address=True)
     if "creditor_agent" in selected:
         chain += agent_xml("CdtrAgt", rng_bic(), 5, exclude_name_address=True)
 
@@ -1656,6 +1668,8 @@ def _gen_pacs010(selected: set, idx: int) -> str:
         cdt_body += agent_xml("InstdAgt", to_bic, 4)
     if "creditor_agent" in selected:
         cdt_body += agent_xml("CdtrAgt", rng_bic(), 4)
+    if "intermediary_agent_1" in selected:
+        cdt_body += agent_xml("IntrmyAgt", rng_bic(), 4)
     # Cdtr mandatory (BranchAndFinancialInstitutionIdentification8)
     cdt_body += agent_xml("Cdtr", rng_bic(), 4)
     if "creditor_account" in selected:
@@ -2018,7 +2032,7 @@ def _gen_camt055(selected: set, idx: int) -> str:
 \t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
 \t\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
 \t\t\t\t\t\t<CxlRsnInf>
-\t\t\t\t\t\t\t<Rsn><Cd>CUST</Cd></Rsn>
+\t\t\t\t\t\t\t<Rsn><Cd>{"DUPL" if "cancellation_reason" in selected else "CUST"}</Cd></Rsn>
 \t\t\t\t\t\t</CxlRsnInf>{orgnl_tx_ref}
 \t\t\t\t\t</TxInf>
 \t\t\t\t</OrgnlPmtInfAndCxl>
@@ -2097,6 +2111,24 @@ def _gen_camt056(selected: set, idx: int) -> str:
 \t\t\t\t\t\t\t<Cd>{reason_cd}</Cd>
 \t\t\t\t\t\t</Rsn>
 \t\t\t\t\t\t<AddtlInf>FI cancellation requested</AddtlInf>
+\t\t\t\t\t</CxlRsnInf>
+\t\t\t\t</TxInf>
+"""
+    # Optional: additional OrgnlTxRef information
+    if "original_transaction" in selected:
+        body += f"""\t\t\t\t<TxInf>
+\t\t\t\t\t<CxlId>{xe(rng_id("ORIGCXL", 10))}</CxlId>
+\t\t\t\t\t<OrgnlGrpInf>
+\t\t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG2", 10))}</OrgnlMsgId>
+\t\t\t\t\t\t<OrgnlMsgNmId>pacs.008.001.08</OrgnlMsgNmId>
+\t\t\t\t\t</OrgnlGrpInf>
+\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E2", 10))}</OrgnlEndToEndId>
+\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
+\t\t\t\t\t<OrgnlIntrBkSttlmAmt Ccy="{xe(ccy)}">{rng_amount(ccy)}</OrgnlIntrBkSttlmAmt>
+\t\t\t\t\t<OrgnlIntrBkSttlmDt>{rng_date(-2)}</OrgnlIntrBkSttlmDt>
+\t\t\t\t\t<CxlRsnInf>
+\t\t\t\t\t\t<Rsn><Cd>{reason_cd}</Cd></Rsn>
+\t\t\t\t\t\t<AddtlInf>Additional transaction cancellation</AddtlInf>
 \t\t\t\t\t</CxlRsnInf>
 \t\t\t\t</TxInf>
 """
@@ -2374,6 +2406,15 @@ def generate_single_xml(
 ) -> str:
     """Generate one ISO 20022 XML message for the given type and return raw XML."""
     selected = set(b.lower() for b in selected_blocks)
+
+    # Safety net: always add mandatory block IDs for this message type so that
+    # mandatory fields are ALWAYS present in the generated XML even if the frontend
+    # somehow omits them from the request payload.
+    blocks_for_type = get_blocks_for_message(message_type)
+    for blk in blocks_for_type:
+        if blk.get("mandatory"):
+            selected.add(blk["id"].lower())
+
     selected_blocks_ctx.set(selected)
     msg_lower = message_type.lower()
     if "pacs.008" in msg_lower:

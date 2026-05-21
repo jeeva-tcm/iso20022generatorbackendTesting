@@ -294,16 +294,7 @@
         "severity": "ERROR",
         "layer": 3
     },
-    {
-        "rule_id": "L3_DUPLICATE_BIC_IN_CHAIN",
-        "description": "The same BIC must not appear in more than one agent position (loop/duplicate detection).",
-        "condition": "exists(Document)",
-        "expression": "len(set(v for k, v in DATA.items() if k.endswith('.BICFI') and any(role in k for role in ['InstgAgt','InstdAgt','IntrmyAgt1','IntrmyAgt2','IntrmyAgt3','DbtrAgt','CdtrAgt']))) == sum(1 for k in DATA.keys() if k.endswith('.BICFI') and any(role in k for role in ['InstgAgt','InstdAgt','IntrmyAgt1','IntrmyAgt2','IntrmyAgt3','DbtrAgt','CdtrAgt']))",
-        "severity": "WARNING",
-        "layer": 3,
-        "errorMessage": "Same BIC appears in more than one agent position in the routing chain — possible loop or duplicate.",
-        "fix": "Each agent in the routing chain (DbtrAgt, IntrmyAgt1/2/3, CdtrAgt, etc.) should reference a different financial institution."
-    },
+
     {
         "rule_id": "L3_FRACTIONDIGITS_JPY",
         "description": "JPY amounts cannot have decimal places.",
