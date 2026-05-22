@@ -2,7 +2,7 @@ import os
 import sys
 import asyncio
 
-sys.path.append(r'c:\Users\HP\Documents\ISO Stub Validator\iso20022generatorbackend')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.services.bulk_generator import generate_single_xml, _validate_charges_information, _normalize_charges_information
 from app.services.validator import ISOValidator

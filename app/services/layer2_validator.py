@@ -861,8 +861,10 @@ class Layer2Mixin:
                 parent        = m.group(1).split('}')[-1]
                 missing_all   = m.group(2)
                 all_missing = [t.strip().strip('()').split('}')[-1] for t in missing_all.split(',')]
-                expected_list = "'" + ", ".join(all_missing) + "'"
-                
+                # Quote each expected element individually so the wording matches
+                # SWIFT MyStandards format: "expected: 'A', 'B'" (each name quoted).
+                expected_list = ", ".join(f"'{t}'" for t in all_missing)
+
                 # Special Case: SchmeNm must have a child
                 if parent == "SchmeNm":
                      return (
@@ -871,8 +873,8 @@ class Layer2Mixin:
                      )
 
                 return (
-                    f"One or more mandatory elements are missing inside '{parent}'. One of the following elements is expected : {expected_list}",
-                    f"The parent element '{parent}' requires specific child elements to be valid. Please add {expected_list} inside your '{parent}' block."
+                    f"The content of element '{parent}' is not complete. One of the following elements is expected: {expected_list}.",
+                    f"The element '{parent}' requires specific child elements to be present. Add {expected_list} inside your '{parent}' block to satisfy the ISO 20022 / SWIFT MyStandards schema."
                 )
             return (
                 "One or more mandatory elements are missing. Review the schema for required fields.",

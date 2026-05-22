@@ -827,6 +827,7 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
     "pain.001": [
         {"id": "group_header",              "label": "Group Header",                "mandatory": True},
         {"id": "initiating_party",          "label": "Initiating Party",            "mandatory": True},
+        {"id": "forwarding_agent",          "label": "Forwarding Agent",            "mandatory": True},
         {"id": "debtor",                    "label": "Debtor",                      "mandatory": True},
         {"id": "debtor_account",            "label": "Debtor Account",              "mandatory": True,  "requires": ["debtor"]},
         {"id": "debtor_agent",              "label": "Debtor Agent",                "mandatory": True},
@@ -840,20 +841,22 @@ MESSAGE_BLOCKS: Dict[str, List[Dict]] = {
     ],
     "pain.002": [
         {"id": "group_header",              "label": "Group Header",                "mandatory": True},
+        {"id": "initiating_party",          "label": "Initiating Party",            "mandatory": True},
         {"id": "original_group_information","label": "Original Group Information",  "mandatory": True},
-        {"id": "original_payment_information","label": "Original Payment Info",     "mandatory": False},
+        {"id": "original_payment_information","label": "Original Payment Info",     "mandatory": True},
         {"id": "status_reason",             "label": "Status Reason Information",   "mandatory": False},
         {"id": "original_transaction",      "label": "Original Transaction Info",   "mandatory": False},
     ],
     "pain.008": [
         {"id": "group_header",              "label": "Group Header",                "mandatory": True},
         {"id": "initiating_party",          "label": "Initiating Party",            "mandatory": True},
+        {"id": "forwarding_agent",          "label": "Forwarding Agent",            "mandatory": True},
         {"id": "creditor",                  "label": "Creditor",                    "mandatory": True},
         {"id": "creditor_account",          "label": "Creditor Account",            "mandatory": True,  "requires": ["creditor"]},
         {"id": "creditor_agent",            "label": "Creditor Agent",              "mandatory": True},
         {"id": "debtor",                    "label": "Debtor",                      "mandatory": True},
         {"id": "debtor_account",            "label": "Debtor Account",              "mandatory": True,  "requires": ["debtor"]},
-        {"id": "debtor_agent",              "label": "Debtor Agent",                "mandatory": False},
+        {"id": "debtor_agent",              "label": "Debtor Agent",                "mandatory": True},
         {"id": "ultimate_creditor",         "label": "Ultimate Creditor",           "mandatory": False},
         {"id": "ultimate_debtor",           "label": "Ultimate Debtor",             "mandatory": False},
         {"id": "payment_type_information",  "label": "Payment Type Information",    "mandatory": False},
@@ -1301,6 +1304,7 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     charge_br = random.choice(["SHAR", "CRED"])
 
     tx = ""
+    rtrd_instd_amt_xml = ""
 
     # -- ChrgsInf (optional) — kept in the same currency zone --
     if "charges_information" in selected or charge_br == "CRED":
@@ -1310,6 +1314,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
                f"\t\t\t\t\t<Agt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(chg_bic)}</BICFI>\n"
                f"\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</Agt>\n\t\t\t\t</ChrgsInf>\n")
+        # If ChargesInformation is present, ReturnedInstructedAmount must be present
+        rtrd_instd_amt_xml = f'\t\t\t\t<RtrdInstdAmt Ccy="{xe(ccy)}">{amount}</RtrdInstdAmt>\n'
 
     # -- InstgAgt / InstdAgt --
     if "instructing_agent" in selected:
@@ -1325,8 +1331,6 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     # Dbtr (Mandatory)
     chain += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
 
-    if "debtor_account" in selected:
-        chain += account_xml("DbtrAcct", debtor_party.iban, 5)
     if "debtor_agent" in selected:
         chain += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5, exclude_name_address=True)
     if "intermediary_agent_1" in selected:
@@ -1337,8 +1341,6 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     # Cdtr (Mandatory)
     chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', creditor_party.name, creditor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
 
-    if "creditor_account" in selected:
-        chain += account_xml("CdtrAcct", creditor_party.iban, 5)
     if "ultimate_creditor" in selected:
         chain += f"\t\t\t\t\t<UltmtCdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', creditor_party.name + ' Group', creditor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</UltmtCdtr>\n"
     if chain:
@@ -1346,6 +1348,18 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 
     # -- RtrRsnInf --
     tx += f"\t\t\t\t<RtrRsnInf>\n\t\t\t\t\t<Rsn>\n\t\t\t\t\t\t<Cd>{xe(rtr_reason)}</Cd>\n\t\t\t\t\t</Rsn>\n\t\t\t\t</RtrRsnInf>\n"
+
+    # -- OrgnlTxRef --
+    orgnl_tx_ref = ""
+    if "debtor_account" in selected or "creditor_account" in selected:
+        orgnl_tx_ref = "\t\t\t\t<OrgnlTxRef>\n"
+        if "debtor_account" in selected:
+            orgnl_tx_ref += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', debtor_party.name, debtor_party.country, 6)}\t\t\t\t\t</Dbtr>\n"
+            orgnl_tx_ref += account_xml("DbtrAcct", debtor_party.iban, 5)
+        if "creditor_account" in selected:
+            orgnl_tx_ref += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', creditor_party.name, creditor_party.country, 6)}\t\t\t\t\t</Cdtr>\n"
+            orgnl_tx_ref += account_xml("CdtrAcct", creditor_party.iban, 5)
+        orgnl_tx_ref += "\t\t\t\t</OrgnlTxRef>\n"
 
     if "remittance_information" in selected:
         pass  # RmtInf is inside OrgnlTxRef, not directly in TxInf for pacs.004
@@ -1384,8 +1398,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 \t\t\t\t<OrgnlUETR>{xe(orig_uetr)}</OrgnlUETR>
 \t\t\t\t<RtrdIntrBkSttlmAmt Ccy="{xe(ccy)}">{amount}</RtrdIntrBkSttlmAmt>
 \t\t\t\t<IntrBkSttlmDt>{xe(sttlm_dt)}</IntrBkSttlmDt>
-\t\t\t\t<ChrgBr>{xe(charge_br)}</ChrgBr>
-{tx}\t\t\t</TxInf>
+{rtrd_instd_amt_xml}				<ChrgBr>{xe(charge_br)}</ChrgBr>
+{tx}{orgnl_tx_ref}			</TxInf>
 \t\t</PmtRtr>
 \t</Document>
 </BusMsgEnvlp>"""
@@ -1432,11 +1446,18 @@ def _gen_pacs003(selected: set, idx: int) -> str:
 
     # -- ChrgBr (mandatory per XSD) --
     charge_br = random.choice(["SHAR", "CRED", "DEBT"])
+    needs_chrgs_inf = "charges_information" in selected or charge_br == "CRED"
+
+    # -- InstdAmt (optional) — MANDATORY when ChrgsInf is present (CBPR+ rule) --
+    if needs_chrgs_inf:
+        instd_amt = amount if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
+        tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{instd_amt}</InstdAmt>\n"
+
     tx += el("ChrgBr", charge_br, 4)
 
     # -- ChrgsInf (optional) — agent BIC kept in the same currency zone --
-    if "charges_information" in selected:
-        chg_amt = rng_amount(ccy)
+    if needs_chrgs_inf:
+        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
         chg_bic = scenario.make_intermediary_agent().bic
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
@@ -1599,20 +1620,8 @@ def _gen_pacs002(selected: set, idx: int) -> str:
             "\t\t\t\t</InstdAgt>\n"
         )
 
-    # ── OrgnlTxRef — optional parties at end of TxInfAndSts ────────────────────
-    orgnl_tx_ref_body = ""
-    if "debtor" in selected:
-        orgnl_tx_ref_body += f"\t\t\t\t\t<Dbtr>\n{party_xml('Pty', debtor_party.name, debtor_party.country, 6)}\t\t\t\t\t</Dbtr>\n"
-    if "creditor" in selected:
-        orgnl_tx_ref_body += f"\t\t\t\t\t<Cdtr>\n{party_xml('Pty', creditor_party.name, creditor_party.country, 6)}\t\t\t\t\t</Cdtr>\n"
-
+    # ── OrgnlTxRef — disabled for CBPR+ ────────────────────────────────────────
     orgnl_tx_ref = ""
-    if orgnl_tx_ref_body:
-        orgnl_tx_ref = (
-            "\t\t\t\t<OrgnlTxRef>\n"
-            f"{orgnl_tx_ref_body}"
-            "\t\t\t\t</OrgnlTxRef>\n"
-        )
 
     # ── Assemble ────────────────────────────────────────────────────────────────
     # GrpHdr contains ONLY: MsgId, CreDtTm — NO InstgAgt/InstdAgt here.
@@ -1742,7 +1751,6 @@ def _gen_pacs010(selected: set, idx: int) -> str:
 \t\t\t</GrpHdr>
 \t\t\t<CdtInstr>
 \t\t\t\t<CdtId>{xe(cdt_id)}</CdtId>
-\t\t\t\t<IntrBkSttlmDt>{sttlm_dt}</IntrBkSttlmDt>
 {cdt_body}\t\t\t\t<DrctDbtTxInf>
 \t\t\t\t\t<PmtId>
 \t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
@@ -2343,6 +2351,14 @@ def _gen_pain001(selected: set, idx: int) -> str:
     if "remittance_information" in selected:
         cdt_tf += f"\t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('REF', 16))}</Ustrd></RmtInf>\n"
 
+    # FwdgAgt: optional in pain.001 standard XSD but Mandatory in CBPR+ usage.
+    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+
+    # NOTE: NbOfTxs is intentionally omitted in <PmtInf>. It is optional in
+    # the base XSD and SWIFT CBPR+ validation against the pain.001 usage
+    # profile rejects it inside <PmtInf>. The authoritative count lives in
+    # <GrpHdr>/<NbOfTxs>.
+
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
 \t<AppHdr xmlns="urn:iso:std:iso:20022:tech:xsd:head.001.001.02">
@@ -2361,16 +2377,16 @@ def _gen_pain001(selected: set, idx: int) -> str:
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
-{initg}\t\t\t</GrpHdr>
+{initg}{fwdg_agt}\t\t\t</GrpHdr>
 \t\t\t<PmtInf>
 \t\t\t\t<PmtInfId>{xe(pmt_inf_id)}</PmtInfId>
 \t\t\t\t<PmtMtd>TRF</PmtMtd>
-\t\t\t\t<NbOfTxs>1</NbOfTxs>
 {pmt_tp}\t\t\t\t<ReqdExctnDt><Dt>{rng_date(1)}</Dt></ReqdExctnDt>
 {dbtr_info}\t\t\t\t<CdtTrfTxInf>
 \t\t\t\t\t<PmtId>
 \t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
 \t\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
+\t\t\t\t\t\t<UETR>{rng_uetr()}</UETR>
 \t\t\t\t\t</PmtId>
 \t\t\t\t\t<Amt><InstdAmt Ccy="{xe(ccy)}">{amount}</InstdAmt></Amt>
 {cdt_tf}\t\t\t\t</CdtTrfTxInf>
@@ -2396,43 +2412,60 @@ def _gen_pain002(selected: set, idx: int) -> str:
     scenario = MessageScenario.random()
     from_bic = scenario.sender_bic
     to_bic = scenario.receiver_bic
+    initg_party = scenario.debtor  # initiating party of the original payment
     biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
     cre_dt = rng_datetime()
+    # OrgnlCreDtTm must be at or before report CreDtTm. Use a fixed earlier time
+    # on the same UTC day so timezone offsets stay consistent (CBPR+ TZ rule).
+    orgnl_cre_dt = datetime.now(timezone.utc).strftime("%Y-%m-%dT09:00:00+00:00")
     status_codes = ["ACSC", "ACCP", "ACSP", "RJCT", "PDNG"]
     status = random.choice(status_codes)
 
+    # GrpHdr: InitgPty is mandatory in SWIFT CBPR+ usage of pain.002.
+    # CBPR+ requires Id instead of Nm.
+    initg = (
+        f"\t\t\t\t<InitgPty>\n"
+        f"\t\t\t\t\t<Id>\n"
+        f"\t\t\t\t\t\t<OrgId>\n"
+        f"\t\t\t\t\t\t\t<AnyBIC>{xe(from_bic)}</AnyBIC>\n"
+        f"\t\t\t\t\t\t</OrgId>\n"
+        f"\t\t\t\t\t</Id>\n"
+        f"\t\t\t\t</InitgPty>\n"
+    )
+
+    # OrgnlGrpInfAndSts XSD sequence:
+    #   OrgnlMsgId, OrgnlMsgNmId, OrgnlCreDtTm(0..1), OrgnlNbOfTxs(0..1),
+    #   OrgnlCtrlSum(0..1), GrpSts(0..1), StsRsnInf(0..*), NbOfTxsPerSts(0..*)
+    # OrgnlCreDtTm must precede GrpSts.
     body = f"""\t\t\t\t<OrgnlGrpInfAndSts>
 \t\t\t\t\t<OrgnlMsgId>{xe(rng_id("ORIGMSG", 10))}</OrgnlMsgId>
 \t\t\t\t\t<OrgnlMsgNmId>pain.001.001.09</OrgnlMsgNmId>
-\t\t\t\t\t<GrpSts>{status}</GrpSts>
+\t\t\t\t\t<OrgnlCreDtTm>{orgnl_cre_dt}</OrgnlCreDtTm>
 \t\t\t\t</OrgnlGrpInfAndSts>
 """
-    if "original_payment_information" in selected:
-        body += f"""\t\t\t\t<OrgnlPmtInfAndSts>
+    # Always emit OrgnlPmtInfAndSts. The XSD declares it 0..unbounded but the
+    # SWIFT CBPR+ usage of pain.002 requires at least one occurrence so the
+    # report is operationally meaningful (it always references the original
+    # payment instruction that's being reported on).
+    body += f"""\t\t\t\t<OrgnlPmtInfAndSts>
 \t\t\t\t\t<OrgnlPmtInfId>{xe(rng_id("ORIGPMT", 10))}</OrgnlPmtInfId>
-\t\t\t\t\t<PmtInfSts>{status}</PmtInfSts>
 """
-        if "status_reason" in selected and status == "RJCT":
+    if "original_transaction" in selected or status == "RJCT":
+        # If status is RJCT we must also emit a StsRsnInf block (PAIN002_RJCT_REQUIRES_RSN).
+        tx_rsn = ""
+        if status == "RJCT":
             reasons = ["AM04", "AC01", "FF01", "AG01"]
-            body += f"""\t\t\t\t\t<StsRsnInf>
-\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>
-\t\t\t\t\t</StsRsnInf>
-"""
-        if "original_transaction" in selected:
-            # If status is RJCT we must also emit a StsRsnInf block (PAIN002_RJCT_REQUIRES_RSN).
-            tx_rsn = ""
-            if status == "RJCT":
-                reasons = ["AM04", "AC01", "FF01", "AG01"]
-                tx_rsn = (f"\t\t\t\t\t\t<StsRsnInf>\n"
-                          f"\t\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>\n"
-                          f"\t\t\t\t\t\t</StsRsnInf>\n")
-            body += f"""\t\t\t\t\t<TxInfAndSts>
+            tx_rsn = (f"\t\t\t\t\t\t<StsRsnInf>\n"
+                      f"\t\t\t\t\t\t\t<Rsn><Cd>{random.choice(reasons)}</Cd></Rsn>\n"
+                      f"\t\t\t\t\t\t</StsRsnInf>\n")
+        body += f"""\t\t\t\t\t<TxInfAndSts>
 \t\t\t\t\t\t<OrgnlEndToEndId>{xe(rng_id("ORIE2E", 10))}</OrgnlEndToEndId>
+\t\t\t\t\t\t<OrgnlUETR>{rng_uetr()}</OrgnlUETR>
 \t\t\t\t\t\t<TxSts>{status}</TxSts>
 {tx_rsn}\t\t\t\t\t</TxInfAndSts>
 """
-        body += "\t\t\t\t</OrgnlPmtInfAndSts>\n"
+    body += "\t\t\t\t</OrgnlPmtInfAndSts>\n"
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -2451,7 +2484,7 @@ def _gen_pain002(selected: set, idx: int) -> str:
 \t\t\t<GrpHdr>
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
-\t\t\t</GrpHdr>
+{initg}\t\t\t</GrpHdr>
 {body}\t\t</CstmrPmtStsRpt>
 \t</Document>
 </BusMsgEnvlp>"""
@@ -2486,6 +2519,10 @@ def _gen_pain008(selected: set, idx: int) -> str:
     # InitgPty is the creditor (merchant) initiating the DD collection
     initg = party_xml("InitgPty", creditor_party.name, creditor_party.country, 4)
 
+    # FwdgAgt is mandatory in SWIFT CBPR+ pain.008 GrpHdr (PAIN008_FWDGAGT_MANDATORY).
+    # Reuse the sender BIC from the BAH so the routing chain stays consistent.
+    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+
     pmt_tp = ""
     if "payment_type_information" in selected:
         svc = random.choice(SERVICE_LEVELS)
@@ -2497,7 +2534,7 @@ def _gen_pain008(selected: set, idx: int) -> str:
     pmt_body += account_xml("CdtrAcct", creditor_party.iban, 4)
     pmt_body += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
     if "ultimate_creditor" in selected:
-        pmt_body += party_xml("UltmtCdtr", creditor_party.name + " Group", creditor_party.country, 4)
+        pass # Not allowed in CBPR+ pain.008 profile
 
     dd_tx = ""
     # DbtrAgt, Dbtr, DbtrAcct are MANDATORY in pain.008
@@ -2509,6 +2546,11 @@ def _gen_pain008(selected: set, idx: int) -> str:
         dd_tx += party_xml("UltmtDbtr", debtor_party.name + " Group", debtor_party.country, 5)
     if "remittance_information" in selected:
         dd_tx += f"\t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('REF', 16))}</Ustrd></RmtInf>\n"
+
+    # NOTE: NbOfTxs is intentionally NOT emitted in <PmtInf>. It is optional there
+    # (minOccurs="0") and SWIFT's CBPR+ pain.008 usage guide validates against an
+    # XSD profile that rejects it in this position. NbOfTxs in <GrpHdr> still
+    # provides the authoritative transaction count for the message.
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -2528,16 +2570,16 @@ def _gen_pain008(selected: set, idx: int) -> str:
 \t\t\t\t<MsgId>{xe(msg_id)}</MsgId>
 \t\t\t\t<CreDtTm>{cre_dt}</CreDtTm>
 \t\t\t\t<NbOfTxs>1</NbOfTxs>
-{initg}\t\t\t</GrpHdr>
+{initg}{fwdg_agt}\t\t\t</GrpHdr>
 \t\t\t<PmtInf>
 \t\t\t\t<PmtInfId>{xe(pmt_inf_id)}</PmtInfId>
 \t\t\t\t<PmtMtd>DD</PmtMtd>
-\t\t\t\t<NbOfTxs>1</NbOfTxs>
-{pmt_tp}\t\t\t\t<ReqdColltnDt>{rng_date(2)}</ReqdColltnDt>
+\t\t\t\t<ReqdColltnDt>{rng_date(2)}</ReqdColltnDt>
 {pmt_body}\t\t\t\t<DrctDbtTxInf>
 \t\t\t\t\t<PmtId>
 \t\t\t\t\t\t<InstrId>{xe(instr_id)}</InstrId>
 \t\t\t\t\t\t<EndToEndId>{xe(e2e_id)}</EndToEndId>
+\t\t\t\t\t\t<UETR>{rng_uetr()}</UETR>
 \t\t\t\t\t</PmtId>
 \t\t\t\t\t<InstdAmt Ccy="{xe(ccy)}">{amount}</InstdAmt>
 \t\t\t\t\t<DrctDbtTx>
@@ -2596,7 +2638,10 @@ def generate_single_xml(
         _validate_postal_address(xml)
         return xml
     elif "pacs.003" in msg_lower:
-        return _gen_pacs003(selected, idx)
+        xml = _gen_pacs003(selected, idx)
+        xml = _normalize_charges_information(xml)
+        _validate_charges_information(xml)
+        return xml
     elif "pacs.002" in msg_lower:
         return _gen_pacs002(selected, idx)
     elif "pacs.010" in msg_lower:
@@ -2619,13 +2664,24 @@ def generate_single_xml(
         return _gen_camt055(selected, idx)
     elif "camt.056" in msg_lower:
         return _gen_camt056(selected, idx)
-    # PAIN generators
+    # PAIN generators — always normalize postal addresses so AdrLine/TwnNm/Ctry
+    # coexistence and the 2-AdrLine maximum hold even when agent_xml randomly
+    # injects an inner <PstlAdr>.
     elif "pain.001" in msg_lower:
-        return _gen_pain001(selected, idx)
+        xml = _gen_pain001(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "pain.002" in msg_lower:
-        return _gen_pain002(selected, idx)
+        xml = _gen_pain002(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "pain.008" in msg_lower:
-        return _gen_pain008(selected, idx)
+        xml = _gen_pain008(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     else:
         return _gen_pacs008(selected, idx)
 

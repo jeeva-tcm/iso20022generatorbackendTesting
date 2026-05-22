@@ -446,6 +446,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     # different schemas; this is a frequent integration/routing bug.
                     self._validate_apphdr_payload_match(xml_content, report)
 
+                    # SWIFT CBPR+ Rule: pain.008 GrpHdr must contain FwdgAgt.
+                    # Base XSD declares FwdgAgt optional, but SWIFT MyStandards
+                    # promotes it to mandatory for cross-border direct debits.
+                    self._validate_pain008_fwdgagt_rule(xml_content, report)
+
                     layer2_success = await self._run_layer_2(xml_content, report, detected_type)
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))
@@ -1137,6 +1142,51 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                     "For consistency, use the same UTC offset in both header and payload "
                     "timestamps (e.g. both '+00:00' or both '+05:30')."
                 ))
+
+    def _validate_pain008_fwdgagt_rule(self, xml_content: str, report: ValidationReport) -> None:
+        """
+        SWIFT CBPR+ Rule — pain.008 GrpHdr must contain FwdgAgt.
+
+        The base ISO 20022 XSD for pain.008.001.08 marks <FwdgAgt> as optional
+        (minOccurs="0") inside <GrpHdr>, but SWIFT MyStandards / CBPR+ network
+        rules promote it to mandatory because every cross-border direct-debit
+        message routed over SWIFT requires the Forwarding Agent to be present
+        for correlation and routing.
+
+        When <FwdgAgt> is absent we emit the exact error message that SWIFT
+        MyStandards displays so users see consistent output across tools:
+
+            "The content of element 'GrpHdr' is not complete.
+             One of the following elements is expected: 'FwdgAgt'."
+        """
+        if not report.message_type or "pain.008" not in report.message_type:
+            return
+
+        try:
+            parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+            root = etree.fromstring(xml_content.encode('utf-8'), parser)
+        except Exception:
+            return
+
+        grp_hdr_nodes = root.xpath("//*[local-name()='GrpHdr']")
+        if not grp_hdr_nodes:
+            return  # GrpHdr itself is missing — XSD layer will flag it
+
+        grp_hdr = grp_hdr_nodes[0]
+        fwdg_agt_nodes = grp_hdr.xpath("*[local-name()='FwdgAgt']")
+        if fwdg_agt_nodes:
+            return  # Present — nothing to flag (content-of-element check passes)
+
+        line = str(grp_hdr.sourceline or "?")
+        report.add_issue(ValidationIssue(
+            "ERROR", 2, "PAIN008_FWDGAGT_MANDATORY", line,
+            "The content of element 'GrpHdr' is not complete. "
+            "One of the following elements is expected: 'FwdgAgt'.",
+            "Add <FwdgAgt> inside <GrpHdr> with the Forwarding Agent's "
+            "financial institution identification (e.g. <FinInstnId><BICFI>...</BICFI></FinInstnId>). "
+            "FwdgAgt is mandatory in SWIFT CBPR+ pain.008 messages even though "
+            "the base ISO 20022 XSD declares it optional."
+        ))
 
     def _validate_uetr_in_xml(self, xml_content: str, report: ValidationReport) -> None:
         """
