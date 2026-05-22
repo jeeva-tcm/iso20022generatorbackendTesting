@@ -1,16 +1,16 @@
 # Graph Report - iso20022generatorbackend  (2026-05-22)
 
 ## Corpus Check
-- 51 files · ~62,902 words
+- 51 files · ~62,915 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 568 nodes · 943 edges · 55 communities (37 shown, 18 thin omitted)
+- 570 nodes · 945 edges · 55 communities (37 shown, 18 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 33 edges (avg confidence: 0.66)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e1b59a1`
+- Built from commit: `3ea7412c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -54,8 +54,8 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `ISOValidator` - 56 edges
-2. `MT2MXConverter` - 34 edges
-3. `generate_single_xml()` - 33 edges
+2. `generate_single_xml()` - 34 edges
+3. `MT2MXConverter` - 34 edges
 4. `xe()` - 25 edges
 5. `FirebaseHistoryService` - 19 edges
 6. `rng_datetime()` - 17 edges
@@ -80,7 +80,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.06
-Nodes (89): main(), main(), account_othr_xml(), account_xml(), agent_xml(), apphdr_fi(), el(), _fi_party() (+81 more)
+Nodes (91): main(), main(), account_othr_xml(), account_xml(), agent_xml(), apphdr_fi(), el(), _fi_party() (+83 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.07
@@ -120,7 +120,7 @@ Nodes (6): _build_credentials(), FirebaseHistoryService, Update the circuit-brea
 
 ### Community 10 - "Community 10"
 Cohesion: 0.09
-Nodes (11): SWIFT CBPR+ Rule — pain.008 GrpHdr must contain FwdgAgt.          The base ISO, Step 4.8 — IBAN / BBAN Account Identifier Validation          For every accoun, Step 4.11 — Charges Currency Match Validation         Verifies that <ChrgsInf><, Step 4.12 — Party Identification Validation         Validates all party blocks, Step 4.13 — Address CBPR+ Rules Validation         Validates all <PstlAdr> bloc, Step 5: Canonical Message Creation         Converts XML to a flat canonical JSO, Step 4.15 — Clearing System Specific Rules         1. TARGET2 (T2) -> Settlemen, Main 10-Step Validation Flow (+3 more)
+Nodes (11): SWIFT CBPR+ Rule — pain.008 GrpHdr must contain FwdgAgt.          The base ISO, Step 4.13 — Address CBPR+ Rules Validation         Validates all <PstlAdr> bloc, Step 4.14 — Remittance Information Validation (CBPR+ SR2025)         Validates:, Step 5: Canonical Message Creation         Converts XML to a flat canonical JSO, Robust Message Type Detection - Prioritizes Payload over Header, STEP 4.16 - Character Set Validation for Name and Address Tags          Checks, Main 10-Step Validation Flow, Step 4.5 — Past Date Validation         Scans the raw XML string directly for A (+3 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.14
@@ -151,7 +151,7 @@ Cohesion: 0.5
 Nodes (4): _iban_check_digits(), Compute valid IBAN check digits using ISO 13616 MOD-97-10 algorithm., Generate a random IBAN with valid MOD-97 check digits., rng_iban()
 
 ## Knowledge Gaps
-- **207 isolated node(s):** `Gracefully stop the APScheduler background scheduler on server shutdown.`, `Get aggregated dashboard statistics from Firestore`, `Generate the next sequential validation ID for batch use`, `Initialize a validation batch:     - Generates a single VAL{DDMMYY}{NNNNN} batc`, `Dynamically extract the schema tree for a specific MX message type` (+202 more)
+- **209 isolated node(s):** `Gracefully stop the APScheduler background scheduler on server shutdown.`, `Get aggregated dashboard statistics from Firestore`, `Generate the next sequential validation ID for batch use`, `Initialize a validation batch:     - Generates a single VAL{DDMMYY}{NNNNN} batc`, `Dynamically extract the schema tree for a specific MX message type` (+204 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -159,9 +159,9 @@ Nodes (4): _iban_check_digits(), Compute valid IBAN check digits using ISO 13616
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `ISOValidator` connect `Community 7` to `Community 4`, `Community 10`, `Community 11`, `Community 14`, `Community 15`, `Community 18`, `Community 19`, `Community 20`, `Community 21`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 26`, `Community 27`, `Community 28`, `Community 29`, `Community 30`?**
-  _High betweenness centrality (0.191) - this node is a cross-community bridge._
-- **Why does `generate_single_xml()` connect `Community 0` to `Community 19`, `Community 7`?**
-  _High betweenness centrality (0.155) - this node is a cross-community bridge._
+  _High betweenness centrality (0.192) - this node is a cross-community bridge._
+- **Why does `generate_single_xml()` connect `Community 0` to `Community 18`, `Community 7`?**
+  _High betweenness centrality (0.157) - this node is a cross-community bridge._
 - **Why does `get_blocks_for_message()` connect `Community 0` to `Community 3`?**
   _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **Are the 13 inferred relationships involving `ISOValidator` (e.g. with `ValidationIssue` and `ValidationReport`) actually correct?**
@@ -169,6 +169,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 8 inferred relationships involving `generate_single_xml()` (e.g. with `main()` and `test_pacs009()`) actually correct?**
   _`generate_single_xml()` has 8 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Gracefully stop the APScheduler background scheduler on server shutdown.`, `Get aggregated dashboard statistics from Firestore`, `Generate the next sequential validation ID for batch use` to the rest of the system?**
-  _207 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _209 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._

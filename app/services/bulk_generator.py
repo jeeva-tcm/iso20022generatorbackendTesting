@@ -2538,7 +2538,8 @@ def _gen_pain008(selected: set, idx: int) -> str:
 
     dd_tx = ""
     # DbtrAgt, Dbtr, DbtrAcct are MANDATORY in pain.008
-    dd_tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5)
+    # CBPR+ often rejects PstlAdr in DbtrAgt here, so we exclude it.
+    dd_tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5, exclude_name_address=True)
     dd_tx += party_xml("Dbtr", debtor_party.name, debtor_party.country, 5)
     dd_tx += account_xml("DbtrAcct", debtor_party.iban, 5)
 

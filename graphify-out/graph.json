@@ -1942,7 +1942,7 @@
       "label": "generate_single_xml()",
       "file_type": "code",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2601",
+      "source_location": "L2602",
       "id": "services_bulk_generator_generate_single_xml",
       "community": 0,
       "norm_label": "generate_single_xml()"
@@ -1951,7 +1951,7 @@
       "label": "generate_bulk_messages()",
       "file_type": "code",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2691",
+      "source_location": "L2692",
       "id": "services_bulk_generator_generate_bulk_messages",
       "community": 0,
       "norm_label": "generate_bulk_messages()"
@@ -2194,8 +2194,8 @@
       "label": "Generate one ISO 20022 XML message for the given type and return raw XML.",
       "file_type": "rationale",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2606",
-      "id": "services_bulk_generator_rationale_2606",
+      "source_location": "L2607",
+      "id": "services_bulk_generator_rationale_2607",
       "community": 0,
       "norm_label": "generate one iso 20022 xml message for the given type and return raw xml."
     },
@@ -2230,8 +2230,8 @@
       "label": "# NOTE: NbOfTxs is intentionally NOT emitted in <PmtInf>. It is optional there",
       "file_type": "rationale",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2550",
-      "id": "services_bulk_generator_rationale_2550",
+      "source_location": "L2551",
+      "id": "services_bulk_generator_rationale_2551",
       "community": 0,
       "norm_label": "# note: nboftxs is intentionally not emitted in <pmtinf>. it is optional there"
     },
@@ -3978,7 +3978,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L71",
       "id": "services_validator_isovalidator_generate_next_id",
-      "community": 20,
+      "community": 10,
       "norm_label": ".generate_next_id()"
     },
     {
@@ -4077,7 +4077,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L690",
       "id": "services_validator_isovalidator_validate_id_lengths_in_xml",
-      "community": 10,
+      "community": 23,
       "norm_label": "._validate_id_lengths_in_xml()"
     },
     {
@@ -4086,7 +4086,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L750",
       "id": "services_validator_isovalidator_validate_cbpr_datetime",
-      "community": 24,
+      "community": 10,
       "norm_label": "._validate_cbpr_datetime()"
     },
     {
@@ -4095,7 +4095,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L807",
       "id": "services_validator_isovalidator_validate_name_address_coexistence",
-      "community": 21,
+      "community": 10,
       "norm_label": "._validate_name_address_coexistence()"
     },
     {
@@ -4104,7 +4104,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L867",
       "id": "services_validator_isovalidator_validate_empty_required_containers",
-      "community": 10,
+      "community": 22,
       "norm_label": "._validate_empty_required_containers()"
     },
     {
@@ -4113,7 +4113,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1059",
       "id": "services_validator_isovalidator_validate_apphdr_payload_match",
-      "community": 27,
+      "community": 30,
       "norm_label": "._validate_apphdr_payload_match()"
     },
     {
@@ -4131,7 +4131,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1191",
       "id": "services_validator_isovalidator_validate_uetr_in_xml",
-      "community": 28,
+      "community": 27,
       "norm_label": "._validate_uetr_in_xml()"
     },
     {
@@ -4140,7 +4140,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1259",
       "id": "services_validator_isovalidator_validate_account_identifiers_in_xml",
-      "community": 10,
+      "community": 24,
       "norm_label": "._validate_account_identifiers_in_xml()"
     },
     {
@@ -4149,7 +4149,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1911",
       "id": "services_validator_isovalidator_validate_nboftxs",
-      "community": 22,
+      "community": 28,
       "norm_label": "._validate_nboftxs()"
     },
     {
@@ -4167,7 +4167,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1976",
       "id": "services_validator_isovalidator_validate_swift_charset",
-      "community": 30,
+      "community": 25,
       "norm_label": "._validate_swift_charset()"
     },
     {
@@ -4176,7 +4176,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2011",
       "id": "services_validator_isovalidator_validate_charges_currency",
-      "community": 10,
+      "community": 20,
       "norm_label": "._validate_charges_currency()"
     },
     {
@@ -4185,7 +4185,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2053",
       "id": "services_validator_isovalidator_validate_party_rules",
-      "community": 10,
+      "community": 26,
       "norm_label": "._validate_party_rules()"
     },
     {
@@ -4203,7 +4203,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2352",
       "id": "services_validator_isovalidator_validate_remittance_rules",
-      "community": 26,
+      "community": 10,
       "norm_label": "._validate_remittance_rules()"
     },
     {
@@ -4221,7 +4221,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2593",
       "id": "services_validator_isovalidator_detect_message_type",
-      "community": 23,
+      "community": 10,
       "norm_label": "._detect_message_type()"
     },
     {
@@ -4257,7 +4257,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2781",
       "id": "services_validator_isovalidator_validate_clearing_system_rules",
-      "community": 10,
+      "community": 21,
       "norm_label": "._validate_clearing_system_rules()"
     },
     {
@@ -4266,7 +4266,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2972",
       "id": "services_validator_isovalidator_validate_charsets_in_xml",
-      "community": 25,
+      "community": 10,
       "norm_label": "._validate_charsets_in_xml()"
     },
     {
@@ -4311,7 +4311,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L72",
       "id": "services_validator_rationale_72",
-      "community": 20,
+      "community": 10,
       "norm_label": "generates the next sequential validation id in format val{ddmmyy}{00001}"
     },
     {
@@ -4410,7 +4410,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L691",
       "id": "services_validator_rationale_691",
-      "community": 10,
+      "community": 23,
       "norm_label": "step 4.6 \u2014 id field maximum length validation         scans the raw xml string"
     },
     {
@@ -4419,7 +4419,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L751",
       "id": "services_validator_rationale_751",
-      "community": 24,
+      "community": 10,
       "norm_label": "step 4.21 \u2014 cbpr+ datetime format validation         enforces:           1. ti"
     },
     {
@@ -4428,7 +4428,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L808",
       "id": "services_validator_rationale_808",
-      "community": 21,
+      "community": 10,
       "norm_label": "step 4.22 \u2014 global name & postal address co-existence (cbpr+)         enforces"
     },
     {
@@ -4437,7 +4437,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L868",
       "id": "services_validator_rationale_868",
-      "community": 10,
+      "community": 22,
       "norm_label": "cbpr+ business rule \u2014 empty mandatory containers.          several iso 20022 c"
     },
     {
@@ -4446,7 +4446,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1060",
       "id": "services_validator_rationale_1060",
-      "community": 27,
+      "community": 30,
       "norm_label": "cbpr+ rule head001_msgdefidr_matches_payload \u2014          the apphdr's <msgdefid"
     },
     {
@@ -4464,7 +4464,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1192",
       "id": "services_validator_rationale_1192",
-      "community": 28,
+      "community": 27,
       "norm_label": "step 4.7 \u2014 uetr uuid v4 format validation         finds every <uetr> element in"
     },
     {
@@ -4473,7 +4473,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1260",
       "id": "services_validator_rationale_1260",
-      "community": 10,
+      "community": 24,
       "norm_label": "step 4.8 \u2014 iban / bban account identifier validation          for every accoun"
     },
     {
@@ -4482,7 +4482,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1912",
       "id": "services_validator_rationale_1912",
-      "community": 22,
+      "community": 28,
       "norm_label": "step 4.9 \u2014 nboftxs count validation         verifies that the <nboftxs> value m"
     },
     {
@@ -4500,7 +4500,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1977",
       "id": "services_validator_rationale_1977",
-      "community": 30,
+      "community": 25,
       "norm_label": "step 4.10 \u2014 swift character set validation         checks <ustrd> (unstructured"
     },
     {
@@ -4509,7 +4509,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2012",
       "id": "services_validator_rationale_2012",
-      "community": 10,
+      "community": 20,
       "norm_label": "step 4.11 \u2014 charges currency match validation         verifies that <chrgsinf><"
     },
     {
@@ -4518,7 +4518,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2054",
       "id": "services_validator_rationale_2054",
-      "community": 10,
+      "community": 26,
       "norm_label": "step 4.12 \u2014 party identification validation         validates all party blocks"
     },
     {
@@ -4536,7 +4536,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2353",
       "id": "services_validator_rationale_2353",
-      "community": 26,
+      "community": 10,
       "norm_label": "step 4.14 \u2014 remittance information validation (cbpr+ sr2025)         validates:"
     },
     {
@@ -4554,7 +4554,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2594",
       "id": "services_validator_rationale_2594",
-      "community": 23,
+      "community": 10,
       "norm_label": "robust message type detection - prioritizes payload over header"
     },
     {
@@ -4581,7 +4581,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2782",
       "id": "services_validator_rationale_2782",
-      "community": 10,
+      "community": 21,
       "norm_label": "step 4.15 \u2014 clearing system specific rules         1. target2 (t2) -> settlemen"
     },
     {
@@ -4590,7 +4590,7 @@
       "source_file": "app/services/validator.py",
       "source_location": "L2973",
       "id": "services_validator_rationale_2973",
-      "community": 25,
+      "community": 10,
       "norm_label": "step 4.16 - character set validation for name and address tags          checks"
     },
     {
@@ -4833,7 +4833,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L1",
       "id": "scratch_test_full_pipeline_py",
-      "community": 18,
+      "community": 19,
       "norm_label": "test_full_pipeline.py"
     },
     {
@@ -4842,7 +4842,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L10",
       "id": "scratch_test_full_pipeline_main",
-      "community": 18,
+      "community": 19,
       "norm_label": "main()"
     },
     {
@@ -4851,7 +4851,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L1",
       "id": "scratch_test_full_pipeline_rationale_1",
-      "community": 18,
+      "community": 19,
       "norm_label": "run the full validate() pipeline end-to-end on both xmls. confirms no rule crash"
     },
     {
@@ -4878,7 +4878,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L1",
       "id": "scratch_test_issues_py",
-      "community": 19,
+      "community": 18,
       "norm_label": "test_issues.py"
     },
     {
@@ -4887,7 +4887,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L13",
       "id": "scratch_test_issues_test_msg",
-      "community": 19,
+      "community": 18,
       "norm_label": "test_msg()"
     },
     {
@@ -4896,7 +4896,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L42",
       "id": "scratch_test_issues_main",
-      "community": 19,
+      "community": 18,
       "norm_label": "main()"
     },
     {
@@ -4970,6 +4970,24 @@
       "id": "scratch_test_pacs009cov_py",
       "community": 54,
       "norm_label": "test_pacs009cov.py"
+    },
+    {
+      "label": "Generate one ISO 20022 XML message for the given type and return raw XML.",
+      "file_type": "rationale",
+      "source_file": "app/services/bulk_generator.py",
+      "source_location": "L2606",
+      "community": 0,
+      "norm_label": "generate one iso 20022 xml message for the given type and return raw xml.",
+      "id": "services_bulk_generator_rationale_2606"
+    },
+    {
+      "label": "# NOTE: NbOfTxs is intentionally NOT emitted in <PmtInf>. It is optional there",
+      "file_type": "rationale",
+      "source_file": "app/services/bulk_generator.py",
+      "source_location": "L2550",
+      "community": 0,
+      "norm_label": "# note: nboftxs is intentionally not emitted in <pmtinf>. it is optional there",
+      "id": "services_bulk_generator_rationale_2550"
     },
     {
       "label": "pain.008 \u2014 Customer Direct Debit Initiation \u2014 constructive variant.      Ancho",
@@ -7759,11 +7777,21 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2550",
+      "source_location": "L2551",
       "weight": 1.0,
-      "source": "services_bulk_generator_rationale_2550",
+      "source": "services_bulk_generator_rationale_2551",
       "target": "app_services_bulk_generator_py",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/bulk_generator.py",
+      "source_location": "L2550",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_bulk_generator_rationale_2550",
+      "target": "app_services_bulk_generator_py"
     },
     {
       "relation": "rationale_for",
@@ -10067,9 +10095,9 @@
       "source_file": "app/services/bulk_generator.py",
       "source_location": "L2497",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_bulk_generator_rationale_2497",
-      "target": "services_bulk_generator_gen_pain008",
-      "confidence_score": 1.0
+      "target": "services_bulk_generator_gen_pain008"
     },
     {
       "relation": "rationale_for",
@@ -10106,9 +10134,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/bulk_generator.py",
-      "source_location": "L2606",
+      "source_location": "L2607",
       "weight": 1.0,
-      "source": "services_bulk_generator_rationale_2606",
+      "source": "services_bulk_generator_rationale_2607",
       "target": "services_bulk_generator_generate_single_xml",
       "confidence_score": 1.0
     },
@@ -10198,6 +10226,16 @@
       "source_location": "L30",
       "weight": 1.0,
       "source": "scratch_test_pacs004_validation_main",
+      "target": "services_bulk_generator_generate_single_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/bulk_generator.py",
+      "source_location": "L2606",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_bulk_generator_rationale_2606",
       "target": "services_bulk_generator_generate_single_xml"
     },
     {
@@ -14953,5 +14991,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5e1b59a121e47b1173bfebd3c32a3a3c6f4eff75"
+  "built_at_commit": "3ea7412cd9b32729adc7c5a0aa60c06291c40617"
 }
