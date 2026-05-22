@@ -1229,6 +1229,11 @@ class MT2MXConverter:
             v_logs.append(f"Applying V2 Mandatory Healing for {mt_key}")
             self._apply_v2_mandatory_healing(mx_root, v2_rules, parsed_fields, namespaces)
 
+        # CBPR+ FIX: Inject mandatory ChrgsInf for pacs.008 (MT103 → FIToFICstmrCdtTrf)
+        # CBPR+ Layer 3 rule PACS008_CHRGSINF_REQUIRED mandates at least one ChrgsInf per CdtTrfTxInf.
+        if mt_type in ("103", "103+", "103REMIT"):
+            self._heal_pacs008_chrgs_inf(mx_root, namespaces, parsed_fields, v_logs)
+
         # 7. Create Envelope and AppHdr
         # We'll build the XML with explicitly defined default namespaces for subtrees
         # to ensure L2 validation passes even without prefixes.
@@ -1337,6 +1342,66 @@ class MT2MXConverter:
             "mx_message": xml_string,
             "logs": v_logs
         }
+
+    def _heal_pacs008_chrgs_inf(self, mx_root, namespaces: dict, parsed_fields: dict, v_logs: list):
+        """
+        CBPR+ PACS008_CHRGSINF_REQUIRED fix:
+        Injects a <ChrgsInf> block into each <CdtTrfTxInf> that is missing one.
+        Also ensures <InstdAmt> is present (required when ChrgsInf exists).
+        """
+        xmlns = namespaces.get("xmlns", "")
+        tag = lambda name: f"{{{xmlns}}}{name}" if xmlns else name
+
+        tx_infos = [el for el in mx_root.iter() if el.tag.split("}")[-1] == "CdtTrfTxInf"]
+        for tx in tx_infos:
+            # Check if ChrgsInf already exists
+            existing = [c for c in tx if c.tag.split("}")[-1] == "ChrgsInf"]
+            if existing:
+                continue  # Already present, skip
+
+            # Resolve transaction currency and amount from IntrBkSttlmAmt
+            ccy = "USD"
+            amt_text = "0.00"
+            for child in tx:
+                local = child.tag.split("}")[-1]
+                if local == "IntrBkSttlmAmt":
+                    ccy = child.get("Ccy", "USD")
+                    amt_text = child.text or "0.00"
+                    break
+
+            # Resolve instructing agent BIC
+            agt_bic = ""
+            for child in tx:
+                if child.tag.split("}")[-1] == "InstgAgt":
+                    for fin in child.iter():
+                        if fin.tag.split("}")[-1] == "BICFI":
+                            agt_bic = fin.text or ""
+                            break
+                    break
+            if not agt_bic:
+                agt_bic = parsed_fields.get("_senderBic", "NOTPROVIDED")
+
+            # Build <ChrgsInf> element
+            chrgs_inf = ET.Element(tag("ChrgsInf"))
+            amt_el = ET.SubElement(chrgs_inf, tag("Amt"))
+            amt_el.set("Ccy", ccy)
+            amt_el.text = "0.00"
+            agt_el = ET.SubElement(chrgs_inf, tag("Agt"))
+            fin_instn = ET.SubElement(agt_el, tag("FinInstnId"))
+            bicfi_el = ET.SubElement(fin_instn, tag("BICFI"))
+            bicfi_el.text = agt_bic
+
+            tx.append(chrgs_inf)
+            v_logs.append(f"[CBPR+] Injected <ChrgsInf> with Amt=0.00 {ccy}, Agt={agt_bic}")
+
+            # Ensure <InstdAmt> is present (CBPR+ mandates InstdAmt when ChrgsInf exists)
+            has_instd_amt = any(c.tag.split("}")[-1] == "InstdAmt" for c in tx)
+            if not has_instd_amt:
+                instd_el = ET.Element(tag("InstdAmt"))
+                instd_el.set("Ccy", ccy)
+                instd_el.text = amt_text
+                tx.append(instd_el)
+                v_logs.append(f"[CBPR+] Injected <InstdAmt Ccy='{ccy}'>{amt_text}</InstdAmt>")
 
     def _map_mt202cov_seq_b(self, mt_message: str, mx_root, namespaces: dict, v_logs: list):
         """
