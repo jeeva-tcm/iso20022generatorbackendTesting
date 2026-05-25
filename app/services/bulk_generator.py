@@ -502,24 +502,13 @@ def _normalize_charges_information(xml_content: str) -> str:
     return etree.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
 
 
-def agent_xml(tag: str, bic: str, indent: int = 4, is_cov: bool = False, exclude_name_address: bool = False) -> str:
+def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
     t = tabs(indent)
     t1 = tabs(indent + 1)
     t2 = tabs(indent + 2)
     
+    # CBPR_1A: if BICFI is present, Nm and PstlAdr are NOT allowed.
     xml = f"{t}<{tag}>\n{t1}<FinInstnId>\n{t2}<BICFI>{xe(bic)}</BICFI>\n"
-    
-    # Exclude InstgAgt and InstdAgt from getting the address
-    exclude_tags = {"InstgAgt", "InstdAgt"}
-    
-    # Randomly include Name and Address (must coexist per CBPR+)
-    if tag not in exclude_tags and not exclude_name_address and random.random() < 0.5:
-        xml += f"{t2}<Nm>{xe(random.choice(COMPANY_NAMES))} Bank</Nm>\n"
-        if is_cov:
-            xml += _rng_pstl_adr_cov(indent + 2)
-        else:
-            xml += _rng_pstl_adr(indent + 2)
-        
     xml += f"{t1}</FinInstnId>\n{t}</{tag}>\n"
     return xml
 
@@ -929,7 +918,7 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{rng_amount(ccy)}</InstdAmt>\n"
 
     # 5. ChrgBr (MANDATORY in pacs.008)
-    charge_br = random.choice(["CRED", "DEBT", "SHAR", "SLEV"])
+    charge_br = random.choice(["CRED", "DEBT", "SHAR"])
     tx += el("ChrgBr", charge_br, 4)
 
     # 6. ChrgsInf (ISO 20022 / CBPR+ rules):
@@ -947,29 +936,29 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 
     # 7. PrvsInstgAgt1/2/3 (optional) — all in same currency zone as the settlement
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4)
 
     # 8. InstgAgt / InstdAgt (in CdtTrfTxInf per XSD v13 CreditTransferTransaction70)
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4)
 
     # 9. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
@@ -984,12 +973,12 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     tx += account_xml("DbtrAcct", debtor.iban, 4)
 
     # 13. DbtrAgt (mandatory)
-    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4, exclude_name_address=True)
+    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 14. CdtrAgt (mandatory)
-    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4, exclude_name_address=True)
+    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
@@ -1126,29 +1115,29 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 
     # 5. PrvsInstgAgt1/2/3 (optional) — in-zone intermediaries
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4)
 
     # 6. InstgAgt / InstdAgt (optional)
     if "instructing_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("InstgAgt", from_bic, 4, is_cov=is_cov)
+        tx += agent_xml("InstgAgt", from_bic, 4)
     if "instructed_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("InstdAgt", to_bic, 4, is_cov=is_cov)
+        tx += agent_xml("InstdAgt", to_bic, 4)
 
     # 7. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
@@ -1160,13 +1149,13 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
         tx += account_xml("DbtrAcct", scenario.debtor.iban, 4)
     # 11. DbtrAgt (optional) — a correspondent for the Dbtr FI, same currency zone
     if "debtor_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("DbtrAgt", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("DbtrAgt", scenario.make_intermediary_agent().bic, 4)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 12. CdtrAgt (optional) — a correspondent for the Cdtr FI, same currency zone
     if "creditor_agent" in selected or is_adv or is_cov:
-        tx += agent_xml("CdtrAgt", scenario.make_intermediary_agent().bic, 4, is_cov=is_cov)
+        tx += agent_xml("CdtrAgt", scenario.make_intermediary_agent().bic, 4)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
@@ -1288,9 +1277,9 @@ def _gen_pacs004(selected: set, idx: int) -> str:
 
     # -- InstgAgt / InstdAgt --
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4, exclude_name_address=True)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4)
 
     # -- RtrChain (TransactionParties11) --
     chain = ""
@@ -1301,11 +1290,11 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     chain += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
 
     if "debtor_agent" in selected:
-        chain += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5, exclude_name_address=True)
+        chain += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5)
     if "intermediary_agent_1" in selected:
-        chain += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 5, exclude_name_address=True)
+        chain += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 5)
     if "creditor_agent" in selected:
-        chain += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 5, exclude_name_address=True)
+        chain += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 5)
 
     # Cdtr (Mandatory)
     chain += f"\t\t\t\t\t<Cdtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', creditor_party.name, creditor_party.country, 7).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Cdtr>\n"
@@ -1766,9 +1755,9 @@ def _gen_camt057(selected: set, idx: int) -> str:
     if "debtor" in selected:
         items += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 6).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
     if "debtor_agent" in selected:
-        items += agent_xml("DbtrAgt", debtor_agent_bic, 5, exclude_name_address=True)
+        items += agent_xml("DbtrAgt", debtor_agent_bic, 5)
     if "intermediary_agent_1" in selected:
-        items += agent_xml("IntrmyAgt", scenario.make_intermediary_agent().bic, 5, exclude_name_address=True)
+        items += agent_xml("IntrmyAgt", scenario.make_intermediary_agent().bic, 5)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -2321,7 +2310,7 @@ def _gen_pain001(selected: set, idx: int) -> str:
         cdt_tf += f"\t\t\t\t\t<RmtInf><Ustrd>{xe(rng_id('REF', 16))}</Ustrd></RmtInf>\n"
 
     # FwdgAgt: optional in pain.001 standard XSD but Mandatory in CBPR+ usage.
-    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4)
 
     # NOTE: NbOfTxs is intentionally omitted in <PmtInf>. It is optional in
     # the base XSD and SWIFT CBPR+ validation against the pain.001 usage
@@ -2490,7 +2479,7 @@ def _gen_pain008(selected: set, idx: int) -> str:
 
     # FwdgAgt is mandatory in SWIFT CBPR+ pain.008 GrpHdr (PAIN008_FWDGAGT_MANDATORY).
     # Reuse the sender BIC from the BAH so the routing chain stays consistent.
-    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4, exclude_name_address=True)
+    fwdg_agt = agent_xml("FwdgAgt", scenario.sender_bic, 4)
 
     pmt_tp = ""
     if "payment_type_information" in selected:
@@ -2508,7 +2497,7 @@ def _gen_pain008(selected: set, idx: int) -> str:
     dd_tx = ""
     # DbtrAgt, Dbtr, DbtrAcct are MANDATORY in pain.008
     # CBPR+ often rejects PstlAdr in DbtrAgt here, so we exclude it.
-    dd_tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5, exclude_name_address=True)
+    dd_tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 5)
     dd_tx += party_xml("Dbtr", debtor_party.name, debtor_party.country, 5)
     dd_tx += account_xml("DbtrAcct", debtor_party.iban, 5)
 
@@ -2579,12 +2568,33 @@ def generate_single_xml(
     # Always include mandatory blocks; randomly include optional ones so each
     # generated message has a different structure (50–80% inclusion per block).
     blocks_for_type = get_blocks_for_message(message_type)
+    block_map = {blk["id"].lower(): blk for blk in blocks_for_type}
     mandatory_ids = {blk["id"].lower() for blk in blocks_for_type if blk.get("mandatory")}
     optional_ids  = {blk["id"].lower() for blk in blocks_for_type if not blk.get("mandatory")}
-    for bid in mandatory_ids:
-        selected.add(bid)
-    # Keep only optional blocks that the user selected, then randomly drop some
-    selected = mandatory_ids | {bid for bid in (selected & optional_ids) if random.random() < 0.65}
+
+    # Start with mandatory blocks + any user-pre-selected optional blocks,
+    # then randomly add more optional blocks (65% chance each).
+    candidate_optional = selected & optional_ids  # user pre-selected optional
+    for bid in optional_ids:
+        if bid not in candidate_optional and random.random() < 0.65:
+            candidate_optional.add(bid)
+
+    # Enforce `requires` dependency: if a block requires another, that parent
+    # must also be included (walk the chain until all deps are satisfied).
+    def _ensure_deps(bid: str, acc: set):
+        blk = block_map.get(bid)
+        if not blk:
+            return
+        for req in blk.get("requires", []):
+            req_lower = req.lower()
+            if req_lower not in acc:
+                acc.add(req_lower)
+                _ensure_deps(req_lower, acc)
+
+    for bid in list(candidate_optional):
+        _ensure_deps(bid, candidate_optional)
+
+    selected = mandatory_ids | candidate_optional
 
     selected_blocks_ctx.set(selected)
     msg_lower = message_type.lower()
@@ -2594,14 +2604,14 @@ def generate_single_xml(
         _validate_charges_information(xml)
         return xml
     elif "pacs.009" in msg_lower and "cov" in msg_lower:
-        xml = _gen_pacs009(selected, idx, is_cov=True)
+        xml = _gen_pacs009(selected, idx)
         xml = _normalize_postal_addresses(xml)
         _validate_postal_address(xml)
         return xml
     elif "pacs.009" in msg_lower and "adv" in msg_lower:
-        return _gen_pacs009(selected, idx, is_cov=False, is_adv=True)
+        return _gen_pacs009(selected, idx, is_adv=True)
     elif "pacs.009" in msg_lower:
-        return _gen_pacs009(selected, idx, is_cov=False)
+        return _gen_pacs009(selected, idx)
     elif "pacs.004" in msg_lower:
         xml = _gen_pacs004(selected, idx)
         xml = _normalize_charges_information(xml)
