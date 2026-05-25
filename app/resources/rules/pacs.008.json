@@ -116,7 +116,7 @@
         ],
         "severity": "ERROR",
         "layer": 3,
-        "errorMessage": "DbtrAcct is mandatory in pacs.008 — every customer payment must reference a debtor account.",
+        "errorMessage": "DbtrAcct is mandatory in pacs.008 \u2014 every customer payment must reference a debtor account.",
         "fix": "Add <DbtrAcct><Id><IBAN>...</IBAN></Id></DbtrAcct> (or <Othr><Id>...</Id></Othr> for non-IBAN accounts)."
     },
     {
@@ -128,7 +128,7 @@
         ],
         "severity": "ERROR",
         "layer": 3,
-        "errorMessage": "CdtrAcct is mandatory in pacs.008 — every customer payment must reference a creditor account.",
+        "errorMessage": "CdtrAcct is mandatory in pacs.008 \u2014 every customer payment must reference a creditor account.",
         "fix": "Add <CdtrAcct><Id><IBAN>...</IBAN></Id></CdtrAcct> (or <Othr><Id>...</Id></Othr> for non-IBAN accounts)."
     },
     {
@@ -167,7 +167,7 @@
         "expression": "Document.FIToFICstmrCdtTrf.CdtTrfTxInf.DbtrAgt.FinInstnId.BICFI != Document.FIToFICstmrCdtTrf.CdtTrfTxInf.CdtrAgt.FinInstnId.BICFI",
         "severity": "WARNING",
         "layer": 3,
-        "errorMessage": "Debtor Agent BIC equals Creditor Agent BIC — verify this is not a loopback payment.",
+        "errorMessage": "Debtor Agent BIC equals Creditor Agent BIC \u2014 verify this is not a loopback payment.",
         "fix": "If you intend a same-bank transfer, this is acceptable; otherwise correct one of the agents."
     },
     {
@@ -189,19 +189,19 @@
         "expression": "False",
         "severity": "ERROR",
         "layer": 3,
-        "errorMessage": "XchgRate provided but InstdAmt and IntrBkSttlmAmt share the same currency — exchange rate not applicable.",
+        "errorMessage": "XchgRate provided but InstdAmt and IntrBkSttlmAmt share the same currency \u2014 exchange rate not applicable.",
         "fix": "Remove <XchgRate> when the instructed and settlement amounts are in the same currency."
     },
     {
-        "rule_id": "PACS008_CHRGSINF_REQUIRED",
-        "description": "CBPR+ mandates ChrgsInf (Charges Information) in every CdtTrfTxInf of a pacs.008 message.",
-        "condition": "True",
+        "rule_id": "PACS008_CHRGSINF_REQUIRED_CRED",
+        "description": "When ChrgBr=CRED, at least one ChrgsInformation must be present (use Amt=0.00 if no charges taken).",
+        "condition": "exists(Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgBr) and Document.FIToFICstmrCdtTrf.CdtTrfTxInf.ChrgBr == 'CRED'",
         "type": "expression",
         "expression": "any(re.match(r'.*\\.CdtTrfTxInf(\\[\\d+\\])?\\.ChrgsInf', k) for k in DATA.keys())",
         "severity": "ERROR",
         "layer": 3,
-        "errorMessage": "ChrgsInf (Charges Information) is missing from CdtTrfTxInf. CBPR+ requires at least one ChrgsInf block per transaction (typically ChrgBr=SHAR).",
-        "fix": "Add <ChrgsInf><Amt Ccy=\"USD\">0.00</Amt><Agt><FinInstnId><BICFI>BANKBICXXX</BICFI></FinInstnId></Agt></ChrgsInf> inside <CdtTrfTxInf>."
+        "errorMessage": "ChrgBr=CRED requires at least one <ChrgsInf> block. If no charges are deducted, use <Amt Ccy=\"...\">0.00</Amt>.",
+        "fix": "Add <ChrgsInf><Amt Ccy=\"USD\">0.00</Amt><Agt><FinInstnId><BICFI>BANKUS33XXX</BICFI></FinInstnId></Agt></ChrgsInf> inside <CdtTrfTxInf>."
     },
     {
         "rule_id": "PACS008_CHRGSINF_REQUIRES_AGT",
@@ -244,5 +244,66 @@
         ],
         "severity": "ERROR",
         "layer": 3
+    },
+    {
+        "rule_id": "CBPR_1A_AGENT_BICFI_EXCLUSIVE",
+        "description": "If FinInstnId.BICFI is present, Nm and PstlAdr are NOT allowed (Agent).",
+        "type": "expression",
+        "expression": "all(not(robust_exists(k.replace('.BICFI', '.Nm')) or robust_exists(k.replace('.BICFI', '.PstlAdr'))) for k in DATA.keys() if k.endswith('.FinInstnId.BICFI'))",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "If BICFI is present, then Name & Postal Address are NOT allowed.",
+        "fix": "Remove <Nm> and <PstlAdr> if <BICFI> is provided."
+    },
+    {
+        "rule_id": "CBPR_1A_AGENT_NAME_ADDRESS_REQUIRED",
+        "description": "If FinInstnId.BICFI is absent, Nm and PstlAdr MUST be present.",
+        "type": "expression",
+        "expression": "all(robust_exists(k.replace('.FinInstnId', '.FinInstnId.Nm')) and robust_exists(k.replace('.FinInstnId', '.FinInstnId.PstlAdr')) for k in DATA.keys() if k.endswith('.FinInstnId') and not robust_exists(k + '.BICFI') and not robust_exists(k + '.Othr'))",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "If BICFI is absent, Name and Postal Address must be present.",
+        "fix": "Provide both <Nm> and <PstlAdr> inside <FinInstnId> if <BICFI> is not used."
+    },
+    {
+        "rule_id": "CBPR_1B_PARTY_ANYBIC_EXCLUSIVE",
+        "description": "If Id.OrgId.AnyBIC is present, Nm and PstlAdr are NOT allowed (Party).",
+        "type": "expression",
+        "expression": "all(not(robust_exists(k.replace('.Id.OrgId.AnyBIC', '.Nm')) or robust_exists(k.replace('.Id.OrgId.AnyBIC', '.PstlAdr'))) for k in DATA.keys() if k.endswith('.Id.OrgId.AnyBIC'))",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "If AnyBIC is present, Name and Postal Address are NOT allowed.",
+        "fix": "Remove <Nm> and <PstlAdr> if <AnyBIC> is provided."
+    },
+    {
+        "rule_id": "CBPR_1B_PARTY_NAME_ADDRESS_RECOMMENDED",
+        "description": "If Name is present, it is recommended to use Postal Address.",
+        "type": "expression",
+        "expression": "all(robust_exists(k.replace('.Nm', '.PstlAdr')) for k in DATA.keys() if k.endswith('.Nm') and (k.endswith('Dbtr.Nm') or k.endswith('Cdtr.Nm') or k.endswith('UltmtDbtr.Nm') or k.endswith('UltmtCdtr.Nm') or k.endswith('InitgPty.Nm')))",
+        "severity": "WARNING",
+        "layer": 3,
+        "errorMessage": "If Name is present, it is recommended to use Postal Address.",
+        "fix": "Provide <PstlAdr> to complement the party's Name."
+    },
+    {
+        "rule_id": "CBPR_SINGLE_TRANSACTION",
+        "description": "Single transactions only are allowed. NbOfTxs must be 1.",
+        "type": "expression",
+        "expression": "exists(Document.FIToFICstmrCdtTrf.GrpHdr.NbOfTxs) and Document.FIToFICstmrCdtTrf.GrpHdr.NbOfTxs == '1' and robust_exists('Document.FIToFICstmrCdtTrf.CdtTrfTxInf')",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Single transactions only are allowed. NbOfTxs must be 1 and exactly one CdtTrfTxInf block must be present.",
+        "fix": "Set <NbOfTxs> to 1 and ensure only one <CdtTrfTxInf> transaction block exists."
+    },
+    {
+        "rule_id": "CBPR_INSTRUCTING_AGENT_BICFI_REQUIRED",
+        "description": "Instructing/Instructed Agents must be identified with a BICFI.",
+        "type": "expression",
+        "expression": "robust_exists('Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstgAgt.FinInstnId.BICFI') and robust_exists('Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAgt.FinInstnId.BICFI')",
+        "condition": "robust_exists('Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstgAgt') and robust_exists('Document.FIToFICstmrCdtTrf.CdtTrfTxInf.InstdAgt')",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "Instructing/Instructed Agents must be identified with a BICFI for point-to-point SWIFT exchange.",
+        "fix": "Add <BICFI> under <InstgAgt><FinInstnId> and <InstdAgt><FinInstnId>."
     }
 ]

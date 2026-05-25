@@ -9,7 +9,7 @@
       "source_file": "debug_mt_mx.py",
       "source_location": "L1",
       "id": "debug_mt_mx_py",
-      "community": 36,
+      "community": 44,
       "norm_label": "debug_mt_mx.py"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "gen_firebase_b64.py",
       "source_location": "L1",
       "id": "gen_firebase_b64_py",
-      "community": 37,
+      "community": 45,
       "norm_label": "gen_firebase_b64.py"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "run.py",
       "source_location": "L1",
       "id": "run_py",
-      "community": 38,
+      "community": 46,
       "norm_label": "run.py"
     },
     {
@@ -36,7 +36,7 @@
       "source_file": "tmp_check_json.py",
       "source_location": "L1",
       "id": "tmp_check_json_py",
-      "community": 39,
+      "community": 47,
       "norm_label": "tmp_check_json.py"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "app/main.py",
       "source_location": "L1",
       "id": "app_main_py",
-      "community": 3,
+      "community": 4,
       "norm_label": "main.py"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "app/main.py",
       "source_location": "L66",
       "id": "app_main_startup_event",
-      "community": 3,
+      "community": 4,
       "norm_label": "startup_event()"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "app/main.py",
       "source_location": "L109",
       "id": "app_main_shutdown_event",
-      "community": 3,
+      "community": 4,
       "norm_label": "shutdown_event()"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "app/main.py",
       "source_location": "L117",
       "id": "app_main_validate_message",
-      "community": 3,
+      "community": 4,
       "norm_label": "validate_message()"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "app/main.py",
       "source_location": "L149",
       "id": "app_main_validate_file",
-      "community": 3,
+      "community": 4,
       "norm_label": "validate_file()"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "app/main.py",
       "source_location": "L190",
       "id": "app_main_convert_mt_to_mx",
-      "community": 3,
+      "community": 4,
       "norm_label": "convert_mt_to_mx()"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "app/main.py",
       "source_location": "L244",
       "id": "app_main_get_history",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_history()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "app/main.py",
       "source_location": "L248",
       "id": "app_main_get_dashboard_stats",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_dashboard_stats()"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "app/main.py",
       "source_location": "L253",
       "id": "app_main_export_history",
-      "community": 3,
+      "community": 4,
       "norm_label": "export_history()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "app/main.py",
       "source_location": "L294",
       "id": "app_main_get_history_detail",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_history_detail()"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "app/main.py",
       "source_location": "L304",
       "id": "app_main_delete_all_history",
-      "community": 3,
+      "community": 4,
       "norm_label": "delete_all_history()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "app/main.py",
       "source_location": "L309",
       "id": "app_main_delete_history_record",
-      "community": 3,
+      "community": 4,
       "norm_label": "delete_history_record()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "app/main.py",
       "source_location": "L316",
       "id": "app_main_generate_id",
-      "community": 3,
+      "community": 4,
       "norm_label": "generate_id()"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "app/main.py",
       "source_location": "L321",
       "id": "app_main_validate_batch_init",
-      "community": 3,
+      "community": 4,
       "norm_label": "validate_batch_init()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "app/main.py",
       "source_location": "L338",
       "id": "app_main_get_messages",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_messages()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "app/main.py",
       "source_location": "L342",
       "id": "app_main_get_message_schema",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_message_schema()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "app/main.py",
       "source_location": "L355",
       "id": "app_main_get_bulk_blocks",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_bulk_blocks()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "app/main.py",
       "source_location": "L364",
       "id": "app_main_bulk_generate",
-      "community": 3,
+      "community": 4,
       "norm_label": "bulk_generate()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "app/main.py",
       "source_location": "L530",
       "id": "app_main_bulk_generate_stream",
-      "community": 3,
+      "community": 4,
       "norm_label": "bulk_generate_stream()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "app/main.py",
       "source_location": "L647",
       "id": "app_main_get_codelist",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_codelist()"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "app/main.py",
       "source_location": "L657",
       "id": "app_main_search_bics",
-      "community": 3,
+      "community": 4,
       "norm_label": "search_bics()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "app/main.py",
       "source_location": "L663",
       "id": "app_main_trigger_bic_refresh",
-      "community": 3,
+      "community": 4,
       "norm_label": "trigger_bic_refresh()"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "app/main.py",
       "source_location": "L694",
       "id": "app_main_get_bic_refresh_status",
-      "community": 3,
+      "community": 4,
       "norm_label": "get_bic_refresh_status()"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "app/main.py",
       "source_location": "L720",
       "id": "app_main_rollback_bic_dataset",
-      "community": 3,
+      "community": 4,
       "norm_label": "rollback_bic_dataset()"
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "app/main.py",
       "source_location": "L741",
       "id": "app_main_serve_frontend",
-      "community": 3,
+      "community": 4,
       "norm_label": "serve_frontend()"
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "app/main.py",
       "source_location": "L753",
       "id": "app_main_firebase_status",
-      "community": 3,
+      "community": 4,
       "norm_label": "firebase_status()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "app/main.py",
       "source_location": "L773",
       "id": "app_main_firebase_write_test",
-      "community": 3,
+      "community": 4,
       "norm_label": "firebase_write_test()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "app/main.py",
       "source_location": "L786",
       "id": "app_main_health_check",
-      "community": 3,
+      "community": 4,
       "norm_label": "health_check()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "app/main.py",
       "source_location": "L110",
       "id": "app_main_rationale_110",
-      "community": 3,
+      "community": 4,
       "norm_label": "gracefully stop the apscheduler background scheduler on server shutdown."
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "app/main.py",
       "source_location": "L249",
       "id": "app_main_rationale_249",
-      "community": 3,
+      "community": 4,
       "norm_label": "get aggregated dashboard statistics from firestore"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "app/main.py",
       "source_location": "L317",
       "id": "app_main_rationale_317",
-      "community": 3,
+      "community": 4,
       "norm_label": "generate the next sequential validation id for batch use"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "app/main.py",
       "source_location": "L324",
       "id": "app_main_rationale_324",
-      "community": 3,
+      "community": 4,
       "norm_label": "initialize a validation batch:     - generates a single val{ddmmyy}{nnnnn} batc"
     },
     {
@@ -333,7 +333,7 @@
       "source_file": "app/main.py",
       "source_location": "L343",
       "id": "app_main_rationale_343",
-      "community": 3,
+      "community": 4,
       "norm_label": "dynamically extract the schema tree for a specific mx message type"
     },
     {
@@ -342,7 +342,7 @@
       "source_file": "app/main.py",
       "source_location": "L356",
       "id": "app_main_rationale_356",
-      "community": 3,
+      "community": 4,
       "norm_label": "return the block definitions (checkboxes) for a given message type."
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "app/main.py",
       "source_location": "L365",
       "id": "app_main_rationale_365",
-      "community": 3,
+      "community": 4,
       "norm_label": "generate exactly n valid iso 20022 messages of the given type with selected opti"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "app/main.py",
       "source_location": "L531",
       "id": "app_main_rationale_531",
-      "community": 3,
+      "community": 4,
       "norm_label": "sse variant of /bulk-generate. streams per-attempt progress events so the     u"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "app/main.py",
       "source_location": "L648",
       "id": "app_main_rationale_648",
-      "community": 3,
+      "community": 4,
       "norm_label": "serve json codelists (like country.json, currency.json) to the frontend"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "app/main.py",
       "source_location": "L658",
       "id": "app_main_rationale_658",
-      "community": 3,
+      "community": 4,
       "norm_label": "search for bic codes and bank information"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "app/main.py",
       "source_location": "L664",
       "id": "app_main_rationale_664",
-      "community": 3,
+      "community": 4,
       "norm_label": "manually trigger a bic dataset refresh (br-9).      the refresh runs in a back"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "app/main.py",
       "source_location": "L695",
       "id": "app_main_rationale_695",
-      "community": 3,
+      "community": 4,
       "norm_label": "return the most recent bic dataset refresh log entries (br-6, br-9).      args"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "app/main.py",
       "source_location": "L721",
       "id": "app_main_rationale_721",
-      "community": 3,
+      "community": 4,
       "norm_label": "instantly roll back the active bic dataset to a previous version hash (br-rollba"
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "app/main.py",
       "source_location": "L774",
       "id": "app_main_rationale_774",
-      "community": 3,
+      "community": 4,
       "norm_label": "diagnostic: tries to write a test document to firestore and deletes it.     hit"
     },
     {
@@ -423,7 +423,7 @@
       "source_file": "app/__init__.py",
       "source_location": "L1",
       "id": "app_init_py",
-      "community": 40,
+      "community": 48,
       "norm_label": "__init__.py"
     },
     {
@@ -432,7 +432,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L1",
       "id": "app_chatbot_chat_service_py",
-      "community": 2,
+      "community": 3,
       "norm_label": "chat_service.py"
     },
     {
@@ -441,7 +441,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L63",
       "id": "chatbot_chat_service_chatservice",
-      "community": 2,
+      "community": 3,
       "norm_label": "chatservice"
     },
     {
@@ -450,7 +450,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L66",
       "id": "chatbot_chat_service_chatservice_init",
-      "community": 2,
+      "community": 3,
       "norm_label": ".__init__()"
     },
     {
@@ -459,7 +459,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L76",
       "id": "chatbot_chat_service_chatservice_ensure_llm",
-      "community": 2,
+      "community": 3,
       "norm_label": "._ensure_llm()"
     },
     {
@@ -468,7 +468,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L98",
       "id": "chatbot_chat_service_chatservice_initialize",
-      "community": 2,
+      "community": 3,
       "norm_label": ".initialize()"
     },
     {
@@ -477,7 +477,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L122",
       "id": "chatbot_chat_service_chatservice_rebuild_index",
-      "community": 2,
+      "community": 3,
       "norm_label": ".rebuild_index()"
     },
     {
@@ -486,7 +486,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L138",
       "id": "chatbot_chat_service_chatservice_add_uploaded_document",
-      "community": 12,
+      "community": 11,
       "norm_label": ".add_uploaded_document()"
     },
     {
@@ -495,7 +495,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L147",
       "id": "chatbot_chat_service_chatservice_retrieve_context",
-      "community": 2,
+      "community": 3,
       "norm_label": "._retrieve_context()"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L153",
       "id": "chatbot_chat_service_chatservice_format_context",
-      "community": 2,
+      "community": 3,
       "norm_label": "._format_context()"
     },
     {
@@ -513,7 +513,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L168",
       "id": "chatbot_chat_service_chatservice_generate_with_llm",
-      "community": 2,
+      "community": 3,
       "norm_label": "._generate_with_llm()"
     },
     {
@@ -522,7 +522,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L189",
       "id": "chatbot_chat_service_chatservice_generate_fallback",
-      "community": 2,
+      "community": 3,
       "norm_label": "._generate_fallback()"
     },
     {
@@ -531,7 +531,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L269",
       "id": "chatbot_chat_service_chatservice_chat",
-      "community": 2,
+      "community": 3,
       "norm_label": ".chat()"
     },
     {
@@ -540,7 +540,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L319",
       "id": "chatbot_chat_service_chatservice_get_stats",
-      "community": 2,
+      "community": 3,
       "norm_label": ".get_stats()"
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L1",
       "id": "chatbot_chat_service_rationale_1",
-      "community": 2,
+      "community": 3,
       "norm_label": "iso 20022 rag chatbot - chat service combines retrieval with an llm to generate"
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L64",
       "id": "chatbot_chat_service_rationale_64",
-      "community": 2,
+      "community": 3,
       "norm_label": "rag-based chat service for iso 20022 questions."
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L77",
       "id": "chatbot_chat_service_rationale_77",
-      "community": 2,
+      "community": 3,
       "norm_label": "initialize the openai provider if key is available."
     },
     {
@@ -576,7 +576,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L99",
       "id": "chatbot_chat_service_rationale_99",
-      "community": 2,
+      "community": 3,
       "norm_label": "initialize the knowledge base. call this on startup."
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L123",
       "id": "chatbot_chat_service_rationale_123",
-      "community": 2,
+      "community": 3,
       "norm_label": "force rebuild the knowledge base."
     },
     {
@@ -594,7 +594,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L139",
       "id": "chatbot_chat_service_rationale_139",
-      "community": 12,
+      "community": 11,
       "norm_label": "add an uploaded document to the knowledge base."
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L148",
       "id": "chatbot_chat_service_rationale_148",
-      "community": 2,
+      "community": 3,
       "norm_label": "retrieve relevant context chunks for a question."
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L154",
       "id": "chatbot_chat_service_rationale_154",
-      "community": 2,
+      "community": 3,
       "norm_label": "format retrieved results into a context string for the llm."
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L169",
       "id": "chatbot_chat_service_rationale_169",
-      "community": 2,
+      "community": 3,
       "norm_label": "generate answer using openai chatgpt."
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L190",
       "id": "chatbot_chat_service_rationale_190",
-      "community": 2,
+      "community": 3,
       "norm_label": "generate a structured answer without an llm, using the retrieved chunks directly"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L270",
       "id": "chatbot_chat_service_rationale_270",
-      "community": 2,
+      "community": 3,
       "norm_label": "main chat endpoint. retrieves context and generates an answer."
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "app/chatbot/chat_service.py",
       "source_location": "L320",
       "id": "chatbot_chat_service_rationale_320",
-      "community": 2,
+      "community": 3,
       "norm_label": "get chatbot knowledge base statistics."
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L1",
       "id": "app_chatbot_ingestion_py",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingestion.py"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L14",
       "id": "chatbot_ingestion_chunk_text",
-      "community": 12,
+      "community": 11,
       "norm_label": "_chunk_text()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L27",
       "id": "chatbot_ingestion_generate_chunk_id",
-      "community": 12,
+      "community": 11,
       "norm_label": "_generate_chunk_id()"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L31",
       "id": "chatbot_ingestion_ingest_xsd_files",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest_xsd_files()"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L153",
       "id": "chatbot_ingestion_ingest_json_rules",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest_json_rules()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L194",
       "id": "chatbot_ingestion_ingest_mt_mappings",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest_mt_mappings()"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L235",
       "id": "chatbot_ingestion_ingest_validator_code",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest_validator_code()"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L291",
       "id": "chatbot_ingestion_ingest_uploaded_file",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest_uploaded_file()"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L328",
       "id": "chatbot_ingestion_build_knowledge_base",
-      "community": 12,
+      "community": 11,
       "norm_label": "build_knowledge_base()"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L1",
       "id": "chatbot_ingestion_rationale_1",
-      "community": 12,
+      "community": 11,
       "norm_label": "iso 20022 rag chatbot - document ingestion & chunking reads xsd schemas, json va"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L15",
       "id": "chatbot_ingestion_rationale_15",
-      "community": 12,
+      "community": 11,
       "norm_label": "split text into overlapping chunks."
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L32",
       "id": "chatbot_ingestion_rationale_32",
-      "community": 12,
+      "community": 11,
       "norm_label": "parse xsd files and extract meaningful chunks:     - complex type definitions"
     },
     {
@@ -765,7 +765,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L154",
       "id": "chatbot_ingestion_rationale_154",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest json validation rules files."
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L195",
       "id": "chatbot_ingestion_rationale_195",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest mt-to-mx mapping files."
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L236",
       "id": "chatbot_ingestion_rationale_236",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest python validator code for knowledge about validation logic."
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L292",
       "id": "chatbot_ingestion_rationale_292",
-      "community": 12,
+      "community": 11,
       "norm_label": "ingest a user-uploaded file (txt, json, xml, csv, md)."
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "app/chatbot/ingestion.py",
       "source_location": "L329",
       "id": "chatbot_ingestion_rationale_329",
-      "community": 12,
+      "community": 11,
       "norm_label": "build the complete knowledge base from all available data sources.     base_dir"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L1",
       "id": "app_chatbot_routes_py",
-      "community": 8,
+      "community": 7,
       "norm_label": "routes.py"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L21",
       "id": "chatbot_routes_chatrequest",
-      "community": 8,
+      "community": 7,
       "norm_label": "chatrequest"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "",
       "source_location": "",
       "id": "basemodel",
-      "community": 8,
+      "community": 7,
       "norm_label": "basemodel"
     },
     {
@@ -837,7 +837,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L26",
       "id": "chatbot_routes_chatresponse",
-      "community": 8,
+      "community": 7,
       "norm_label": "chatresponse"
     },
     {
@@ -846,7 +846,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L34",
       "id": "chatbot_routes_ask_question",
-      "community": 8,
+      "community": 7,
       "norm_label": "ask_question()"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L44",
       "id": "chatbot_routes_get_chatbot_stats",
-      "community": 8,
+      "community": 7,
       "norm_label": "get_chatbot_stats()"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L50",
       "id": "chatbot_routes_get_suggestions",
-      "community": 8,
+      "community": 7,
       "norm_label": "get_suggestions()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L69",
       "id": "chatbot_routes_rebuild_knowledge_base",
-      "community": 8,
+      "community": 7,
       "norm_label": "rebuild_knowledge_base()"
     },
     {
@@ -882,7 +882,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L77",
       "id": "chatbot_routes_upload_reference_document",
-      "community": 8,
+      "community": 7,
       "norm_label": "upload_reference_document()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L1",
       "id": "chatbot_routes_rationale_1",
-      "community": 8,
+      "community": 7,
       "norm_label": "iso 20022 rag chatbot - fastapi routes provides /chatbot/* endpoints for the cha"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L35",
       "id": "chatbot_routes_rationale_35",
-      "community": 8,
+      "community": 7,
       "norm_label": "ask a question about iso 20022 / swift messaging."
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L45",
       "id": "chatbot_routes_rationale_45",
-      "community": 8,
+      "community": 7,
       "norm_label": "get knowledge base statistics."
     },
     {
@@ -918,7 +918,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L51",
       "id": "chatbot_routes_rationale_51",
-      "community": 8,
+      "community": 7,
       "norm_label": "get suggested questions for the chatbot."
     },
     {
@@ -927,7 +927,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L70",
       "id": "chatbot_routes_rationale_70",
-      "community": 8,
+      "community": 7,
       "norm_label": "force rebuild the knowledge base index."
     },
     {
@@ -936,7 +936,7 @@
       "source_file": "app/chatbot/routes.py",
       "source_location": "L78",
       "id": "chatbot_routes_rationale_78",
-      "community": 8,
+      "community": 7,
       "norm_label": "upload a reference document to expand the knowledge base."
     },
     {
@@ -945,7 +945,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L1",
       "id": "app_chatbot_vector_store_py",
-      "community": 2,
+      "community": 3,
       "norm_label": "vector_store.py"
     },
     {
@@ -954,7 +954,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L15",
       "id": "chatbot_vector_store_tfidfvectorstore",
-      "community": 2,
+      "community": 3,
       "norm_label": "tfidfvectorstore"
     },
     {
@@ -963,7 +963,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L21",
       "id": "chatbot_vector_store_tfidfvectorstore_init",
-      "community": 2,
+      "community": 3,
       "norm_label": ".__init__()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L29",
       "id": "chatbot_vector_store_tfidfvectorstore_tokenize",
-      "community": 2,
+      "community": 3,
       "norm_label": "._tokenize()"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L41",
       "id": "chatbot_vector_store_tfidfvectorstore_add_documents",
-      "community": 2,
+      "community": 3,
       "norm_label": ".add_documents()"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L48",
       "id": "chatbot_vector_store_tfidfvectorstore_build_index",
-      "community": 2,
+      "community": 3,
       "norm_label": ".build_index()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L74",
       "id": "chatbot_vector_store_tfidfvectorstore_bm25_score",
-      "community": 2,
+      "community": 3,
       "norm_label": "._bm25_score()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L92",
       "id": "chatbot_vector_store_tfidfvectorstore_search",
-      "community": 2,
+      "community": 3,
       "norm_label": ".search()"
     },
     {
@@ -1017,7 +1017,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L156",
       "id": "chatbot_vector_store_tfidfvectorstore_save",
-      "community": 2,
+      "community": 3,
       "norm_label": ".save()"
     },
     {
@@ -1026,7 +1026,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L170",
       "id": "chatbot_vector_store_tfidfvectorstore_load",
-      "community": 2,
+      "community": 3,
       "norm_label": ".load()"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L190",
       "id": "chatbot_vector_store_size",
-      "community": 2,
+      "community": 3,
       "norm_label": "size()"
     },
     {
@@ -1044,7 +1044,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L1",
       "id": "chatbot_vector_store_rationale_1",
-      "community": 2,
+      "community": 3,
       "norm_label": "iso 20022 rag chatbot - vector store uses tf-idf based similarity search (no ext"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L16",
       "id": "chatbot_vector_store_rationale_16",
-      "community": 2,
+      "community": 3,
       "norm_label": "a lightweight tf-idf based vector store that requires no external ml libraries."
     },
     {
@@ -1062,7 +1062,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L30",
       "id": "chatbot_vector_store_rationale_30",
-      "community": 2,
+      "community": 3,
       "norm_label": "tokenize text into lowercase words, removing xml tags and special chars."
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L42",
       "id": "chatbot_vector_store_rationale_42",
-      "community": 2,
+      "community": 3,
       "norm_label": "add documents to the store."
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L49",
       "id": "chatbot_vector_store_rationale_49",
-      "community": 2,
+      "community": 3,
       "norm_label": "build the tf-idf index."
     },
     {
@@ -1089,7 +1089,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L75",
       "id": "chatbot_vector_store_rationale_75",
-      "community": 2,
+      "community": 3,
       "norm_label": "calculate bm25 score for a document given a query."
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L93",
       "id": "chatbot_vector_store_rationale_93",
-      "community": 2,
+      "community": 3,
       "norm_label": "search for the most relevant documents."
     },
     {
@@ -1107,7 +1107,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L157",
       "id": "chatbot_vector_store_rationale_157",
-      "community": 2,
+      "community": 3,
       "norm_label": "save the vector store to disk."
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "app/chatbot/vector_store.py",
       "source_location": "L171",
       "id": "chatbot_vector_store_rationale_171",
-      "community": 2,
+      "community": 3,
       "norm_label": "load the vector store from disk."
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "app/chatbot/__init__.py",
       "source_location": "L1",
       "id": "app_chatbot_init_py",
-      "community": 41,
+      "community": 49,
       "norm_label": "__init__.py"
     },
     {
@@ -1134,7 +1134,7 @@
       "source_file": "app/mappings/__init__.py",
       "source_location": "L1",
       "id": "app_mappings_init_py",
-      "community": 42,
+      "community": 50,
       "norm_label": "__init__.py"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "app/models/__init__.py",
       "source_location": "L1",
       "id": "app_models_init_py",
-      "community": 43,
+      "community": 51,
       "norm_label": "__init__.py"
     },
     {
@@ -1152,7 +1152,7 @@
       "source_file": "app/resources/__init__.py",
       "source_location": "L1",
       "id": "app_resources_init_py",
-      "community": 44,
+      "community": 52,
       "norm_label": "__init__.py"
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L1",
       "id": "app_schemas_validation_py",
-      "community": 8,
+      "community": 7,
       "norm_label": "validation.py"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L5",
       "id": "schemas_validation_validationrequest",
-      "community": 8,
+      "community": 7,
       "norm_label": "validationrequest"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L14",
       "id": "schemas_validation_batchinitrequest",
-      "community": 8,
+      "community": 7,
       "norm_label": "batchinitrequest"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L17",
       "id": "schemas_validation_mtconversionrequest",
-      "community": 8,
+      "community": 7,
       "norm_label": "mtconversionrequest"
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L22",
       "id": "schemas_validation_issueschema",
-      "community": 8,
+      "community": 7,
       "norm_label": "issueschema"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L31",
       "id": "schemas_validation_validationresponse",
-      "community": 8,
+      "community": 7,
       "norm_label": "validationresponse"
     },
     {
@@ -1215,7 +1215,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L45",
       "id": "schemas_validation_config",
-      "community": 8,
+      "community": 7,
       "norm_label": "config"
     },
     {
@@ -1224,7 +1224,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L48",
       "id": "schemas_validation_historysummary",
-      "community": 8,
+      "community": 7,
       "norm_label": "historysummary"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L62",
       "id": "schemas_validation_format_timestamp",
-      "community": 8,
+      "community": 7,
       "norm_label": "format_timestamp()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "app/schemas/validation.py",
       "source_location": "L73",
       "id": "schemas_validation_dashboardstats",
-      "community": 8,
+      "community": 7,
       "norm_label": "dashboardstats"
     },
     {
@@ -1251,7 +1251,7 @@
       "source_file": "app/schemas/__init__.py",
       "source_location": "L1",
       "id": "app_schemas_init_py",
-      "community": 45,
+      "community": 53,
       "norm_label": "__init__.py"
     },
     {
@@ -1449,7 +1449,7 @@
       "source_file": "app/services/bic_refresh_service.py",
       "source_location": "L125",
       "id": "services_bic_refresh_service_rationale_125",
-      "community": 46,
+      "community": 54,
       "norm_label": "true when a refresh is currently in progress."
     },
     {
@@ -2236,12 +2236,156 @@
       "norm_label": "# note: nboftxs is intentionally not emitted in <pmtinf>. it is optional there"
     },
     {
+      "label": "cbpr_json_validator.py",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L1",
+      "id": "app_services_cbpr_json_validator_py",
+      "community": 2,
+      "norm_label": "cbpr_json_validator.py"
+    },
+    {
+      "label": "_extract_catalog()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L93",
+      "id": "services_cbpr_json_validator_extract_catalog",
+      "community": 2,
+      "norm_label": "_extract_catalog()"
+    },
+    {
+      "label": "_local_name()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L111",
+      "id": "services_cbpr_json_validator_local_name",
+      "community": 2,
+      "norm_label": "_local_name()"
+    },
+    {
+      "label": "CBPRJsonSchemaMixin",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L116",
+      "id": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "community": 2,
+      "norm_label": "cbprjsonschemamixin"
+    },
+    {
+      "label": "._cbpr_schemas_dir()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L122",
+      "id": "services_cbpr_json_validator_cbprjsonschemamixin_cbpr_schemas_dir",
+      "community": 2,
+      "norm_label": "._cbpr_schemas_dir()"
+    },
+    {
+      "label": "._find_cbpr_schema_for()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L126",
+      "id": "services_cbpr_json_validator_cbprjsonschemamixin_find_cbpr_schema_for",
+      "community": 2,
+      "norm_label": "._find_cbpr_schema_for()"
+    },
+    {
+      "label": "._load_cbpr_catalog()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L185",
+      "id": "services_cbpr_json_validator_cbprjsonschemamixin_load_cbpr_catalog",
+      "community": 2,
+      "norm_label": "._load_cbpr_catalog()"
+    },
+    {
+      "label": "._run_cbpr_json_schema_check()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L201",
+      "id": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check",
+      "community": 2,
+      "norm_label": "._run_cbpr_json_schema_check()"
+    },
+    {
+      "label": "_cbpr_check_value()",
+      "file_type": "code",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L259",
+      "id": "services_cbpr_json_validator_cbpr_check_value",
+      "community": 2,
+      "norm_label": "_cbpr_check_value()"
+    },
+    {
+      "label": "CBPR+ JSON Schema Validator (Layer 4) ===================================== Runs",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L1",
+      "id": "services_cbpr_json_validator_rationale_1",
+      "community": 2,
+      "norm_label": "cbpr+ json schema validator (layer 4) ===================================== runs"
+    },
+    {
+      "label": "Walk schema.definitions and surface every primitive type's constraints.",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L94",
+      "id": "services_cbpr_json_validator_rationale_94",
+      "community": 2,
+      "norm_label": "walk schema.definitions and surface every primitive type's constraints."
+    },
+    {
+      "label": "Strip namespace from an lxml tag like '{urn:...}MsgId' \u2192 'MsgId'.",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L112",
+      "id": "services_cbpr_json_validator_rationale_112",
+      "community": 2,
+      "norm_label": "strip namespace from an lxml tag like '{urn:...}msgid' \u2192 'msgid'."
+    },
+    {
+      "label": "Mixin added to ISOValidator. Provides one entry point: _run_cbpr_json_schema_che",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L117",
+      "id": "services_cbpr_json_validator_rationale_117",
+      "community": 2,
+      "norm_label": "mixin added to isovalidator. provides one entry point: _run_cbpr_json_schema_che"
+    },
+    {
+      "label": "Locate a JSON schema file matching the message type.          Examples of expect",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L127",
+      "id": "services_cbpr_json_validator_rationale_127",
+      "community": 2,
+      "norm_label": "locate a json schema file matching the message type.          examples of expect"
+    },
+    {
+      "label": "Layer 4: type-level CBPR+ JSON Schema check. Adds ValidationIssues to report.",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L207",
+      "id": "services_cbpr_json_validator_rationale_207",
+      "community": 2,
+      "norm_label": "layer 4: type-level cbpr+ json schema check. adds validationissues to report."
+    },
+    {
+      "label": "Check a single value against a single rule. Returns one ValidationIssue or None.",
+      "file_type": "rationale",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L265",
+      "id": "services_cbpr_json_validator_rationale_265",
+      "community": 55,
+      "norm_label": "check a single value against a single rule. returns one validationissue or none."
+    },
+    {
       "label": "firebase_service.py",
       "file_type": "code",
       "source_file": "app/services/firebase_service.py",
       "source_location": "L1",
       "id": "app_services_firebase_service_py",
-      "community": 9,
+      "community": 8,
       "norm_label": "firebase_service.py"
     },
     {
@@ -2250,7 +2394,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L14",
       "id": "services_firebase_service_sanitize_firestore_doc",
-      "community": 9,
+      "community": 8,
       "norm_label": "_sanitize_firestore_doc()"
     },
     {
@@ -2259,7 +2403,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L36",
       "id": "services_firebase_service_firebasehistoryservice",
-      "community": 9,
+      "community": 8,
       "norm_label": "firebasehistoryservice"
     },
     {
@@ -2268,7 +2412,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L47",
       "id": "services_firebase_service_firebasehistoryservice_init",
-      "community": 9,
+      "community": 8,
       "norm_label": ".__init__()"
     },
     {
@@ -2277,7 +2421,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L84",
       "id": "services_firebase_service_firebasehistoryservice_run_boot_health_check",
-      "community": 9,
+      "community": 8,
       "norm_label": "._run_boot_health_check()"
     },
     {
@@ -2286,7 +2430,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L118",
       "id": "services_firebase_service_firebasehistoryservice_note_call_outcome",
-      "community": 9,
+      "community": 8,
       "norm_label": "._note_call_outcome()"
     },
     {
@@ -2295,7 +2439,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L137",
       "id": "services_firebase_service_firebasehistoryservice_read_local_db",
-      "community": 9,
+      "community": 8,
       "norm_label": "._read_local_db()"
     },
     {
@@ -2304,7 +2448,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L147",
       "id": "services_firebase_service_firebasehistoryservice_write_local_db",
-      "community": 9,
+      "community": 8,
       "norm_label": "._write_local_db()"
     },
     {
@@ -2313,7 +2457,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L154",
       "id": "services_firebase_service_firebasehistoryservice_read_local_counters",
-      "community": 9,
+      "community": 8,
       "norm_label": "._read_local_counters()"
     },
     {
@@ -2322,7 +2466,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L164",
       "id": "services_firebase_service_firebasehistoryservice_write_local_counters",
-      "community": 9,
+      "community": 8,
       "norm_label": "._write_local_counters()"
     },
     {
@@ -2331,7 +2475,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L172",
       "id": "services_firebase_service_build_credentials",
-      "community": 9,
+      "community": 8,
       "norm_label": "_build_credentials()"
     },
     {
@@ -2340,7 +2484,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L250",
       "id": "services_firebase_service_firebasehistoryservice_save_history",
-      "community": 9,
+      "community": 8,
       "norm_label": ".save_history()"
     },
     {
@@ -2349,7 +2493,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L308",
       "id": "services_firebase_service_firebasehistoryservice_get_history",
-      "community": 9,
+      "community": 8,
       "norm_label": ".get_history()"
     },
     {
@@ -2358,7 +2502,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L369",
       "id": "services_firebase_service_firebasehistoryservice_get_stats",
-      "community": 9,
+      "community": 8,
       "norm_label": ".get_stats()"
     },
     {
@@ -2367,7 +2511,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L422",
       "id": "services_firebase_service_firebasehistoryservice_delete_record",
-      "community": 9,
+      "community": 8,
       "norm_label": ".delete_record()"
     },
     {
@@ -2376,7 +2520,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L455",
       "id": "services_firebase_service_firebasehistoryservice_delete_all",
-      "community": 9,
+      "community": 8,
       "norm_label": ".delete_all()"
     },
     {
@@ -2385,7 +2529,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L492",
       "id": "services_firebase_service_firebasehistoryservice_reset_all_counters",
-      "community": 9,
+      "community": 8,
       "norm_label": ".reset_all_counters()"
     },
     {
@@ -2394,7 +2538,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L514",
       "id": "services_firebase_service_firebasehistoryservice_hard_delete_all",
-      "community": 9,
+      "community": 8,
       "norm_label": ".hard_delete_all()"
     },
     {
@@ -2403,7 +2547,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L547",
       "id": "services_firebase_service_firebasehistoryservice_get_detail",
-      "community": 9,
+      "community": 8,
       "norm_label": ".get_detail()"
     },
     {
@@ -2412,7 +2556,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L583",
       "id": "services_firebase_service_firebasehistoryservice_get_next_sequence",
-      "community": 9,
+      "community": 8,
       "norm_label": ".get_next_sequence()"
     },
     {
@@ -2421,7 +2565,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L651",
       "id": "services_firebase_service_firebasehistoryservice_check_duplicate_msg_uetr",
-      "community": 9,
+      "community": 8,
       "norm_label": ".check_duplicate_msg_uetr()"
     },
     {
@@ -2430,7 +2574,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L682",
       "id": "services_firebase_service_firebasehistoryservice_test_write",
-      "community": 9,
+      "community": 8,
       "norm_label": ".test_write()"
     },
     {
@@ -2439,7 +2583,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L15",
       "id": "services_firebase_service_rationale_15",
-      "community": 9,
+      "community": 8,
       "norm_label": "recursively converts firestore-specific types to json-serializable python types."
     },
     {
@@ -2448,7 +2592,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L85",
       "id": "services_firebase_service_rationale_85",
-      "community": 9,
+      "community": 8,
       "norm_label": "issue a single tiny firestore read to verify the credentials actually         w"
     },
     {
@@ -2457,7 +2601,7 @@
       "source_file": "app/services/firebase_service.py",
       "source_location": "L119",
       "id": "services_firebase_service_rationale_119",
-      "community": 9,
+      "community": 8,
       "norm_label": "update the circuit-breaker state after a firestore call."
     },
     {
@@ -2466,7 +2610,7 @@
       "source_file": "app/services/layer1_validator.py",
       "source_location": "L1",
       "id": "app_services_layer1_validator_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer1_validator.py"
     },
     {
@@ -2475,7 +2619,7 @@
       "source_file": "app/services/layer1_validator.py",
       "source_location": "L7",
       "id": "services_layer1_validator_layer1mixin",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer1mixin"
     },
     {
@@ -2484,7 +2628,7 @@
       "source_file": "app/services/layer1_validator.py",
       "source_location": "L8",
       "id": "services_layer1_validator_layer1mixin_run_layer_1",
-      "community": 4,
+      "community": 2,
       "norm_label": "._run_layer_1()"
     },
     {
@@ -2493,7 +2637,7 @@
       "source_file": "app/services/layer1_validator.py",
       "source_location": "L9",
       "id": "services_layer1_validator_rationale_9",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer 1 \u2014 technical / payload validation         comprehensive check for well-f"
     },
     {
@@ -2502,7 +2646,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L1",
       "id": "app_services_layer2_validator_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer2_validator.py"
     },
     {
@@ -2511,7 +2655,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L9",
       "id": "services_layer2_validator_layer2mixin",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer2mixin"
     },
     {
@@ -2520,7 +2664,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L16",
       "id": "services_layer2_validator_layer2mixin_run_layer_2",
-      "community": 4,
+      "community": 2,
       "norm_label": "._run_layer_2()"
     },
     {
@@ -2529,7 +2673,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L283",
       "id": "services_layer2_validator_layer2mixin_camel_to_words",
-      "community": 4,
+      "community": 2,
       "norm_label": "._camel_to_words()"
     },
     {
@@ -2538,7 +2682,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L291",
       "id": "services_layer2_validator_layer2mixin_build_tag_info_from_xsd",
-      "community": 4,
+      "community": 2,
       "norm_label": "._build_tag_info_from_xsd()"
     },
     {
@@ -2547,7 +2691,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L350",
       "id": "services_layer2_validator_layer2mixin_mask_namespace_in_place",
-      "community": 4,
+      "community": 2,
       "norm_label": "._mask_namespace_in_place()"
     },
     {
@@ -2556,7 +2700,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L359",
       "id": "services_layer2_validator_layer2mixin_simplify_error_message",
-      "community": 4,
+      "community": 2,
       "norm_label": "._simplify_error_message()"
     },
     {
@@ -2565,7 +2709,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L17",
       "id": "services_layer2_validator_rationale_17",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer 2 \u2014 iso structure validation (xsd)         strict implementation of the 1"
     },
     {
@@ -2574,7 +2718,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L284",
       "id": "services_layer2_validator_rationale_284",
-      "community": 4,
+      "community": 2,
       "norm_label": "convert iso 20022 camelcase names to readable english words."
     },
     {
@@ -2583,7 +2727,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L292",
       "id": "services_layer2_validator_rationale_292",
-      "community": 4,
+      "community": 2,
       "norm_label": "dynamically parse an xsd file and return a dict:           { element_name: { 'l"
     },
     {
@@ -2592,7 +2736,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L351",
       "id": "services_layer2_validator_rationale_351",
-      "community": 4,
+      "community": 2,
       "norm_label": "recursively updates the tag of an element and its children to use a new namespac"
     },
     {
@@ -2601,7 +2745,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L360",
       "id": "services_layer2_validator_rationale_360",
-      "community": 4,
+      "community": 2,
       "norm_label": "dynamic translation engine: converts technical xsd/lxml jargon into         cle"
     },
     {
@@ -2610,7 +2754,7 @@
       "source_file": "app/services/layer2_validator.py",
       "source_location": "L32",
       "id": "services_layer2_validator_rationale_32",
-      "community": 4,
+      "community": 2,
       "norm_label": "# important: remove_blank_text must be false to preserve user's original line nu"
     },
     {
@@ -2619,7 +2763,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L1",
       "id": "app_services_layer3_timing_py",
-      "community": 13,
+      "community": 12,
       "norm_label": "layer3_timing.py"
     },
     {
@@ -2628,7 +2772,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L6",
       "id": "services_layer3_timing_validationissue",
-      "community": 13,
+      "community": 12,
       "norm_label": "validationissue"
     },
     {
@@ -2637,7 +2781,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L7",
       "id": "services_layer3_timing_validationissue_init",
-      "community": 13,
+      "community": 12,
       "norm_label": ".__init__()"
     },
     {
@@ -2646,7 +2790,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L14",
       "id": "services_layer3_timing_validationissue_to_dict",
-      "community": 13,
+      "community": 12,
       "norm_label": ".to_dict()"
     },
     {
@@ -2655,7 +2799,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L25",
       "id": "services_layer3_timing_validationresult",
-      "community": 13,
+      "community": 12,
       "norm_label": "validationresult"
     },
     {
@@ -2664,7 +2808,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L26",
       "id": "services_layer3_timing_validationresult_init",
-      "community": 13,
+      "community": 12,
       "norm_label": ".__init__()"
     },
     {
@@ -2673,7 +2817,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L33",
       "id": "services_layer3_timing_validationresult_add_issue",
-      "community": 13,
+      "community": 12,
       "norm_label": ".add_issue()"
     },
     {
@@ -2682,7 +2826,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L40",
       "id": "services_layer3_timing_validationresult_set_recommended_value_date",
-      "community": 13,
+      "community": 12,
       "norm_label": ".set_recommended_value_date()"
     },
     {
@@ -2691,7 +2835,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L43",
       "id": "services_layer3_timing_validationresult_to_dict",
-      "community": 13,
+      "community": 12,
       "norm_label": ".to_dict()"
     },
     {
@@ -2700,7 +2844,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L54",
       "id": "services_layer3_timing_is_holiday",
-      "community": 13,
+      "community": 12,
       "norm_label": "is_holiday()"
     },
     {
@@ -2709,7 +2853,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L61",
       "id": "services_layer3_timing_get_system_config",
-      "community": 13,
+      "community": 12,
       "norm_label": "get_system_config()"
     },
     {
@@ -2718,7 +2862,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L76",
       "id": "services_layer3_timing_parse_time",
-      "community": 13,
+      "community": 12,
       "norm_label": "parse_time()"
     },
     {
@@ -2727,7 +2871,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L84",
       "id": "services_layer3_timing_to_zoned_datetime",
-      "community": 13,
+      "community": 12,
       "norm_label": "to_zoned_datetime()"
     },
     {
@@ -2736,7 +2880,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L109",
       "id": "services_layer3_timing_is_business_day",
-      "community": 13,
+      "community": 12,
       "norm_label": "is_business_day()"
     },
     {
@@ -2745,7 +2889,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L117",
       "id": "services_layer3_timing_next_business_day",
-      "community": 13,
+      "community": 12,
       "norm_label": "next_business_day()"
     },
     {
@@ -2754,7 +2898,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L123",
       "id": "services_layer3_timing_validatelayer3timing",
-      "community": 13,
+      "community": 12,
       "norm_label": "validatelayer3timing()"
     },
     {
@@ -2763,7 +2907,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L251",
       "id": "services_layer3_timing_pp",
-      "community": 13,
+      "community": 12,
       "norm_label": "pp()"
     },
     {
@@ -2772,7 +2916,7 @@
       "source_file": "app/services/layer3_timing.py",
       "source_location": "L55",
       "id": "services_layer3_timing_rationale_55",
-      "community": 13,
+      "community": 12,
       "norm_label": "dynamic lookup for holidays from configuration."
     },
     {
@@ -2781,7 +2925,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L1",
       "id": "app_services_layer3_validator_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "layer3_validator.py"
     },
     {
@@ -2790,7 +2934,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L9",
       "id": "services_layer3_validator_layer3mixin",
-      "community": 11,
+      "community": 10,
       "norm_label": "layer3mixin"
     },
     {
@@ -2799,7 +2943,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L14",
       "id": "services_layer3_validator_layer3mixin_normalize_message",
-      "community": 11,
+      "community": 10,
       "norm_label": "._normalize_message()"
     },
     {
@@ -2808,7 +2952,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L16",
       "id": "services_layer3_validator_layer3mixin_load_generic_config",
-      "community": 11,
+      "community": 10,
       "norm_label": "._load_generic_config()"
     },
     {
@@ -2817,7 +2961,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L33",
       "id": "services_layer3_validator_layer3mixin_load_all_rules",
-      "community": 11,
+      "community": 10,
       "norm_label": "._load_all_rules()"
     },
     {
@@ -2826,7 +2970,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L94",
       "id": "services_layer3_validator_layer3mixin_run_dynamic_layer",
-      "community": 11,
+      "community": 10,
       "norm_label": "._run_dynamic_layer()"
     },
     {
@@ -2835,7 +2979,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L119",
       "id": "services_layer3_validator_layer3mixin_run_generic_field_validation",
-      "community": 11,
+      "community": 10,
       "norm_label": "._run_generic_field_validation()"
     },
     {
@@ -2844,7 +2988,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L223",
       "id": "services_layer3_validator_layer3mixin_execute_rule_logic",
-      "community": 11,
+      "community": 10,
       "norm_label": "._execute_rule_logic()"
     },
     {
@@ -2853,7 +2997,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L383",
       "id": "services_layer3_validator_layer3mixin_evaluate_expression",
-      "community": 11,
+      "community": 10,
       "norm_label": "._evaluate_expression()"
     },
     {
@@ -2862,7 +3006,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L608",
       "id": "services_layer3_validator_layer3mixin_check_iban_currency",
-      "community": 11,
+      "community": 10,
       "norm_label": "._check_iban_currency()"
     },
     {
@@ -2871,7 +3015,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L674",
       "id": "services_layer3_validator_layer3mixin_check_msg_uetr_duplicate",
-      "community": 11,
+      "community": 10,
       "norm_label": "._check_msg_uetr_duplicate()"
     },
     {
@@ -2880,7 +3024,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L691",
       "id": "services_layer3_validator_layer3mixin_validate_entity_mismatch",
-      "community": 11,
+      "community": 10,
       "norm_label": ".validate_entity_mismatch()"
     },
     {
@@ -2889,7 +3033,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L17",
       "id": "services_layer3_validator_rationale_17",
-      "community": 11,
+      "community": 10,
       "norm_label": "loads the new global algorithms and field library."
     },
     {
@@ -2898,7 +3042,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L34",
       "id": "services_layer3_validator_rationale_34",
-      "community": 11,
+      "community": 10,
       "norm_label": "loads global rules + family rules + message-specific rules."
     },
     {
@@ -2907,7 +3051,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L95",
       "id": "services_layer3_validator_rationale_95",
-      "community": 11,
+      "community": 10,
       "norm_label": "executes all rules assigned to a specific layer."
     },
     {
@@ -2916,7 +3060,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L120",
       "id": "services_layer3_validator_rationale_120",
-      "community": 11,
+      "community": 10,
       "norm_label": "executes validation based on the generic field library and global algorithms."
     },
     {
@@ -2925,7 +3069,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L224",
       "id": "services_layer3_validator_rationale_224",
-      "community": 11,
+      "community": 10,
       "norm_label": "advanced dynamic rule dispatcher."
     },
     {
@@ -2934,7 +3078,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L384",
       "id": "services_layer3_validator_rationale_384",
-      "community": 11,
+      "community": 10,
       "norm_label": "evaluates dynamic expressions against the canonical data map.         supports"
     },
     {
@@ -2943,7 +3087,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L609",
       "id": "services_layer3_validator_rationale_609",
-      "community": 11,
+      "community": 10,
       "norm_label": "business rule: validate if the transaction currency matches the local currency"
     },
     {
@@ -2952,7 +3096,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L675",
       "id": "services_layer3_validator_rationale_675",
-      "community": 11,
+      "community": 10,
       "norm_label": "business rule: verify if the msgid + uetr combination has been seen before."
     },
     {
@@ -2961,7 +3105,7 @@
       "source_file": "app/services/layer3_validator.py",
       "source_location": "L692",
       "id": "services_layer3_validator_rationale_692",
-      "community": 11,
+      "community": 10,
       "norm_label": "special early check for entity mismatch (l3-biz-party-name-entity-match)."
     },
     {
@@ -2970,7 +3114,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L1",
       "id": "app_services_models_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "models.py"
     },
     {
@@ -2979,7 +3123,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L3",
       "id": "services_models_validationissue",
-      "community": 4,
+      "community": 2,
       "norm_label": "validationissue"
     },
     {
@@ -2988,7 +3132,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L4",
       "id": "services_models_validationissue_init",
-      "community": 4,
+      "community": 2,
       "norm_label": ".__init__()"
     },
     {
@@ -2997,7 +3141,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L13",
       "id": "services_models_validationissue_to_dict",
-      "community": 4,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -3006,7 +3150,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L24",
       "id": "services_models_validationreport",
-      "community": 4,
+      "community": 2,
       "norm_label": "validationreport"
     },
     {
@@ -3015,7 +3159,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L25",
       "id": "services_models_validationreport_init",
-      "community": 4,
+      "community": 2,
       "norm_label": ".__init__()"
     },
     {
@@ -3024,7 +3168,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L39",
       "id": "services_models_validationreport_add_issue",
-      "community": 4,
+      "community": 2,
       "norm_label": ".add_issue()"
     },
     {
@@ -3033,7 +3177,7 @@
       "source_file": "app/services/models.py",
       "source_location": "L50",
       "id": "services_models_validationreport_to_dict",
-      "community": 4,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -3307,10 +3451,37 @@
       "norm_label": ".validate_and_convert()"
     },
     {
+      "label": "_parse_71f_71g_value()",
+      "file_type": "code",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1348",
+      "id": "services_mt_mx_converter_parse_71f_71g_value",
+      "community": 1,
+      "norm_label": "_parse_71f_71g_value()"
+    },
+    {
+      "label": "._apply_charges_information()",
+      "file_type": "code",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1368",
+      "id": "services_mt_mx_converter_mt2mxconverter_apply_charges_information",
+      "community": 1,
+      "norm_label": "._apply_charges_information()"
+    },
+    {
+      "label": "._find_node()",
+      "file_type": "code",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1454",
+      "id": "services_mt_mx_converter_mt2mxconverter_find_node",
+      "community": 1,
+      "norm_label": "._find_node()"
+    },
+    {
       "label": "._map_mt202cov_seq_b()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1341",
+      "source_location": "L1469",
       "id": "services_mt_mx_converter_mt2mxconverter_map_mt202cov_seq_b",
       "community": 1,
       "norm_label": "._map_mt202cov_seq_b()"
@@ -3319,7 +3490,7 @@
       "label": "._extract_composite_field()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1476",
+      "source_location": "L1604",
       "id": "services_mt_mx_converter_mt2mxconverter_extract_composite_field",
       "community": 1,
       "norm_label": "._extract_composite_field()"
@@ -3328,7 +3499,7 @@
       "label": "._apply_v2_mandatory_healing()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1515",
+      "source_location": "L1643",
       "id": "services_mt_mx_converter_mt2mxconverter_apply_v2_mandatory_healing",
       "community": 1,
       "norm_label": "._apply_v2_mandatory_healing()"
@@ -3337,7 +3508,7 @@
       "label": "._process_v2_children()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1668",
+      "source_location": "L1796",
       "id": "services_mt_mx_converter_mt2mxconverter_process_v2_children",
       "community": 1,
       "norm_label": "._process_v2_children()"
@@ -3346,7 +3517,7 @@
       "label": "._sort_xml_recursively()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1690",
+      "source_location": "L1818",
       "id": "services_mt_mx_converter_mt2mxconverter_sort_xml_recursively",
       "community": 1,
       "norm_label": "._sort_xml_recursively()"
@@ -3355,7 +3526,7 @@
       "label": "._cleanup_xml()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1774",
+      "source_location": "L1902",
       "id": "services_mt_mx_converter_mt2mxconverter_cleanup_xml",
       "community": 1,
       "norm_label": "._cleanup_xml()"
@@ -3364,7 +3535,7 @@
       "label": "._heal_camt_mandatory_fields()",
       "file_type": "code",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1785",
+      "source_location": "L1913",
       "id": "services_mt_mx_converter_mt2mxconverter_heal_camt_mandatory_fields",
       "community": 1,
       "norm_label": "._heal_camt_mandatory_fields()"
@@ -3496,11 +3667,38 @@
       "norm_label": "validates the data content based on the standard swift fields types."
     },
     {
+      "label": "Parse a SWIFT 71F / 71G value.         Format: <3-char ISO 4217 currency><amoun",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1349",
+      "id": "services_mt_mx_converter_rationale_1349",
+      "community": 56,
+      "norm_label": "parse a swift 71f / 71g value.         format: <3-char iso 4217 currency><amoun"
+    },
+    {
+      "label": "Map MT 71F (sender's charges) and 71G (receiver's charges) into pacs.008 / pacs.",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1369",
+      "id": "services_mt_mx_converter_rationale_1369",
+      "community": 1,
+      "norm_label": "map mt 71f (sender's charges) and 71g (receiver's charges) into pacs.008 / pacs."
+    },
+    {
+      "label": "Locate a node by slash-delimited local-name path (namespace-aware).",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1455",
+      "id": "services_mt_mx_converter_rationale_1455",
+      "community": 1,
+      "norm_label": "locate a node by slash-delimited local-name path (namespace-aware)."
+    },
+    {
       "label": "BUG 1 + BUG 4 FIX:         MT202COV carries two sequences:           Sequence",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1342",
-      "id": "services_mt_mx_converter_rationale_1342",
+      "source_location": "L1470",
+      "id": "services_mt_mx_converter_rationale_1470",
       "community": 1,
       "norm_label": "bug 1 + bug 4 fix:         mt202cov carries two sequences:           sequence"
     },
@@ -3508,8 +3706,8 @@
       "label": "Extracts date, currency, or amount from composite SWIFT fields like 32A, 33B, et",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1477",
-      "id": "services_mt_mx_converter_rationale_1477",
+      "source_location": "L1605",
+      "id": "services_mt_mx_converter_rationale_1605",
       "community": 1,
       "norm_label": "extracts date, currency, or amount from composite swift fields like 32a, 33b, et"
     },
@@ -3517,8 +3715,8 @@
       "label": "Recursively applies mandatory field rules from swift_validation_rules.json (v2.0",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1516",
-      "id": "services_mt_mx_converter_rationale_1516",
+      "source_location": "L1644",
+      "id": "services_mt_mx_converter_rationale_1644",
       "community": 1,
       "norm_label": "recursively applies mandatory field rules from swift_validation_rules.json (v2.0"
     },
@@ -3526,8 +3724,8 @@
       "label": "Process children using mx_root for path navigation to ensure absolute paths work",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1669",
-      "id": "services_mt_mx_converter_rationale_1669",
+      "source_location": "L1797",
+      "id": "services_mt_mx_converter_rationale_1797",
       "community": 1,
       "norm_label": "process children using mx_root for path navigation to ensure absolute paths work"
     },
@@ -3535,8 +3733,8 @@
       "label": "Sorts the children of 'element' according to the order in 'sequence'.",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1676",
-      "id": "services_mt_mx_converter_rationale_1676",
+      "source_location": "L1804",
+      "id": "services_mt_mx_converter_rationale_1804",
       "community": 1,
       "norm_label": "sorts the children of 'element' according to the order in 'sequence'."
     },
@@ -3544,8 +3742,8 @@
       "label": "Recursively sorts children of an element based on a comprehensive list of ISO 20",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1691",
-      "id": "services_mt_mx_converter_rationale_1691",
+      "source_location": "L1819",
+      "id": "services_mt_mx_converter_rationale_1819",
       "community": 1,
       "norm_label": "recursively sorts children of an element based on a comprehensive list of iso 20"
     },
@@ -3553,8 +3751,8 @@
       "label": "Recursively removes elements that have no text and no children.",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1775",
-      "id": "services_mt_mx_converter_rationale_1775",
+      "source_location": "L1903",
+      "id": "services_mt_mx_converter_rationale_1903",
       "community": 1,
       "norm_label": "recursively removes elements that have no text and no children."
     },
@@ -3562,8 +3760,8 @@
       "label": "Final sweep to ensure Ntry nodes are compliant with mandatory reporting rules.",
       "file_type": "rationale",
       "source_file": "app/services/mt_mx_converter.py",
-      "source_location": "L1786",
-      "id": "services_mt_mx_converter_rationale_1786",
+      "source_location": "L1914",
+      "id": "services_mt_mx_converter_rationale_1914",
       "community": 1,
       "norm_label": "final sweep to ensure ntry nodes are compliant with mandatory reporting rules."
     },
@@ -3573,7 +3771,7 @@
       "source_file": "app/services/pacs004_validator.py",
       "source_location": "L1",
       "id": "app_services_pacs004_validator_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "pacs004_validator.py"
     },
     {
@@ -3582,7 +3780,7 @@
       "source_file": "app/services/pacs004_validator.py",
       "source_location": "L6",
       "id": "services_pacs004_validator_pacs004mixin",
-      "community": 4,
+      "community": 2,
       "norm_label": "pacs004mixin"
     },
     {
@@ -3591,7 +3789,7 @@
       "source_file": "app/services/pacs004_validator.py",
       "source_location": "L12",
       "id": "services_pacs004_validator_pacs004mixin_validate_pacs_004",
-      "community": 4,
+      "community": 2,
       "norm_label": "._validate_pacs_004()"
     },
     {
@@ -3600,7 +3798,7 @@
       "source_file": "app/services/pacs004_validator.py",
       "source_location": "L7",
       "id": "services_pacs004_validator_rationale_7",
-      "community": 4,
+      "community": 2,
       "norm_label": "dedicated strict validator for pacs.004.001.09 (paymentreturn)     based on cbp"
     },
     {
@@ -3915,16 +4113,16 @@
       "source_file": "app/services/validator.py",
       "source_location": "L1",
       "id": "app_services_validator_py",
-      "community": 4,
+      "community": 2,
       "norm_label": "validator.py"
     },
     {
       "label": "ISOValidator",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L20",
+      "source_location": "L21",
       "id": "services_validator_isovalidator",
-      "community": 7,
+      "community": 9,
       "norm_label": "isovalidator"
     },
     {
@@ -3933,7 +4131,7 @@
       "source_file": "",
       "source_location": "",
       "id": "layer1mixin",
-      "community": 7,
+      "community": 9,
       "norm_label": "layer1mixin"
     },
     {
@@ -3942,7 +4140,7 @@
       "source_file": "",
       "source_location": "",
       "id": "layer2mixin",
-      "community": 7,
+      "community": 9,
       "norm_label": "layer2mixin"
     },
     {
@@ -3951,7 +4149,7 @@
       "source_file": "",
       "source_location": "",
       "id": "layer3mixin",
-      "community": 7,
+      "community": 9,
       "norm_label": "layer3mixin"
     },
     {
@@ -3960,14 +4158,23 @@
       "source_file": "",
       "source_location": "",
       "id": "pacs004mixin",
-      "community": 7,
+      "community": 9,
       "norm_label": "pacs004mixin"
+    },
+    {
+      "label": "CBPRJsonSchemaMixin",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "cbprjsonschemamixin",
+      "community": 9,
+      "norm_label": "cbprjsonschemamixin"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L26",
+      "source_location": "L27",
       "id": "services_validator_isovalidator_init",
       "community": 15,
       "norm_label": ".__init__()"
@@ -3976,25 +4183,25 @@
       "label": ".generate_next_id()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L71",
+      "source_location": "L72",
       "id": "services_validator_isovalidator_generate_next_id",
-      "community": 10,
+      "community": 20,
       "norm_label": ".generate_next_id()"
     },
     {
       "label": ".reset_counter()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L93",
+      "source_location": "L94",
       "id": "services_validator_isovalidator_reset_counter",
-      "community": 7,
+      "community": 38,
       "norm_label": ".reset_counter()"
     },
     {
       "label": "._load_config()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L98",
+      "source_location": "L99",
       "id": "services_validator_isovalidator_load_config",
       "community": 15,
       "norm_label": "._load_config()"
@@ -4003,7 +4210,7 @@
       "label": "._load_bics()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L108",
+      "source_location": "L109",
       "id": "services_validator_isovalidator_load_bics",
       "community": 15,
       "norm_label": "._load_bics()"
@@ -4012,25 +4219,25 @@
       "label": ".reload_bics()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L143",
+      "source_location": "L144",
       "id": "services_validator_isovalidator_reload_bics",
-      "community": 7,
+      "community": 9,
       "norm_label": ".reload_bics()"
     },
     {
       "label": ".search_bics()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L199",
+      "source_location": "L200",
       "id": "services_validator_isovalidator_search_bics",
-      "community": 7,
+      "community": 37,
       "norm_label": ".search_bics()"
     },
     {
       "label": "._ensure_xsds_extracted()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L216",
+      "source_location": "L217",
       "id": "services_validator_isovalidator_ensure_xsds_extracted",
       "community": 15,
       "norm_label": "._ensure_xsds_extracted()"
@@ -4039,7 +4246,7 @@
       "label": "._load_codelists()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L249",
+      "source_location": "L250",
       "id": "services_validator_isovalidator_load_codelists",
       "community": 15,
       "norm_label": "._load_codelists()"
@@ -4048,61 +4255,61 @@
       "label": ".get_supported_messages()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L265",
+      "source_location": "L266",
       "id": "services_validator_isovalidator_get_supported_messages",
-      "community": 7,
+      "community": 18,
       "norm_label": ".get_supported_messages()"
     },
     {
       "label": ".validate()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L315",
+      "source_location": "L316",
       "id": "services_validator_isovalidator_validate",
-      "community": 10,
+      "community": 13,
       "norm_label": ".validate()"
     },
     {
       "label": "._validate_dates_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L612",
+      "source_location": "L627",
       "id": "services_validator_isovalidator_validate_dates_in_xml",
-      "community": 10,
+      "community": 30,
       "norm_label": "._validate_dates_in_xml()"
     },
     {
       "label": "._validate_id_lengths_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L690",
+      "source_location": "L705",
       "id": "services_validator_isovalidator_validate_id_lengths_in_xml",
-      "community": 23,
+      "community": 13,
       "norm_label": "._validate_id_lengths_in_xml()"
     },
     {
       "label": "._validate_cbpr_datetime()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L750",
+      "source_location": "L765",
       "id": "services_validator_isovalidator_validate_cbpr_datetime",
-      "community": 10,
+      "community": 24,
       "norm_label": "._validate_cbpr_datetime()"
     },
     {
       "label": "._validate_name_address_coexistence()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L807",
+      "source_location": "L822",
       "id": "services_validator_isovalidator_validate_name_address_coexistence",
-      "community": 10,
+      "community": 13,
       "norm_label": "._validate_name_address_coexistence()"
     },
     {
       "label": "._validate_empty_required_containers()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L867",
+      "source_location": "L882",
       "id": "services_validator_isovalidator_validate_empty_required_containers",
       "community": 22,
       "norm_label": "._validate_empty_required_containers()"
@@ -4111,142 +4318,142 @@
       "label": "._validate_apphdr_payload_match()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1059",
+      "source_location": "L1074",
       "id": "services_validator_isovalidator_validate_apphdr_payload_match",
-      "community": 30,
+      "community": 25,
       "norm_label": "._validate_apphdr_payload_match()"
     },
     {
       "label": "._validate_pain008_fwdgagt_rule()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1146",
+      "source_location": "L1161",
       "id": "services_validator_isovalidator_validate_pain008_fwdgagt_rule",
-      "community": 10,
+      "community": 13,
       "norm_label": "._validate_pain008_fwdgagt_rule()"
     },
     {
       "label": "._validate_uetr_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1191",
+      "source_location": "L1206",
       "id": "services_validator_isovalidator_validate_uetr_in_xml",
-      "community": 27,
+      "community": 21,
       "norm_label": "._validate_uetr_in_xml()"
     },
     {
       "label": "._validate_account_identifiers_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1259",
+      "source_location": "L1274",
       "id": "services_validator_isovalidator_validate_account_identifiers_in_xml",
-      "community": 24,
+      "community": 34,
       "norm_label": "._validate_account_identifiers_in_xml()"
     },
     {
       "label": "._validate_nboftxs()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1911",
+      "source_location": "L1926",
       "id": "services_validator_isovalidator_validate_nboftxs",
-      "community": 28,
+      "community": 29,
       "norm_label": "._validate_nboftxs()"
     },
     {
       "label": "._validate_duplicate_ids()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1946",
+      "source_location": "L1961",
       "id": "services_validator_isovalidator_validate_duplicate_ids",
-      "community": 29,
+      "community": 13,
       "norm_label": "._validate_duplicate_ids()"
     },
     {
       "label": "._validate_swift_charset()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L1976",
+      "source_location": "L1991",
       "id": "services_validator_isovalidator_validate_swift_charset",
-      "community": 25,
+      "community": 35,
       "norm_label": "._validate_swift_charset()"
     },
     {
       "label": "._validate_charges_currency()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2011",
+      "source_location": "L2026",
       "id": "services_validator_isovalidator_validate_charges_currency",
-      "community": 20,
+      "community": 27,
       "norm_label": "._validate_charges_currency()"
     },
     {
       "label": "._validate_party_rules()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2053",
+      "source_location": "L2068",
       "id": "services_validator_isovalidator_validate_party_rules",
-      "community": 26,
+      "community": 33,
       "norm_label": "._validate_party_rules()"
     },
     {
       "label": "._validate_address_cbpr_rules()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2187",
+      "source_location": "L2202",
       "id": "services_validator_isovalidator_validate_address_cbpr_rules",
-      "community": 10,
+      "community": 23,
       "norm_label": "._validate_address_cbpr_rules()"
     },
     {
       "label": "._validate_remittance_rules()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2352",
+      "source_location": "L2367",
       "id": "services_validator_isovalidator_validate_remittance_rules",
-      "community": 10,
+      "community": 28,
       "norm_label": "._validate_remittance_rules()"
     },
     {
       "label": "._normalize_message()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2524",
+      "source_location": "L2539",
       "id": "services_validator_isovalidator_normalize_message",
-      "community": 10,
+      "community": 32,
       "norm_label": "._normalize_message()"
     },
     {
       "label": "._detect_message_type()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2593",
+      "source_location": "L2608",
       "id": "services_validator_isovalidator_detect_message_type",
-      "community": 10,
+      "community": 13,
       "norm_label": "._detect_message_type()"
     },
     {
       "label": "._finalize_report()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2657",
+      "source_location": "L2672",
       "id": "services_validator_isovalidator_finalize_report",
-      "community": 7,
+      "community": 9,
       "norm_label": "._finalize_report()"
     },
     {
       "label": "._decrement_counters()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2725",
+      "source_location": "L2740",
       "id": "services_validator_isovalidator_decrement_counters",
-      "community": 7,
+      "community": 9,
       "norm_label": "._decrement_counters()"
     },
     {
       "label": "._get_xsd_path()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2732",
+      "source_location": "L2747",
       "id": "services_validator_isovalidator_get_xsd_path",
       "community": 14,
       "norm_label": "._get_xsd_path()"
@@ -4255,25 +4462,25 @@
       "label": "._validate_clearing_system_rules()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2781",
+      "source_location": "L2796",
       "id": "services_validator_isovalidator_validate_clearing_system_rules",
-      "community": 21,
+      "community": 19,
       "norm_label": "._validate_clearing_system_rules()"
     },
     {
       "label": "._validate_charsets_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L2972",
+      "source_location": "L2987",
       "id": "services_validator_isovalidator_validate_charsets_in_xml",
-      "community": 10,
+      "community": 31,
       "norm_label": "._validate_charsets_in_xml()"
     },
     {
       "label": "._get_xpath_for_element()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L3031",
+      "source_location": "L3046",
       "id": "services_validator_isovalidator_get_xpath_for_element",
       "community": 14,
       "norm_label": "._get_xpath_for_element()"
@@ -4282,7 +4489,7 @@
       "label": "._validate_duplicate_tags()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L3043",
+      "source_location": "L3058",
       "id": "services_validator_isovalidator_validate_duplicate_tags",
       "community": 14,
       "norm_label": "._validate_duplicate_tags()"
@@ -4291,7 +4498,7 @@
       "label": "._check_lei()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L3111",
+      "source_location": "L3126",
       "id": "services_validator_isovalidator_check_lei",
       "community": 14,
       "norm_label": "._check_lei()"
@@ -4300,7 +4507,7 @@
       "label": "._validate_schme_nm_in_xml()",
       "file_type": "code",
       "source_file": "app/services/validator.py",
-      "source_location": "L3153",
+      "source_location": "L3168",
       "id": "services_validator_isovalidator_validate_schme_nm_in_xml",
       "community": 14,
       "norm_label": "._validate_schme_nm_in_xml()"
@@ -4309,26 +4516,26 @@
       "label": "Generates the next sequential validation ID in format VAL{DDMMYY}{00001}",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L72",
-      "id": "services_validator_rationale_72",
-      "community": 10,
+      "source_location": "L73",
+      "id": "services_validator_rationale_73",
+      "community": 20,
       "norm_label": "generates the next sequential validation id in format val{ddmmyy}{00001}"
     },
     {
       "label": "Resets the daily counter back to 0",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L94",
-      "id": "services_validator_rationale_94",
-      "community": 7,
+      "source_location": "L95",
+      "id": "services_validator_rationale_95",
+      "community": 38,
       "norm_label": "resets the daily counter back to 0"
     },
     {
       "label": "Loads the dynamic configuration file",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L99",
-      "id": "services_validator_rationale_99",
+      "source_location": "L100",
+      "id": "services_validator_rationale_100",
       "community": 15,
       "norm_label": "loads the dynamic configuration file"
     },
@@ -4336,8 +4543,8 @@
       "label": "Loads BIC codes from the entities.ftm.json file (JSONL format)",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L109",
-      "id": "services_validator_rationale_109",
+      "source_location": "L110",
+      "id": "services_validator_rationale_110",
       "community": 15,
       "norm_label": "loads bic codes from the entities.ftm.json file (jsonl format)"
     },
@@ -4345,26 +4552,26 @@
       "label": "Hot-reload the BIC dataset from disk into memory without disrupting         act",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L144",
-      "id": "services_validator_rationale_144",
-      "community": 7,
+      "source_location": "L145",
+      "id": "services_validator_rationale_145",
+      "community": 9,
       "norm_label": "hot-reload the bic dataset from disk into memory without disrupting         act"
     },
     {
       "label": "Searches for BICs matching the query in either the BIC code or bank name",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L200",
-      "id": "services_validator_rationale_200",
-      "community": 7,
+      "source_location": "L201",
+      "id": "services_validator_rationale_201",
+      "community": 37,
       "norm_label": "searches for bics matching the query in either the bic code or bank name"
     },
     {
       "label": "High-Performance Extraction Engine:         Automatically unzips all XSD bluepr",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L217",
-      "id": "services_validator_rationale_217",
+      "source_location": "L218",
+      "id": "services_validator_rationale_218",
       "community": 15,
       "norm_label": "high-performance extraction engine:         automatically unzips all xsd bluepr"
     },
@@ -4372,8 +4579,8 @@
       "label": "Loads all JSON codelists from the resource directory (Lowercased keys)",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L250",
-      "id": "services_validator_rationale_250",
+      "source_location": "L251",
+      "id": "services_validator_rationale_251",
       "community": 15,
       "norm_label": "loads all json codelists from the resource directory (lowercased keys)"
     },
@@ -4381,62 +4588,62 @@
       "label": "Scans the XSD directory and ZIP files for supported message types.         Cach",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L266",
-      "id": "services_validator_rationale_266",
-      "community": 7,
+      "source_location": "L267",
+      "id": "services_validator_rationale_267",
+      "community": 18,
       "norm_label": "scans the xsd directory and zip files for supported message types.         cach"
     },
     {
       "label": "Main 10-Step Validation Flow",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L316",
-      "id": "services_validator_rationale_316",
-      "community": 10,
+      "source_location": "L317",
+      "id": "services_validator_rationale_317",
+      "community": 13,
       "norm_label": "main 10-step validation flow"
     },
     {
       "label": "Step 4.5 \u2014 Past Date Validation         Scans the raw XML string directly for A",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L613",
-      "id": "services_validator_rationale_613",
-      "community": 10,
+      "source_location": "L628",
+      "id": "services_validator_rationale_628",
+      "community": 30,
       "norm_label": "step 4.5 \u2014 past date validation         scans the raw xml string directly for a"
     },
     {
       "label": "Step 4.6 \u2014 ID Field Maximum Length Validation         Scans the raw XML string",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L691",
-      "id": "services_validator_rationale_691",
-      "community": 23,
+      "source_location": "L706",
+      "id": "services_validator_rationale_706",
+      "community": 13,
       "norm_label": "step 4.6 \u2014 id field maximum length validation         scans the raw xml string"
     },
     {
       "label": "Step 4.21 \u2014 CBPR+ DateTime Format Validation         Enforces:           1. Ti",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L751",
-      "id": "services_validator_rationale_751",
-      "community": 10,
+      "source_location": "L766",
+      "id": "services_validator_rationale_766",
+      "community": 24,
       "norm_label": "step 4.21 \u2014 cbpr+ datetime format validation         enforces:           1. ti"
     },
     {
       "label": "Step 4.22 \u2014 Global Name & Postal Address Co-existence (CBPR+)         Enforces",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L808",
-      "id": "services_validator_rationale_808",
-      "community": 10,
+      "source_location": "L823",
+      "id": "services_validator_rationale_823",
+      "community": 13,
       "norm_label": "step 4.22 \u2014 global name & postal address co-existence (cbpr+)         enforces"
     },
     {
       "label": "CBPR+ Business Rule \u2014 Empty Mandatory Containers.          Several ISO 20022 c",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L868",
-      "id": "services_validator_rationale_868",
+      "source_location": "L883",
+      "id": "services_validator_rationale_883",
       "community": 22,
       "norm_label": "cbpr+ business rule \u2014 empty mandatory containers.          several iso 20022 c"
     },
@@ -4444,134 +4651,134 @@
       "label": "CBPR+ rule HEAD001_MSGDEFIDR_MATCHES_PAYLOAD \u2014          The AppHdr's <MsgDefId",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1060",
-      "id": "services_validator_rationale_1060",
-      "community": 30,
+      "source_location": "L1075",
+      "id": "services_validator_rationale_1075",
+      "community": 25,
       "norm_label": "cbpr+ rule head001_msgdefidr_matches_payload \u2014          the apphdr's <msgdefid"
     },
     {
       "label": "SWIFT CBPR+ Rule \u2014 pain.008 GrpHdr must contain FwdgAgt.          The base ISO",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1147",
-      "id": "services_validator_rationale_1147",
-      "community": 10,
+      "source_location": "L1162",
+      "id": "services_validator_rationale_1162",
+      "community": 13,
       "norm_label": "swift cbpr+ rule \u2014 pain.008 grphdr must contain fwdgagt.          the base iso"
     },
     {
       "label": "Step 4.7 \u2014 UETR UUID v4 Format Validation         Finds every <UETR> element in",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1192",
-      "id": "services_validator_rationale_1192",
-      "community": 27,
+      "source_location": "L1207",
+      "id": "services_validator_rationale_1207",
+      "community": 21,
       "norm_label": "step 4.7 \u2014 uetr uuid v4 format validation         finds every <uetr> element in"
     },
     {
       "label": "Step 4.8 \u2014 IBAN / BBAN Account Identifier Validation          For every accoun",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1260",
-      "id": "services_validator_rationale_1260",
-      "community": 24,
+      "source_location": "L1275",
+      "id": "services_validator_rationale_1275",
+      "community": 34,
       "norm_label": "step 4.8 \u2014 iban / bban account identifier validation          for every accoun"
     },
     {
       "label": "Step 4.9 \u2014 NbOfTxs Count Validation         Verifies that the <NbOfTxs> value m",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1912",
-      "id": "services_validator_rationale_1912",
-      "community": 28,
+      "source_location": "L1927",
+      "id": "services_validator_rationale_1927",
+      "community": 29,
       "norm_label": "step 4.9 \u2014 nboftxs count validation         verifies that the <nboftxs> value m"
     },
     {
       "label": "Step 4.17 \u2014 Duplicate Identification Validation         Scans for unique identi",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1947",
-      "id": "services_validator_rationale_1947",
-      "community": 29,
+      "source_location": "L1962",
+      "id": "services_validator_rationale_1962",
+      "community": 13,
       "norm_label": "step 4.17 \u2014 duplicate identification validation         scans for unique identi"
     },
     {
       "label": "Step 4.10 \u2014 SWIFT Character Set Validation         Checks <Ustrd> (unstructured",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L1977",
-      "id": "services_validator_rationale_1977",
-      "community": 25,
+      "source_location": "L1992",
+      "id": "services_validator_rationale_1992",
+      "community": 35,
       "norm_label": "step 4.10 \u2014 swift character set validation         checks <ustrd> (unstructured"
     },
     {
       "label": "Step 4.11 \u2014 Charges Currency Match Validation         Verifies that <ChrgsInf><",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2012",
-      "id": "services_validator_rationale_2012",
-      "community": 20,
+      "source_location": "L2027",
+      "id": "services_validator_rationale_2027",
+      "community": 27,
       "norm_label": "step 4.11 \u2014 charges currency match validation         verifies that <chrgsinf><"
     },
     {
       "label": "Step 4.12 \u2014 Party Identification Validation         Validates all party blocks",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2054",
-      "id": "services_validator_rationale_2054",
-      "community": 26,
+      "source_location": "L2069",
+      "id": "services_validator_rationale_2069",
+      "community": 33,
       "norm_label": "step 4.12 \u2014 party identification validation         validates all party blocks"
     },
     {
       "label": "Step 4.13 \u2014 Address CBPR+ Rules Validation         Validates all <PstlAdr> bloc",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2188",
-      "id": "services_validator_rationale_2188",
-      "community": 10,
+      "source_location": "L2203",
+      "id": "services_validator_rationale_2203",
+      "community": 23,
       "norm_label": "step 4.13 \u2014 address cbpr+ rules validation         validates all <pstladr> bloc"
     },
     {
       "label": "Step 4.14 \u2014 Remittance Information Validation (CBPR+ SR2025)         Validates:",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2353",
-      "id": "services_validator_rationale_2353",
-      "community": 10,
+      "source_location": "L2368",
+      "id": "services_validator_rationale_2368",
+      "community": 28,
       "norm_label": "step 4.14 \u2014 remittance information validation (cbpr+ sr2025)         validates:"
     },
     {
       "label": "Step 5: Canonical Message Creation         Converts XML to a flat canonical JSO",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2525",
-      "id": "services_validator_rationale_2525",
-      "community": 10,
+      "source_location": "L2540",
+      "id": "services_validator_rationale_2540",
+      "community": 32,
       "norm_label": "step 5: canonical message creation         converts xml to a flat canonical jso"
     },
     {
       "label": "Robust Message Type Detection - Prioritizes Payload over Header",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2594",
-      "id": "services_validator_rationale_2594",
-      "community": 10,
+      "source_location": "L2609",
+      "id": "services_validator_rationale_2609",
+      "community": 13,
       "norm_label": "robust message type detection - prioritizes payload over header"
     },
     {
       "label": "Helper to adjust counters when removing a duplicate issue.",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2726",
-      "id": "services_validator_rationale_2726",
-      "community": 7,
+      "source_location": "L2741",
+      "id": "services_validator_rationale_2741",
+      "community": 9,
       "norm_label": "helper to adjust counters when removing a duplicate issue."
     },
     {
       "label": "Locates the XSD file for the given message type.         1. Exact Match (e.g. p",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2733",
-      "id": "services_validator_rationale_2733",
+      "source_location": "L2748",
+      "id": "services_validator_rationale_2748",
       "community": 14,
       "norm_label": "locates the xsd file for the given message type.         1. exact match (e.g. p"
     },
@@ -4579,26 +4786,26 @@
       "label": "Step 4.15 \u2014 Clearing System Specific Rules         1. TARGET2 (T2) -> Settlemen",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2782",
-      "id": "services_validator_rationale_2782",
-      "community": 21,
+      "source_location": "L2797",
+      "id": "services_validator_rationale_2797",
+      "community": 19,
       "norm_label": "step 4.15 \u2014 clearing system specific rules         1. target2 (t2) -> settlemen"
     },
     {
       "label": "STEP 4.16 - Character Set Validation for Name and Address Tags          Checks",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L2973",
-      "id": "services_validator_rationale_2973",
-      "community": 10,
+      "source_location": "L2988",
+      "id": "services_validator_rationale_2988",
+      "community": 31,
       "norm_label": "step 4.16 - character set validation for name and address tags          checks"
     },
     {
       "label": "Helper to build a simple non-indexed XPath for an lxml element",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L3032",
-      "id": "services_validator_rationale_3032",
+      "source_location": "L3047",
+      "id": "services_validator_rationale_3047",
       "community": 14,
       "norm_label": "helper to build a simple non-indexed xpath for an lxml element"
     },
@@ -4606,8 +4813,8 @@
       "label": "Step 4.18 \u2014 Duplicate Tag Validation         Checks for tags that appear more t",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L3044",
-      "id": "services_validator_rationale_3044",
+      "source_location": "L3059",
+      "id": "services_validator_rationale_3059",
       "community": 14,
       "norm_label": "step 4.18 \u2014 duplicate tag validation         checks for tags that appear more t"
     },
@@ -4615,8 +4822,8 @@
       "label": "Validates Legal Entity Identifier (LEI) using ISO 7064 MOD 97-10.         Retur",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L3112",
-      "id": "services_validator_rationale_3112",
+      "source_location": "L3127",
+      "id": "services_validator_rationale_3127",
       "community": 14,
       "norm_label": "validates legal entity identifier (lei) using iso 7064 mod 97-10.         retur"
     },
@@ -4624,8 +4831,8 @@
       "label": "Step 4.19 \u2014 Scheme Name Validation (Strict Policy + Structural Rules + LEI Check",
       "file_type": "rationale",
       "source_file": "app/services/validator.py",
-      "source_location": "L3154",
-      "id": "services_validator_rationale_3154",
+      "source_location": "L3169",
+      "id": "services_validator_rationale_3169",
       "community": 14,
       "norm_label": "step 4.19 \u2014 scheme name validation (strict policy + structural rules + lei check"
     },
@@ -4635,7 +4842,7 @@
       "source_file": "app/services/__init__.py",
       "source_location": "L1",
       "id": "app_services_init_py",
-      "community": 47,
+      "community": 57,
       "norm_label": "__init__.py"
     },
     {
@@ -4644,7 +4851,7 @@
       "source_file": "bics/demo.py",
       "source_location": "L1",
       "id": "bics_demo_py",
-      "community": 48,
+      "community": 58,
       "norm_label": "demo.py"
     },
     {
@@ -4671,7 +4878,7 @@
       "source_file": "scratch/debug_pacs009.py",
       "source_location": "L1",
       "id": "scratch_debug_pacs009_py",
-      "community": 7,
+      "community": 9,
       "norm_label": "debug_pacs009.py"
     },
     {
@@ -4680,7 +4887,7 @@
       "source_file": "scratch/debug_pacs009.py",
       "source_location": "L12",
       "id": "scratch_debug_pacs009_test_pacs009",
-      "community": 7,
+      "community": 9,
       "norm_label": "test_pacs009()"
     },
     {
@@ -4689,7 +4896,7 @@
       "source_file": "scratch/debug_pain008.py",
       "source_location": "L1",
       "id": "scratch_debug_pain008_py",
-      "community": 7,
+      "community": 9,
       "norm_label": "debug_pain008.py"
     },
     {
@@ -4698,7 +4905,7 @@
       "source_file": "scratch/debug_pain008.py",
       "source_location": "L13",
       "id": "scratch_debug_pain008_test_messages",
-      "community": 7,
+      "community": 9,
       "norm_label": "test_messages()"
     },
     {
@@ -4707,7 +4914,7 @@
       "source_file": "scratch/find_helpers.py",
       "source_location": "L1",
       "id": "scratch_find_helpers_py",
-      "community": 49,
+      "community": 59,
       "norm_label": "find_helpers.py"
     },
     {
@@ -4716,7 +4923,7 @@
       "source_file": "scratch/inspect_pacs004_ref.py",
       "source_location": "L1",
       "id": "scratch_inspect_pacs004_ref_py",
-      "community": 50,
+      "community": 60,
       "norm_label": "inspect_pacs004_ref.py"
     },
     {
@@ -4725,7 +4932,7 @@
       "source_file": "scratch/inspect_xsd.py",
       "source_location": "L1",
       "id": "scratch_inspect_xsd_py",
-      "community": 31,
+      "community": 39,
       "norm_label": "inspect_xsd.py"
     },
     {
@@ -4734,7 +4941,7 @@
       "source_file": "scratch/inspect_xsd.py",
       "source_location": "L4",
       "id": "scratch_inspect_xsd_inspect_file",
-      "community": 31,
+      "community": 39,
       "norm_label": "inspect_file()"
     },
     {
@@ -4743,7 +4950,7 @@
       "source_file": "scratch/search_codebase.py",
       "source_location": "L1",
       "id": "scratch_search_codebase_py",
-      "community": 51,
+      "community": 61,
       "norm_label": "search_codebase.py"
     },
     {
@@ -4752,7 +4959,7 @@
       "source_file": "scratch/test_account_empty.py",
       "source_location": "L1",
       "id": "scratch_test_account_empty_py",
-      "community": 32,
+      "community": 40,
       "norm_label": "test_account_empty.py"
     },
     {
@@ -4761,7 +4968,7 @@
       "source_file": "scratch/test_account_empty.py",
       "source_location": "L1",
       "id": "scratch_test_account_empty_rationale_1",
-      "community": 32,
+      "community": 40,
       "norm_label": "verify tier 1 catches empty account containers and other newly-listed empties."
     },
     {
@@ -4770,7 +4977,7 @@
       "source_file": "scratch/test_api_pacs004.py",
       "source_location": "L1",
       "id": "scratch_test_api_pacs004_py",
-      "community": 52,
+      "community": 62,
       "norm_label": "test_api_pacs004.py"
     },
     {
@@ -4797,7 +5004,7 @@
       "source_file": "scratch/test_e2e.py",
       "source_location": "L1",
       "id": "scratch_test_e2e_py",
-      "community": 33,
+      "community": 41,
       "norm_label": "test_e2e.py"
     },
     {
@@ -4806,7 +5013,7 @@
       "source_file": "scratch/test_e2e.py",
       "source_location": "L1",
       "id": "scratch_test_e2e_rationale_1",
-      "community": 33,
+      "community": 41,
       "norm_label": "end-to-end smoke test:  1) user's original empty-fininstnid xml still fails (alr"
     },
     {
@@ -4815,7 +5022,7 @@
       "source_file": "scratch/test_empty_container.py",
       "source_location": "L1",
       "id": "scratch_test_empty_container_py",
-      "community": 34,
+      "community": 42,
       "norm_label": "test_empty_container.py"
     },
     {
@@ -4824,7 +5031,7 @@
       "source_file": "scratch/test_empty_container.py",
       "source_location": "L1",
       "id": "scratch_test_empty_container_rationale_1",
-      "community": 34,
+      "community": 42,
       "norm_label": "quick smoke test for _validate_empty_required_containers.  loads the user's repo"
     },
     {
@@ -4833,7 +5040,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L1",
       "id": "scratch_test_full_pipeline_py",
-      "community": 19,
+      "community": 36,
       "norm_label": "test_full_pipeline.py"
     },
     {
@@ -4842,7 +5049,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L10",
       "id": "scratch_test_full_pipeline_main",
-      "community": 19,
+      "community": 36,
       "norm_label": "main()"
     },
     {
@@ -4851,7 +5058,7 @@
       "source_file": "scratch/test_full_pipeline.py",
       "source_location": "L1",
       "id": "scratch_test_full_pipeline_rationale_1",
-      "community": 19,
+      "community": 36,
       "norm_label": "run the full validate() pipeline end-to-end on both xmls. confirms no rule crash"
     },
     {
@@ -4860,7 +5067,7 @@
       "source_file": "scratch/test_full_user_xml.py",
       "source_location": "L1",
       "id": "scratch_test_full_user_xml_py",
-      "community": 35,
+      "community": 43,
       "norm_label": "test_full_user_xml.py"
     },
     {
@@ -4869,7 +5076,7 @@
       "source_file": "scratch/test_full_user_xml.py",
       "source_location": "L1",
       "id": "scratch_test_full_user_xml_rationale_1",
-      "community": 35,
+      "community": 43,
       "norm_label": "full user xml smoke test \u2014 confirms only the empty <fr>/<fininstnid> get flagged"
     },
     {
@@ -4878,7 +5085,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L1",
       "id": "scratch_test_issues_py",
-      "community": 18,
+      "community": 26,
       "norm_label": "test_issues.py"
     },
     {
@@ -4887,7 +5094,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L13",
       "id": "scratch_test_issues_test_msg",
-      "community": 18,
+      "community": 26,
       "norm_label": "test_msg()"
     },
     {
@@ -4896,7 +5103,7 @@
       "source_file": "scratch/test_issues.py",
       "source_location": "L42",
       "id": "scratch_test_issues_main",
-      "community": 18,
+      "community": 26,
       "norm_label": "main()"
     },
     {
@@ -4905,7 +5112,7 @@
       "source_file": "scratch/test_pacs002.py",
       "source_location": "L1",
       "id": "scratch_test_pacs002_py",
-      "community": 53,
+      "community": 63,
       "norm_label": "test_pacs002.py"
     },
     {
@@ -4914,7 +5121,7 @@
       "source_file": "scratch/test_pacs002_validation.py",
       "source_location": "L1",
       "id": "scratch_test_pacs002_validation_py",
-      "community": 7,
+      "community": 9,
       "norm_label": "test_pacs002_validation.py"
     },
     {
@@ -4923,7 +5130,7 @@
       "source_file": "scratch/test_pacs002_validation.py",
       "source_location": "L13",
       "id": "scratch_test_pacs002_validation_main",
-      "community": 7,
+      "community": 9,
       "norm_label": "main()"
     },
     {
@@ -4932,7 +5139,7 @@
       "source_file": "scratch/test_pacs003_charges.py",
       "source_location": "L1",
       "id": "scratch_test_pacs003_charges_py",
-      "community": 7,
+      "community": 9,
       "norm_label": "test_pacs003_charges.py"
     },
     {
@@ -4941,7 +5148,7 @@
       "source_file": "scratch/test_pacs003_charges.py",
       "source_location": "L13",
       "id": "scratch_test_pacs003_charges_main",
-      "community": 7,
+      "community": 9,
       "norm_label": "main()"
     },
     {
@@ -4950,7 +5157,7 @@
       "source_file": "scratch/test_pacs004_validation.py",
       "source_location": "L1",
       "id": "scratch_test_pacs004_validation_py",
-      "community": 7,
+      "community": 9,
       "norm_label": "test_pacs004_validation.py"
     },
     {
@@ -4959,7 +5166,7 @@
       "source_file": "scratch/test_pacs004_validation.py",
       "source_location": "L13",
       "id": "scratch_test_pacs004_validation_main",
-      "community": 7,
+      "community": 9,
       "norm_label": "main()"
     },
     {
@@ -4968,8 +5175,404 @@
       "source_file": "scratch/test_pacs009cov.py",
       "source_location": "L1",
       "id": "scratch_test_pacs009cov_py",
-      "community": 54,
+      "community": 64,
       "norm_label": "test_pacs009cov.py"
+    },
+    {
+      "label": "BUG 1 + BUG 4 FIX:         MT202COV carries two sequences:           Sequence",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1342",
+      "community": 1,
+      "norm_label": "bug 1 + bug 4 fix:         mt202cov carries two sequences:           sequence",
+      "id": "services_mt_mx_converter_rationale_1342"
+    },
+    {
+      "label": "Extracts date, currency, or amount from composite SWIFT fields like 32A, 33B, et",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1477",
+      "community": 1,
+      "norm_label": "extracts date, currency, or amount from composite swift fields like 32a, 33b, et",
+      "id": "services_mt_mx_converter_rationale_1477"
+    },
+    {
+      "label": "Recursively applies mandatory field rules from swift_validation_rules.json (v2.0",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1516",
+      "community": 1,
+      "norm_label": "recursively applies mandatory field rules from swift_validation_rules.json (v2.0",
+      "id": "services_mt_mx_converter_rationale_1516"
+    },
+    {
+      "label": "Process children using mx_root for path navigation to ensure absolute paths work",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1669",
+      "community": 1,
+      "norm_label": "process children using mx_root for path navigation to ensure absolute paths work",
+      "id": "services_mt_mx_converter_rationale_1669"
+    },
+    {
+      "label": "Sorts the children of 'element' according to the order in 'sequence'.",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1676",
+      "community": 1,
+      "norm_label": "sorts the children of 'element' according to the order in 'sequence'.",
+      "id": "services_mt_mx_converter_rationale_1676"
+    },
+    {
+      "label": "Recursively sorts children of an element based on a comprehensive list of ISO 20",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1691",
+      "community": 1,
+      "norm_label": "recursively sorts children of an element based on a comprehensive list of iso 20",
+      "id": "services_mt_mx_converter_rationale_1691"
+    },
+    {
+      "label": "Recursively removes elements that have no text and no children.",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1775",
+      "community": 1,
+      "norm_label": "recursively removes elements that have no text and no children.",
+      "id": "services_mt_mx_converter_rationale_1775"
+    },
+    {
+      "label": "Final sweep to ensure Ntry nodes are compliant with mandatory reporting rules.",
+      "file_type": "rationale",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1786",
+      "community": 1,
+      "norm_label": "final sweep to ensure ntry nodes are compliant with mandatory reporting rules.",
+      "id": "services_mt_mx_converter_rationale_1786"
+    },
+    {
+      "label": "Generates the next sequential validation ID in format VAL{DDMMYY}{00001}",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L72",
+      "community": 20,
+      "norm_label": "generates the next sequential validation id in format val{ddmmyy}{00001}",
+      "id": "services_validator_rationale_72"
+    },
+    {
+      "label": "Resets the daily counter back to 0",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L94",
+      "community": 38,
+      "norm_label": "resets the daily counter back to 0",
+      "id": "services_validator_rationale_94"
+    },
+    {
+      "label": "Loads the dynamic configuration file",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L99",
+      "community": 15,
+      "norm_label": "loads the dynamic configuration file",
+      "id": "services_validator_rationale_99"
+    },
+    {
+      "label": "Loads BIC codes from the entities.ftm.json file (JSONL format)",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L109",
+      "community": 15,
+      "norm_label": "loads bic codes from the entities.ftm.json file (jsonl format)",
+      "id": "services_validator_rationale_109"
+    },
+    {
+      "label": "Hot-reload the BIC dataset from disk into memory without disrupting         act",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L144",
+      "community": 9,
+      "norm_label": "hot-reload the bic dataset from disk into memory without disrupting         act",
+      "id": "services_validator_rationale_144"
+    },
+    {
+      "label": "Searches for BICs matching the query in either the BIC code or bank name",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L200",
+      "community": 37,
+      "norm_label": "searches for bics matching the query in either the bic code or bank name",
+      "id": "services_validator_rationale_200"
+    },
+    {
+      "label": "High-Performance Extraction Engine:         Automatically unzips all XSD bluepr",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L217",
+      "community": 15,
+      "norm_label": "high-performance extraction engine:         automatically unzips all xsd bluepr",
+      "id": "services_validator_rationale_217"
+    },
+    {
+      "label": "Loads all JSON codelists from the resource directory (Lowercased keys)",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L250",
+      "community": 15,
+      "norm_label": "loads all json codelists from the resource directory (lowercased keys)",
+      "id": "services_validator_rationale_250"
+    },
+    {
+      "label": "Scans the XSD directory and ZIP files for supported message types.         Cach",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L266",
+      "community": 18,
+      "norm_label": "scans the xsd directory and zip files for supported message types.         cach",
+      "id": "services_validator_rationale_266"
+    },
+    {
+      "label": "Main 10-Step Validation Flow",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L316",
+      "community": 13,
+      "norm_label": "main 10-step validation flow",
+      "id": "services_validator_rationale_316"
+    },
+    {
+      "label": "Step 4.5 \u2014 Past Date Validation         Scans the raw XML string directly for A",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L613",
+      "community": 30,
+      "norm_label": "step 4.5 \u2014 past date validation         scans the raw xml string directly for a",
+      "id": "services_validator_rationale_613"
+    },
+    {
+      "label": "Step 4.6 \u2014 ID Field Maximum Length Validation         Scans the raw XML string",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L691",
+      "community": 13,
+      "norm_label": "step 4.6 \u2014 id field maximum length validation         scans the raw xml string",
+      "id": "services_validator_rationale_691"
+    },
+    {
+      "label": "Step 4.21 \u2014 CBPR+ DateTime Format Validation         Enforces:           1. Ti",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L751",
+      "community": 24,
+      "norm_label": "step 4.21 \u2014 cbpr+ datetime format validation         enforces:           1. ti",
+      "id": "services_validator_rationale_751"
+    },
+    {
+      "label": "Step 4.22 \u2014 Global Name & Postal Address Co-existence (CBPR+)         Enforces",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L808",
+      "community": 13,
+      "norm_label": "step 4.22 \u2014 global name & postal address co-existence (cbpr+)         enforces",
+      "id": "services_validator_rationale_808"
+    },
+    {
+      "label": "CBPR+ Business Rule \u2014 Empty Mandatory Containers.          Several ISO 20022 c",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L868",
+      "community": 22,
+      "norm_label": "cbpr+ business rule \u2014 empty mandatory containers.          several iso 20022 c",
+      "id": "services_validator_rationale_868"
+    },
+    {
+      "label": "CBPR+ rule HEAD001_MSGDEFIDR_MATCHES_PAYLOAD \u2014          The AppHdr's <MsgDefId",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1060",
+      "community": 25,
+      "norm_label": "cbpr+ rule head001_msgdefidr_matches_payload \u2014          the apphdr's <msgdefid",
+      "id": "services_validator_rationale_1060"
+    },
+    {
+      "label": "SWIFT CBPR+ Rule \u2014 pain.008 GrpHdr must contain FwdgAgt.          The base ISO",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1147",
+      "community": 13,
+      "norm_label": "swift cbpr+ rule \u2014 pain.008 grphdr must contain fwdgagt.          the base iso",
+      "id": "services_validator_rationale_1147"
+    },
+    {
+      "label": "Step 4.7 \u2014 UETR UUID v4 Format Validation         Finds every <UETR> element in",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1192",
+      "community": 21,
+      "norm_label": "step 4.7 \u2014 uetr uuid v4 format validation         finds every <uetr> element in",
+      "id": "services_validator_rationale_1192"
+    },
+    {
+      "label": "Step 4.8 \u2014 IBAN / BBAN Account Identifier Validation          For every accoun",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1260",
+      "community": 34,
+      "norm_label": "step 4.8 \u2014 iban / bban account identifier validation          for every accoun",
+      "id": "services_validator_rationale_1260"
+    },
+    {
+      "label": "Step 4.9 \u2014 NbOfTxs Count Validation         Verifies that the <NbOfTxs> value m",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1912",
+      "community": 29,
+      "norm_label": "step 4.9 \u2014 nboftxs count validation         verifies that the <nboftxs> value m",
+      "id": "services_validator_rationale_1912"
+    },
+    {
+      "label": "Step 4.17 \u2014 Duplicate Identification Validation         Scans for unique identi",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1947",
+      "community": 13,
+      "norm_label": "step 4.17 \u2014 duplicate identification validation         scans for unique identi",
+      "id": "services_validator_rationale_1947"
+    },
+    {
+      "label": "Step 4.10 \u2014 SWIFT Character Set Validation         Checks <Ustrd> (unstructured",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1977",
+      "community": 35,
+      "norm_label": "step 4.10 \u2014 swift character set validation         checks <ustrd> (unstructured",
+      "id": "services_validator_rationale_1977"
+    },
+    {
+      "label": "Step 4.11 \u2014 Charges Currency Match Validation         Verifies that <ChrgsInf><",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2012",
+      "community": 27,
+      "norm_label": "step 4.11 \u2014 charges currency match validation         verifies that <chrgsinf><",
+      "id": "services_validator_rationale_2012"
+    },
+    {
+      "label": "Step 4.12 \u2014 Party Identification Validation         Validates all party blocks",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2054",
+      "community": 33,
+      "norm_label": "step 4.12 \u2014 party identification validation         validates all party blocks",
+      "id": "services_validator_rationale_2054"
+    },
+    {
+      "label": "Step 4.13 \u2014 Address CBPR+ Rules Validation         Validates all <PstlAdr> bloc",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2188",
+      "community": 23,
+      "norm_label": "step 4.13 \u2014 address cbpr+ rules validation         validates all <pstladr> bloc",
+      "id": "services_validator_rationale_2188"
+    },
+    {
+      "label": "Step 4.14 \u2014 Remittance Information Validation (CBPR+ SR2025)         Validates:",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2353",
+      "community": 28,
+      "norm_label": "step 4.14 \u2014 remittance information validation (cbpr+ sr2025)         validates:",
+      "id": "services_validator_rationale_2353"
+    },
+    {
+      "label": "Step 5: Canonical Message Creation         Converts XML to a flat canonical JSO",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2525",
+      "community": 32,
+      "norm_label": "step 5: canonical message creation         converts xml to a flat canonical jso",
+      "id": "services_validator_rationale_2525"
+    },
+    {
+      "label": "Robust Message Type Detection - Prioritizes Payload over Header",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2594",
+      "community": 13,
+      "norm_label": "robust message type detection - prioritizes payload over header",
+      "id": "services_validator_rationale_2594"
+    },
+    {
+      "label": "Helper to adjust counters when removing a duplicate issue.",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2726",
+      "community": 9,
+      "norm_label": "helper to adjust counters when removing a duplicate issue.",
+      "id": "services_validator_rationale_2726"
+    },
+    {
+      "label": "Locates the XSD file for the given message type.         1. Exact Match (e.g. p",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2733",
+      "community": 14,
+      "norm_label": "locates the xsd file for the given message type.         1. exact match (e.g. p",
+      "id": "services_validator_rationale_2733"
+    },
+    {
+      "label": "Step 4.15 \u2014 Clearing System Specific Rules         1. TARGET2 (T2) -> Settlemen",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2782",
+      "community": 19,
+      "norm_label": "step 4.15 \u2014 clearing system specific rules         1. target2 (t2) -> settlemen",
+      "id": "services_validator_rationale_2782"
+    },
+    {
+      "label": "STEP 4.16 - Character Set Validation for Name and Address Tags          Checks",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2973",
+      "community": 31,
+      "norm_label": "step 4.16 - character set validation for name and address tags          checks",
+      "id": "services_validator_rationale_2973"
+    },
+    {
+      "label": "Helper to build a simple non-indexed XPath for an lxml element",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3032",
+      "community": 14,
+      "norm_label": "helper to build a simple non-indexed xpath for an lxml element",
+      "id": "services_validator_rationale_3032"
+    },
+    {
+      "label": "Step 4.18 \u2014 Duplicate Tag Validation         Checks for tags that appear more t",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3044",
+      "community": 14,
+      "norm_label": "step 4.18 \u2014 duplicate tag validation         checks for tags that appear more t",
+      "id": "services_validator_rationale_3044"
+    },
+    {
+      "label": "Validates Legal Entity Identifier (LEI) using ISO 7064 MOD 97-10.         Retur",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3112",
+      "community": 14,
+      "norm_label": "validates legal entity identifier (lei) using iso 7064 mod 97-10.         retur",
+      "id": "services_validator_rationale_3112"
+    },
+    {
+      "label": "Step 4.19 \u2014 Scheme Name Validation (Strict Policy + Structural Rules + LEI Check",
+      "file_type": "rationale",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3154",
+      "community": 14,
+      "norm_label": "step 4.19 \u2014 scheme name validation (strict policy + structural rules + lei check",
+      "id": "services_validator_rationale_3154"
     },
     {
       "label": "Generate one ISO 20022 XML message for the given type and return raw XML.",
@@ -7779,9 +8382,9 @@
       "source_file": "app/services/bulk_generator.py",
       "source_location": "L2551",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_bulk_generator_rationale_2551",
-      "target": "app_services_bulk_generator_py",
-      "confidence_score": 1.0
+      "target": "app_services_bulk_generator_py"
     },
     {
       "relation": "rationale_for",
@@ -10136,9 +10739,9 @@
       "source_file": "app/services/bulk_generator.py",
       "source_location": "L2607",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_bulk_generator_rationale_2607",
-      "target": "services_bulk_generator_generate_single_xml",
-      "confidence_score": 1.0
+      "target": "services_bulk_generator_generate_single_xml"
     },
     {
       "relation": "calls",
@@ -10257,6 +10860,264 @@
       "confidence_score": 1.0,
       "source": "services_bulk_generator_rationale_2605",
       "target": "services_bulk_generator_generate_single_xml"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_cbpr_json_validator_py",
+      "target": "app_services_models_py"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L93",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_cbpr_json_validator_py",
+      "target": "services_cbpr_json_validator_extract_catalog"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L111",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_cbpr_json_validator_py",
+      "target": "services_cbpr_json_validator_local_name"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L116",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_cbpr_json_validator_py",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L259",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_cbpr_json_validator_py",
+      "target": "services_cbpr_json_validator_cbpr_check_value"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_1",
+      "target": "app_services_cbpr_json_validator_py"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_validator_py",
+      "target": "app_services_cbpr_json_validator_py"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L197",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_load_cbpr_catalog",
+      "target": "services_cbpr_json_validator_extract_catalog"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_94",
+      "target": "services_cbpr_json_validator_extract_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L225",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check",
+      "target": "services_cbpr_json_validator_local_name"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L112",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_112",
+      "target": "services_cbpr_json_validator_local_name"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_cbpr_schemas_dir"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_find_cbpr_schema_for"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L185",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_load_cbpr_catalog"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L201",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L117",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_117",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L23",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_models_validationissue"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L23",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin",
+      "target": "services_models_validationreport"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L18",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "services_validator_isovalidator",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L138",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_find_cbpr_schema_for",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_cbpr_schemas_dir"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_load_cbpr_catalog",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_find_cbpr_schema_for"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_127",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_find_cbpr_schema_for"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L208",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_load_cbpr_catalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L236",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check",
+      "target": "services_cbpr_json_validator_cbpr_check_value"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/cbpr_json_validator.py",
+      "source_location": "L207",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_cbpr_json_validator_rationale_207",
+      "target": "services_cbpr_json_validator_cbprjsonschemamixin_run_cbpr_json_schema_check"
     },
     {
       "relation": "contains",
@@ -11877,6 +12738,16 @@
       "target": "services_mt_mx_converter_mt2mxconverter"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1348",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_services_mt_mx_converter_py",
+      "target": "services_mt_mx_converter_parse_71f_71g_value"
+    },
+    {
       "relation": "inherits",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
@@ -12156,6 +13027,26 @@
       "confidence_score": 1.0,
       "source": "services_mt_mx_converter_mt2mxconverter",
       "target": "services_mt_mx_converter_mt2mxconverter_validate_and_convert"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1368",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_mt2mxconverter",
+      "target": "services_mt_mx_converter_mt2mxconverter_apply_charges_information"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1454",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_mt2mxconverter",
+      "target": "services_mt_mx_converter_mt2mxconverter_find_node"
     },
     {
       "relation": "method",
@@ -12793,6 +13684,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1804",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1804",
+      "target": "services_mt_mx_converter_mt2mxconverter_sort_children_by_list"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
       "source_location": "L1676",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -12892,6 +13793,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_mt_mx_converter_mt2mxconverter_validate_and_convert",
+      "target": "services_mt_mx_converter_mt2mxconverter_apply_charges_information"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1223",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_mt2mxconverter_validate_and_convert",
       "target": "services_mt_mx_converter_mt2mxconverter_map_mt202cov_seq_b"
     },
     {
@@ -12939,6 +13851,47 @@
       "target": "services_mt_mx_converter_mt2mxconverter_heal_camt_mandatory_fields"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1394",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_mt2mxconverter_apply_charges_information",
+      "target": "services_mt_mx_converter_mt2mxconverter_find_node"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1369",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1369",
+      "target": "services_mt_mx_converter_mt2mxconverter_apply_charges_information"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1455",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1455",
+      "target": "services_mt_mx_converter_mt2mxconverter_find_node"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1470",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1470",
+      "target": "services_mt_mx_converter_mt2mxconverter_map_mt202cov_seq_b"
+    },
+    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
@@ -12957,6 +13910,16 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_mt_mx_converter_mt2mxconverter_apply_v2_mandatory_healing",
+      "target": "services_mt_mx_converter_mt2mxconverter_extract_composite_field"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1605",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1605",
       "target": "services_mt_mx_converter_mt2mxconverter_extract_composite_field"
     },
     {
@@ -12984,11 +13947,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1644",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1644",
+      "target": "services_mt_mx_converter_mt2mxconverter_apply_v2_mandatory_healing"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
       "source_location": "L1516",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_mt_mx_converter_rationale_1516",
       "target": "services_mt_mx_converter_mt2mxconverter_apply_v2_mandatory_healing"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1797",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1797",
+      "target": "services_mt_mx_converter_mt2mxconverter_process_v2_children"
     },
     {
       "relation": "rationale_for",
@@ -13004,6 +13987,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1819",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1819",
+      "target": "services_mt_mx_converter_mt2mxconverter_sort_xml_recursively"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
       "source_location": "L1691",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -13014,11 +14007,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1903",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1903",
+      "target": "services_mt_mx_converter_mt2mxconverter_cleanup_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
       "source_location": "L1775",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_mt_mx_converter_rationale_1775",
       "target": "services_mt_mx_converter_mt2mxconverter_cleanup_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/mt_mx_converter.py",
+      "source_location": "L1914",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_mt_mx_converter_rationale_1914",
+      "target": "services_mt_mx_converter_mt2mxconverter_heal_camt_mandatory_fields"
     },
     {
       "relation": "rationale_for",
@@ -13639,6 +14652,16 @@
       "target": "pacs004mixin"
     },
     {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_isovalidator",
+      "target": "cbprjsonschemamixin"
+    },
+    {
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
@@ -14154,11 +15177,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_73",
+      "target": "services_validator_isovalidator_generate_next_id"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L72",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_72",
       "target": "services_validator_isovalidator_generate_next_id"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_95",
+      "target": "services_validator_isovalidator_reset_counter"
     },
     {
       "relation": "rationale_for",
@@ -14174,11 +15217,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_100",
+      "target": "services_validator_isovalidator_load_config"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L99",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_99",
       "target": "services_validator_isovalidator_load_config"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_110",
+      "target": "services_validator_isovalidator_load_bics"
     },
     {
       "relation": "rationale_for",
@@ -14194,11 +15257,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L145",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_145",
+      "target": "services_validator_isovalidator_reload_bics"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L144",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_144",
       "target": "services_validator_isovalidator_reload_bics"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L201",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_201",
+      "target": "services_validator_isovalidator_search_bics"
     },
     {
       "relation": "rationale_for",
@@ -14214,6 +15297,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L218",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_218",
+      "target": "services_validator_isovalidator_ensure_xsds_extracted"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L217",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -14224,11 +15317,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L251",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_251",
+      "target": "services_validator_isovalidator_load_codelists"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L250",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_250",
       "target": "services_validator_isovalidator_load_codelists"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L267",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_267",
+      "target": "services_validator_isovalidator_get_supported_messages"
     },
     {
       "relation": "rationale_for",
@@ -14497,11 +15610,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L317",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_317",
+      "target": "services_validator_isovalidator_validate"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L316",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_316",
       "target": "services_validator_isovalidator_validate"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L628",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_628",
+      "target": "services_validator_isovalidator_validate_dates_in_xml"
     },
     {
       "relation": "rationale_for",
@@ -14517,11 +15650,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L706",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_706",
+      "target": "services_validator_isovalidator_validate_id_lengths_in_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L691",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_691",
       "target": "services_validator_isovalidator_validate_id_lengths_in_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L766",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_766",
+      "target": "services_validator_isovalidator_validate_cbpr_datetime"
     },
     {
       "relation": "rationale_for",
@@ -14537,11 +15690,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L823",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_823",
+      "target": "services_validator_isovalidator_validate_name_address_coexistence"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L808",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_808",
       "target": "services_validator_isovalidator_validate_name_address_coexistence"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L883",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_883",
+      "target": "services_validator_isovalidator_validate_empty_required_containers"
     },
     {
       "relation": "rationale_for",
@@ -14557,11 +15730,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L1075",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1075",
+      "target": "services_validator_isovalidator_validate_apphdr_payload_match"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L1060",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_1060",
       "target": "services_validator_isovalidator_validate_apphdr_payload_match"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1162",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1162",
+      "target": "services_validator_isovalidator_validate_pain008_fwdgagt_rule"
     },
     {
       "relation": "rationale_for",
@@ -14577,11 +15770,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L1207",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1207",
+      "target": "services_validator_isovalidator_validate_uetr_in_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L1192",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_1192",
       "target": "services_validator_isovalidator_validate_uetr_in_xml"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1275",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1275",
+      "target": "services_validator_isovalidator_validate_account_identifiers_in_xml"
     },
     {
       "relation": "rationale_for",
@@ -14597,11 +15810,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L1927",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1927",
+      "target": "services_validator_isovalidator_validate_nboftxs"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L1912",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_1912",
       "target": "services_validator_isovalidator_validate_nboftxs"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L1962",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1962",
+      "target": "services_validator_isovalidator_validate_duplicate_ids"
     },
     {
       "relation": "rationale_for",
@@ -14617,11 +15850,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L1992",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_1992",
+      "target": "services_validator_isovalidator_validate_swift_charset"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L1977",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_1977",
       "target": "services_validator_isovalidator_validate_swift_charset"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2027",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2027",
+      "target": "services_validator_isovalidator_validate_charges_currency"
     },
     {
       "relation": "rationale_for",
@@ -14637,11 +15890,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L2069",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2069",
+      "target": "services_validator_isovalidator_validate_party_rules"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L2054",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_2054",
       "target": "services_validator_isovalidator_validate_party_rules"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2203",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2203",
+      "target": "services_validator_isovalidator_validate_address_cbpr_rules"
     },
     {
       "relation": "rationale_for",
@@ -14657,6 +15930,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L2368",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2368",
+      "target": "services_validator_isovalidator_validate_remittance_rules"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L2353",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -14667,11 +15950,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L2540",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2540",
+      "target": "services_validator_isovalidator_normalize_message"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L2525",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_2525",
       "target": "services_validator_isovalidator_normalize_message"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2609",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2609",
+      "target": "services_validator_isovalidator_detect_message_type"
     },
     {
       "relation": "rationale_for",
@@ -14692,6 +15995,16 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_isovalidator_finalize_report",
+      "target": "services_validator_isovalidator_decrement_counters"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2741",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2741",
       "target": "services_validator_isovalidator_decrement_counters"
     },
     {
@@ -14719,6 +16032,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L2748",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2748",
+      "target": "services_validator_isovalidator_get_xsd_path"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L2733",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -14729,11 +16052,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L2797",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2797",
+      "target": "services_validator_isovalidator_validate_clearing_system_rules"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L2782",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_2782",
       "target": "services_validator_isovalidator_validate_clearing_system_rules"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L2988",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_2988",
+      "target": "services_validator_isovalidator_validate_charsets_in_xml"
     },
     {
       "relation": "rationale_for",
@@ -14771,11 +16114,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L3047",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_3047",
+      "target": "services_validator_isovalidator_get_xpath_for_element"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L3032",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_3032",
       "target": "services_validator_isovalidator_get_xpath_for_element"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3059",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_3059",
+      "target": "services_validator_isovalidator_validate_duplicate_tags"
     },
     {
       "relation": "rationale_for",
@@ -14802,11 +16165,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/services/validator.py",
+      "source_location": "L3127",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_3127",
+      "target": "services_validator_isovalidator_check_lei"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
       "source_location": "L3112",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "services_validator_rationale_3112",
       "target": "services_validator_isovalidator_check_lei"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/services/validator.py",
+      "source_location": "L3169",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_validator_rationale_3169",
+      "target": "services_validator_isovalidator_validate_schme_nm_in_xml"
     },
     {
       "relation": "rationale_for",
@@ -14991,5 +16374,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "3ea7412cd9b32729adc7c5a0aa60c06291c40617"
+  "built_at_commit": "e3617f65ef6b7792e55438a65072ba1f83383a0e"
 }

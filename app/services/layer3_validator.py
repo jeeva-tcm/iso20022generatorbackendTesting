@@ -389,13 +389,40 @@ class Layer3Mixin:
         if codelists is None:
             codelists = {}
         def exists_sub(match):
-            path_expr = match.group(1).strip()
-            # Only statically replace if it's a literal path string (no variables or quotes)
+            path_expr = match.group(1).strip().strip("\"'")
+            # Only statically replace if it's a literal path string (no variables)
             if re.match(r'^[A-Za-z0-9._\[\]]+$', path_expr):
-                path = path_expr.replace("[", "\\[").replace("]", "\\]")
-                return "True" if any(re.match(f"^{path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
+                parts = path_expr.split('.')
+                escaped_parts = [p.replace("[", "\\[").replace("]", "\\]") for p in parts]
+                regex_path = r'(\[\d+\])?\.'.join(escaped_parts)
+                return "True" if any(re.match(f"^{regex_path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
             # Return original string to be handled by the 'exists' lambda in eval()
             return match.group(0)
+
+        def count_paths(path):
+            path = path.strip("\"'")
+            escaped = [p.replace("[", "\\[").replace("]", "\\]") for p in path.split('.')]
+            regex_path = r'(\[\d+\])?\.'.join(escaped)
+            pattern = re.compile(f"^{regex_path}(\\[\\d+\\])?$")
+            return len(set(k for k in data.keys() if pattern.match(k) or re.match(f"^{regex_path}(\\[\\d+\\])?\\.", k)))
+
+        def exists_any_paths(base_path, elements):
+            base_path = base_path.strip("\"'")
+            for el in elements:
+                full_path = f"{base_path}.{el}"
+                escaped = [p.replace("[", "\\[").replace("]", "\\]") for p in full_path.split('.')]
+                regex_path = r'(\[\d+\])?\.'.join(escaped)
+                if any(re.match(f"^{regex_path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()):
+                    return True
+            return False
+
+        def all_max_length_paths(path, max_len):
+            path = path.strip("\"'")
+            escaped = [p.replace("[", "\\[").replace("]", "\\]") for p in path.split('.')]
+            regex_path = r'(\[\d+\])?\.'.join(escaped)
+            pattern = re.compile(f"^{regex_path}(\\[\\d+\\])?(\\..*)?$")
+            matching_keys = [k for k in data.keys() if pattern.match(k)]
+            return all(len(str(data[k])) <= max_len for k in matching_keys)
 
         def _gl(key):
              if not line_map: return "/"
@@ -410,13 +437,13 @@ class Layer3Mixin:
             if not block_content: return True # Empty block is fine
 
             has_adr_line = any(k.startswith(f"{addr_path}.AdrLine") for k in data.keys())
-            has_town = any(k.startswith(f"{addr_path}.TownNm") for k in data.keys())
+            has_town = any(k.startswith(f"{addr_path}.TwnNm") for k in data.keys())
             has_ctry = any(k.startswith(f"{addr_path}.Ctry") for k in data.keys())
-            
-            # Coexistence rule: If AdrLine is absent, TownNm and Ctry must be present
+
+            # Coexistence rule: If AdrLine is absent, TwnNm and Ctry must be present
             if not has_adr_line:
                 issues_found = []
-                if not has_town: issues_found.append(".TownNm")
+                if not has_town: issues_found.append(".TwnNm")
                 if not has_ctry: issues_found.append(".Ctry")
 
                 if issues_found:
@@ -551,8 +578,26 @@ class Layer3Mixin:
 
             return True
 
+        def robust_exists(path):
+            path = str(path).strip("\"'")
+            escaped = [p.replace("[", "\\[").replace("]", "\\]") for p in path.split('.')]
+            regex_path = r'(\[\d+\])?\.'.join(escaped)
+            return any(re.match(f"^{regex_path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys())
+
+        def robust_exists_sub(match):
+            path_expr = match.group(1).strip().strip("\"'")
+            if re.match(r'^[A-Za-z0-9._\[\]]+$', path_expr):
+                parts = path_expr.split('.')
+                escaped_parts = [p.replace("[", "\\[").replace("]", "\\]") for p in parts]
+                regex_path = r'(\[\d+\])?\.'.join(escaped_parts)
+                return "True" if any(re.match(f"^{regex_path}(\\[\\d+\\])?(\\..*)?$", k) for k in data.keys()) else "False"
+            return match.group(0)
+
         try:
-            temp_expr = re.sub(r'exists\(([^)]+)\)', exists_sub, expr)
+            # Pre-evaluate robust_exists('literal.path') first so the variable
+            # substitution loop cannot corrupt the path string inside the quotes.
+            temp_expr = re.sub(r'robust_exists\(([^)]+)\)', robust_exists_sub, expr)
+            temp_expr = re.sub(r'(?<!robust_)exists\(([^)]+)\)', exists_sub, temp_expr)
             
             mandate_date_str = self.config.get("validation_rules", {}).get("cbpr_plus_mandate_date", "2026-11-01T00:00:00")
             try:
@@ -573,13 +618,17 @@ class Layer3Mixin:
                 "check_purpose_limit": lambda k, v: check_purpose_limit(k, v, data, report, rule_meta),
                 "check_iban_currency": lambda k, v: self._check_iban_currency(k, v, data, report, _gl, codelists),
                 "is_after_2026": datetime.now() > mandate_date,
-                "exists": lambda x: any(k.startswith(x) for k in data.keys()),
+                "exists": robust_exists,
+                "robust_exists": robust_exists,
+                "count": count_paths,
+                "exists_any": exists_any_paths,
+                "all_max_length": all_max_length_paths,
                 "check_msg_uetr_duplicate": lambda m, u: self._check_msg_uetr_duplicate(m, u, report),
                 "re": re,
                 "MESSAGE_TYPE": report.message_type if report else "Unknown"
             }
             
-            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
+            reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "count", "exists_any", "all_max_length", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
             for key in sorted(data.keys(), key=len, reverse=True):
                 pattern = r'\b' + re.escape(key) + r'\b'
                 if re.search(pattern, temp_expr) and key not in reserved:

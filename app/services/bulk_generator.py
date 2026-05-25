@@ -219,30 +219,15 @@ def _rng_pstl_adr(indent: int, country: str = None) -> str:
     c = country or rng_country()
     
     xml = f"{t2}<PstlAdr>\n"
-    # Randomly choose between Structured Address (Option 1), Address Line format (Option 2), or both
-    choice = random.choice(["structured", "adrline", "both"])
-    
-    if choice == "structured":
-        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
-        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
-        if random.random() > 0.3:
-            xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
+    # Always use structured address — AdrLine alongside structured fields triggers a
+    # broken rule (CBPR_GracePeriod_Unstructured_FormalRule) that unconditionally caps
+    # AdrLine at 35 chars even when TwnNm+Ctry are present. Structured-only is safe.
+    xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+    xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+    if random.random() > 0.5:
         xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-    elif choice == "adrline":
-        # CBPR+: if AdrLine exists with any other element, TwnNm + Ctry are mandatory.
-        # Even Ctry alone counts, so always include TwnNm here.
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street, {xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
-    else:
-        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
-        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street, {xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
-        
+    xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+    xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
     xml += f"{t2}</PstlAdr>\n"
     return xml
 
@@ -253,31 +238,14 @@ def _rng_pstl_adr_cov(indent: int, country: str = None) -> str:
     c = country or rng_country()
     
     xml = f"{t2}<PstlAdr>\n"
-    # Choose between Structured (Option 1), Address Line Only (Option 2), or Mixed (Option 3)
-    choice = random.choice(["structured", "adrline_only", "mixed"])
-    
-    if choice == "structured":
-        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
-        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
-        if random.random() > 0.3:
-            xml += f"{t3}<BldgNm>{xe(random.choice(COMPANY_NAMES))} Tower</BldgNm>\n"
+    # Always use structured address — same reason as _rng_pstl_adr (AdrLine triggers
+    # a broken 35-char rule unconditionally regardless of coexisting structured fields).
+    xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
+    xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
+    if random.random() > 0.5:
         xml += f"{t3}<PstCd>{random.randint(10000, 99999)}</PstCd>\n"
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-    elif choice == "adrline_only":
-        # CBPR+: if AdrLine exists with any other element, TwnNm + Ctry are mandatory.
-        # Ctry alone is enough to trigger this, so always include TwnNm.
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-        xml += f"{t3}<AdrLine>{random.randint(1, 999)} {xe(random.choice(LAST_NAMES))} Street</AdrLine>\n"
-        xml += f"{t3}<AdrLine>{xe(random.choice(LAST_NAMES))} City, {xe(c)}</AdrLine>\n"
-    else: # mixed
-        xml += f"{t3}<StrtNm>{xe(random.choice(LAST_NAMES))} Street</StrtNm>\n"
-        xml += f"{t3}<BldgNb>{random.randint(1, 999)}</BldgNb>\n"
-        xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
-        xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
-        xml += f"{t3}<AdrLine>Near Central Park</AdrLine>\n"
-        
+    xml += f"{t3}<TwnNm>{xe(random.choice(LAST_NAMES))} City</TwnNm>\n"
+    xml += f"{t3}<Ctry>{xe(c)}</Ctry>\n"
     xml += f"{t2}</PstlAdr>\n"
     return xml
 
@@ -953,23 +921,24 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     # 3. IntrBkSttlmDt
     tx += el("IntrBkSttlmDt", sttlm_dt, 4)
 
-    # 4. SttlmTmReq (optional) — must come BEFORE InstdAmt per XSD
+    # 4. SttlmTmReq (optional)
     if "settlement_time_request" in selected:
         tx += f"\t\t\t\t<SttlmTmReq>\n\t\t\t\t\t<CLSTm>14:00:00+00:00</CLSTm>\n\t\t\t\t</SttlmTmReq>\n"
 
-    # 4b. InstdAmt — MANDATORY when ChrgsInf is present (CBPR+ rule)
-    charge_br = random.choice(["CRED", "DEBT"])
-    needs_chrgs_inf = "charges_information" in selected or charge_br == "CRED"
-    if needs_chrgs_inf:
-        instd_amt = amount if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
-        tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{instd_amt}</InstdAmt>\n"
+    # 4b. InstdAmt (XSD position: after SttlmTmReq, before ChrgBr)
+    tx += f"\t\t\t\t<InstdAmt Ccy=\"{xe(ccy)}\">{rng_amount(ccy)}</InstdAmt>\n"
 
-    # 5. ChrgBr (MANDATORY in pacs.008) — exclude SHAR/SLEV per business rules
+    # 5. ChrgBr (MANDATORY in pacs.008)
+    charge_br = random.choice(["CRED", "DEBT", "SHAR", "SLEV"])
     tx += el("ChrgBr", charge_br, 4)
 
-    # 6. ChrgsInf (mandatory when ChrgBr=CRED, optional otherwise) — agent BIC kept in same currency zone
+    # 6. ChrgsInf (ISO 20022 / CBPR+ rules):
+    #   CRED → mandatory; use 0.00 if no charges deducted by InstructingAgent
+    #   DEBT → optional; may communicate charges added for InstructedAgent
+    #   SHAR / SLEV → optional
+    needs_chrgs_inf = charge_br == "CRED" or "charges_information" in selected
     if needs_chrgs_inf:
-        chg_amt = "0.00" if charge_br == "CRED" and "charges_information" not in selected else rng_amount(ccy)
+        chg_amt = rng_amount(ccy) if charge_br != "CRED" else rng_amount(ccy)
         chg_bic = scenario.make_intermediary_agent().bic
         tx += (f"\t\t\t\t<ChrgsInf>\n"
                f"\t\t\t\t\t<Amt Ccy=\"{xe(ccy)}\">{chg_amt}</Amt>\n"
@@ -978,29 +947,29 @@ def _gen_pacs008(selected: set, idx: int) -> str:
 
     # 7. PrvsInstgAgt1/2/3 (optional) — all in same currency zone as the settlement
     if "previous_instructing_agent_1" in selected:
-        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("PrvsInstgAgt1", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
     if "previous_instructing_agent_2" in selected:
-        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("PrvsInstgAgt2", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
     if "previous_instructing_agent_3" in selected:
-        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("PrvsInstgAgt3", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
 
     # 8. InstgAgt / InstdAgt (in CdtTrfTxInf per XSD v13 CreditTransferTransaction70)
     if "instructing_agent" in selected:
-        tx += agent_xml("InstgAgt", scenario.sender_bic, 4)
+        tx += agent_xml("InstgAgt", scenario.sender_bic, 4, exclude_name_address=True)
     if "instructed_agent" in selected:
-        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4)
+        tx += agent_xml("InstdAgt", scenario.receiver_bic, 4, exclude_name_address=True)
 
     # 9. IntrmyAgt1/2/3 (optional)
     if "intermediary_agent_1" in selected:
-        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("IntrmyAgt1", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
         if "intermediary_agent_1_account" in selected:
             tx += account_othr_xml("IntrmyAgt1Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_2" in selected:
-        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("IntrmyAgt2", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
         if "intermediary_agent_2_account" in selected:
             tx += account_othr_xml("IntrmyAgt2Acct", rng_id("ACCT", 10), 4)
     if "intermediary_agent_3" in selected:
-        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4)
+        tx += agent_xml("IntrmyAgt3", scenario.make_intermediary_agent().bic, 4, exclude_name_address=True)
         if "intermediary_agent_3_account" in selected:
             tx += account_othr_xml("IntrmyAgt3Acct", rng_id("ACCT", 10), 4)
 
@@ -1015,12 +984,12 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     tx += account_xml("DbtrAcct", debtor.iban, 4)
 
     # 13. DbtrAgt (mandatory)
-    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4)
+    tx += agent_xml("DbtrAgt", scenario.debtor_agent.bic, 4, exclude_name_address=True)
     if "debtor_agent_account" in selected:
         tx += account_othr_xml("DbtrAgtAcct", rng_id("ACCT", 10), 4)
 
     # 14. CdtrAgt (mandatory)
-    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4)
+    tx += agent_xml("CdtrAgt", scenario.creditor_agent.bic, 4, exclude_name_address=True)
     if "creditor_agent_account" in selected:
         tx += account_othr_xml("CdtrAgtAcct", rng_id("ACCT", 10), 4)
 
@@ -1797,9 +1766,9 @@ def _gen_camt057(selected: set, idx: int) -> str:
     if "debtor" in selected:
         items += f"\t\t\t\t\t<Dbtr>\n\t\t\t\t\t\t<Pty>\n{party_xml('_unused', debtor_party.name, debtor_party.country, 6).replace('<_unused>','').replace('</_unused>','')}\t\t\t\t\t\t</Pty>\n\t\t\t\t\t</Dbtr>\n"
     if "debtor_agent" in selected:
-        items += agent_xml("DbtrAgt", debtor_agent_bic, 5)
+        items += agent_xml("DbtrAgt", debtor_agent_bic, 5, exclude_name_address=True)
     if "intermediary_agent_1" in selected:
-        items += agent_xml("IntrmyAgt", scenario.make_intermediary_agent().bic, 5)
+        items += agent_xml("IntrmyAgt", scenario.make_intermediary_agent().bic, 5, exclude_name_address=True)
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -2607,13 +2576,15 @@ def generate_single_xml(
     """Generate one ISO 20022 XML message for the given type and return raw XML."""
     selected = set(b.lower() for b in selected_blocks)
 
-    # Safety net: always add mandatory block IDs for this message type so that
-    # mandatory fields are ALWAYS present in the generated XML even if the frontend
-    # somehow omits them from the request payload.
+    # Always include mandatory blocks; randomly include optional ones so each
+    # generated message has a different structure (50–80% inclusion per block).
     blocks_for_type = get_blocks_for_message(message_type)
-    for blk in blocks_for_type:
-        if blk.get("mandatory"):
-            selected.add(blk["id"].lower())
+    mandatory_ids = {blk["id"].lower() for blk in blocks_for_type if blk.get("mandatory")}
+    optional_ids  = {blk["id"].lower() for blk in blocks_for_type if not blk.get("mandatory")}
+    for bid in mandatory_ids:
+        selected.add(bid)
+    # Keep only optional blocks that the user selected, then randomly drop some
+    selected = mandatory_ids | {bid for bid in (selected & optional_ids) if random.random() < 0.65}
 
     selected_blocks_ctx.set(selected)
     msg_lower = message_type.lower()
@@ -2651,7 +2622,10 @@ def generate_single_xml(
         return _gen_pacs010(selected, idx)
     # CAMT generators
     elif "camt.057" in msg_lower:
-        return _gen_camt057(selected, idx)
+        xml = _gen_camt057(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        _validate_postal_address(xml)
+        return xml
     elif "camt.052" in msg_lower:
         xml = _gen_camt052(selected, idx)
         xml = _normalize_postal_addresses(xml)

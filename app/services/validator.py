@@ -15,9 +15,10 @@ from .layer2_validator import Layer2Mixin
 from .layer3_validator import Layer3Mixin
 from .layer3_timing import validateLayer3Timing
 from .pacs004_validator import Pacs004Mixin
+from .cbpr_json_validator import CBPRJsonSchemaMixin
 
 
-class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
+class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin, CBPRJsonSchemaMixin):
 
     _id_lock = threading.Lock()
     _daily_counter = 0
@@ -455,7 +456,21 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin):
                 except Exception as e:
                     report.add_issue(ValidationIssue("ERROR", 2, "FATAL_L2", "/", f"Critical failure in Layer 2 (XSD): {str(e)}", "Ensure the XSD library is available."))
                     return self._finalize_report(report, start_time)
-            
+
+            # STEP 4.22: CBPR+ JSON Schema type-level check (folded into Layer 3)
+            # Validates every leaf element (BICFI, IBAN, MmbId, Nm, addresses, etc.)
+            # against the constraints in the SWIFT MyStandards JSON schema for the
+            # detected message type. Runs only when a schema file is available; silently
+            # no-ops otherwise so it never blocks the existing pipeline.
+            try:
+                self._run_cbpr_json_schema_check(xml_content, report, detected_type)
+            except Exception as e:
+                report.add_issue(ValidationIssue(
+                    "WARNING", 3, "CBPR_JSON_FAULT", "/",
+                    f"CBPR+ JSON Schema check could not run: {str(e)[:120]}",
+                    "Non-fatal — the rest of the validation still runs.",
+                ))
+
             if report.errors > 0:
                 report.layer_status['3'] = {"status": "SKIPPED", "time": 0}
                 return self._finalize_report(report, start_time)

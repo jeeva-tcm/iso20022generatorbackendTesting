@@ -592,7 +592,7 @@ class MT2MXConverter:
         # 4. SWIFT MT Block 4 Syntax & Unknown Tag Validation
         allowed_tags = {r["mt_tag"] for r in mapping.get("mappings", []) if not r["mt_tag"].startswith("_")}
         # Add broad set of common tags to avoid false positives in syntax validation
-        allowed_tags.update({"20", "21", "23B", "23E", "25", "26T", "28", "28C", "30", "32A", "32B", "33B", "34F", "50A", "50K", "52A", "53A", "57A", "59", "60F", "60M", "61", "62F", "62M", "64", "65", "70", "71A", "72", "77B", "77T"})
+        allowed_tags.update({"20", "21", "23B", "23E", "25", "26T", "28", "28C", "30", "32A", "32B", "33B", "34F", "50A", "50K", "52A", "53A", "57A", "59", "60F", "60M", "61", "62F", "62M", "64", "65", "70", "71A", "71F", "71G", "72", "77B", "77T"})
         
         v_logs.append(f"Detected MT type: {mt_type}")
         
@@ -1216,6 +1216,12 @@ class MT2MXConverter:
             
         v_logs.append("Data mapping and type validation PASSED.")
 
+        # ── Charges Information (71F sender's charges, 71G receiver's charges) ──
+        # Emit one <ChrgsInf> per 71F (sender side, agent = InstgAgt/DbtrAgt) and
+        # one per 71G (receiver side, agent = InstdAgt/CdtrAgt). Skipped when neither
+        # is present (CBPR+ compliant for SHAR / when no actual charges deducted).
+        self._apply_charges_information(mx_root, parsed_fields, mapping, namespaces, v_logs)
+
         # BUG 1 FIX: MT202COV Sequence B — parse block {5:} and map UndrlygCstmrCdtTrf
         # Sequence A is in block {4:} (interbank), Sequence B is in block {5:} (customer).
         # The standard parse_mt_blocks only reads block {4:}, so we handle {5:} separately.
@@ -1337,6 +1343,152 @@ class MT2MXConverter:
             "mx_message": xml_string,
             "logs": v_logs
         }
+
+    @staticmethod
+    def _parse_71f_71g_value(raw: str):
+        """
+        Parse a SWIFT 71F / 71G value.
+        Format: <3-char ISO 4217 currency><amount with comma decimal>
+        Examples: 'USD25,00' -> ('USD', '25.00'),  'EUR1234,5' -> ('EUR', '1234.5')
+        Returns (currency, amount_str) or (None, None) if invalid.
+        """
+        if not raw:
+            return None, None
+        v = str(raw).strip().replace(' ', '')
+        m = re.match(r'^([A-Z]{3})([0-9]+(?:,[0-9]+)?)$', v)
+        if not m:
+            return None, None
+        ccy = m.group(1)
+        amt = m.group(2).replace(',', '.')
+        # Force trailing zero if amount ends with '.'
+        if amt.endswith('.'):
+            amt += '0'
+        return ccy, amt
+
+    def _apply_charges_information(self, mx_root, parsed_fields: dict, mapping: dict, namespaces: dict, v_logs: list):
+        """
+        Map MT 71F (sender's charges) and 71G (receiver's charges) into pacs.008 / pacs.009
+        <ChrgsInf> elements inside CdtTrfTxInf.
+
+        Per CBPR+ usage guideline:
+          - 71F → one <ChrgsInf> per occurrence, Agt = InstgAgt / DbtrAgt
+          - 71G → one <ChrgsInf>, Agt = InstdAgt / CdtrAgt
+          - When ChrgBr = SHAR and no 71F/71G is supplied, no <ChrgsInf> is emitted.
+        """
+        f71f_raw = parsed_fields.get("71F")
+        f71g_raw = parsed_fields.get("71G")
+        if not f71f_raw and not f71g_raw:
+            return
+
+        # Locate CdtTrfTxInf node. Different message families use different root paths.
+        root_local = mapping.get("root_element", "")
+        candidate_paths = [
+            "FIToFICstmrCdtTrf/CdtTrfTxInf",
+            "FICdtTrf/CdtTrfTxInf",
+        ]
+        if root_local and "/CdtTrfTxInf" not in root_local:
+            candidate_paths.insert(0, f"{root_local.split('/')[0]}/CdtTrfTxInf")
+
+        tx_node = None
+        for p in candidate_paths:
+            tx_node = self._find_node(mx_root, p, namespaces)
+            if tx_node is not None:
+                break
+        if tx_node is None:
+            v_logs.append("[Charges] No CdtTrfTxInf found in tree — skipping 71F/71G emission.")
+            return
+
+        xmlns = namespaces.get("xmlns", "")
+        def _tag(name):
+            return f"{{{xmlns}}}{name}" if xmlns else name
+
+        sender_bic = parsed_fields.get("_senderBic", "")
+        receiver_bic = parsed_fields.get("_receiverBic", "")
+
+        def _emit_chrgs_inf(amt_raw: str, agent_bic: str, side: str):
+            ccy, amt = self._parse_71f_71g_value(amt_raw)
+            if not ccy or not amt:
+                v_logs.append(f"[Charges] Skipped 71{side} value '{amt_raw}' (unparsable).")
+                return
+            
+            # Dynamically resolve agent_bic if empty/missing to satisfy PACS008_CHRGSINF_REQUIRES_AGT
+            if not agent_bic:
+                if side == "F":
+                    agent_bic = parsed_fields.get("_senderBic") or \
+                                self._get_element_text(mx_root, "FIToFICstmrCdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FICdtTrf/GrpHdr/InstgAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FICdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI", namespaces) or \
+                                "BANKUS33XXX"
+                else: # side == "G"
+                    agent_bic = parsed_fields.get("_receiverBic") or \
+                                self._get_element_text(mx_root, "FIToFICstmrCdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FICdtTrf/GrpHdr/InstdAgt/FinInstnId/BICFI", namespaces) or \
+                                self._get_element_text(mx_root, "FICdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/BICFI", namespaces) or \
+                                "BANKUS33XXX"
+
+            ci = ET.SubElement(tx_node, _tag("ChrgsInf"))
+            amt_el = ET.SubElement(ci, _tag("Amt"))
+            amt_el.set("Ccy", ccy)
+            amt_el.text = amt
+            
+            agt = ET.SubElement(ci, _tag("Agt"))
+            fi = ET.SubElement(agt, _tag("FinInstnId"))
+            bic_el = ET.SubElement(fi, _tag("BICFI"))
+            bic_el.text = agent_bic
+            v_logs.append(f"[Charges] :71{side}:{amt_raw} -> <ChrgsInf> {ccy} {amt} agent={agent_bic}")
+
+        # For DEBT (OUR), use either 71F (first entry) or 71G (first entry), but only one total.
+        chrg_br = parsed_fields.get("71A", "").strip().upper()
+        if chrg_br == "OUR":
+            if f71f_raw:
+                f71f_raw = f71f_raw[0] if isinstance(f71f_raw, list) else f71f_raw
+                f71g_raw = None
+            elif f71g_raw:
+                f71g_raw = f71g_raw[0] if isinstance(f71g_raw, list) else f71g_raw
+
+        has_chrgs = False
+        # 71F is repeatable; parse_mt_blocks returns either a string or list.
+        if f71f_raw:
+            entries = f71f_raw if isinstance(f71f_raw, list) else [f71f_raw]
+            for raw in entries:
+                _emit_chrgs_inf(raw, sender_bic, "F")
+                has_chrgs = True
+
+        # 71G is normally single-occurrence; tolerate list just in case.
+        if f71g_raw:
+            entries = f71g_raw if isinstance(f71g_raw, list) else [f71g_raw]
+            for raw in entries:
+                _emit_chrgs_inf(raw, receiver_bic, "G")
+                has_chrgs = True
+                
+        # CBPR+ requires InstdAmt to be present if ChrgsInf is present.
+        # If InstdAmt is missing (e.g. no 33B), default it to IntrBkSttlmAmt.
+        if has_chrgs:
+            instd_amt_node = tx_node.find(_tag("InstdAmt"))
+            if instd_amt_node is None:
+                intr_bk_amt_node = tx_node.find(_tag("IntrBkSttlmAmt"))
+                if intr_bk_amt_node is not None:
+                    instd_amt = ET.SubElement(tx_node, _tag("InstdAmt"))
+                    instd_amt.text = intr_bk_amt_node.text
+                    instd_amt.set("Ccy", intr_bk_amt_node.get("Ccy"))
+                    v_logs.append("[Charges] Auto-injected InstdAmt from IntrBkSttlmAmt to satisfy CBPR+ rules.")
+
+    def _find_node(self, root, path: str, namespaces: dict):
+        """Locate a node by slash-delimited local-name path (namespace-aware)."""
+        xmlns = namespaces.get("xmlns", "")
+        cur = root
+        for part in [p for p in path.split("/") if p]:
+            tag = f"{{{xmlns}}}{part}" if xmlns else part
+            child = cur.find(tag)
+            if child is None:
+                # Some callers pass paths beginning with the root's own tag; skip if matched.
+                if part == cur.tag.split("}")[-1]:
+                    continue
+                return None
+            cur = child
+        return cur
 
     def _map_mt202cov_seq_b(self, mt_message: str, mx_root, namespaces: dict, v_logs: list):
         """
