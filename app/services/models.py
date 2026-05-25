@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 
+import re
+from typing import Optional
+
 class ValidationIssue:
-    def __init__(self, severity: str, layer: int, code: str, path: str, message: str, fix_suggestion: str = "", related_test: str = ""):
+    def __init__(self, severity: str, layer: int, code: str, path: str, message: str, fix_suggestion: str = "", related_test: str = "", line: Optional[int] = None):
         self.severity = severity
         self.layer = layer
         self.code = code
@@ -9,6 +12,20 @@ class ValidationIssue:
         self.message = message
         self.fix_suggestion = fix_suggestion
         self.related_test = related_test
+        self.line = line
+
+        # Dynamic backward compatibility check: if line is not explicitly provided,
+        # but path is numeric, extract it as the line number.
+        if self.line is None and path:
+            trimmed_path = str(path).strip()
+            if trimmed_path.isdigit():
+                self.line = int(trimmed_path)
+                self.path = "/"
+            elif "Line" in trimmed_path:
+                match = re.search(r'\b\d+\b', trimmed_path)
+                if match:
+                    self.line = int(match.group(0))
+                    self.path = "/"
 
     def to_dict(self):
         return {
@@ -18,7 +35,8 @@ class ValidationIssue:
             "path": self.path,
             "message": self.message,
             "fix_suggestion": self.fix_suggestion,
-            "related_test": self.related_test
+            "related_test": self.related_test,
+            "line": self.line
         }
 
 class ValidationReport:

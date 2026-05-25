@@ -95,6 +95,7 @@ class Layer2Mixin:
                     # which preserves absolute sourcelines, error.line is already absolute.
                     # We no longer add line_offset to avoid double-counting.
                     real_line = error.line
+                    best_node = None
                     
                     # 3. HIGH-PRECISION LINE CORRECTION
                     # We use the friendly message context to find the EXACT line in the original XML
@@ -187,7 +188,18 @@ class Layer2Mixin:
                     if "SchmeNm" in error.message or "Invalid data" in friendly_msg or "<Cd>" in friendly_msg:
                         effective_layer = 3
                     
-                    issues.append(ValidationIssue("ERROR", effective_layer, "SCHEMA_VAL", str(real_line), friendly_msg.strip(), suggestion))
+                    node_path = "/"
+                    try:
+                        if best_node is not None:
+                            node_path = self._get_xpath_for_element(best_node)
+                        elif tag_match:
+                            raw_tag = tag_match.group(1)
+                            tag_name = raw_tag.split('}')[-1] if '}' in raw_tag else raw_tag
+                            node_path = f"//{tag_name}"
+                    except:
+                        pass
+
+                    issues.append(ValidationIssue("ERROR", effective_layer, "SCHEMA_VAL", node_path, friendly_msg.strip(), suggestion, line=real_line))
 
             # Step 11 — Mandatory Header Logic (head.001)
             app_hdr_node = full_xml_doc.find(".//{*}AppHdr")
@@ -233,6 +245,7 @@ class Layer2Mixin:
                             
                             # 2. Estimate
                             h_real_line = h_line_offset + error.line - 1
+                            best_n = None
                             
                             # 3. High-Precision correction for AppHdr
                             try:
@@ -257,12 +270,23 @@ class Layer2Mixin:
                             except:
                                 pass
 
-                            issues.append(ValidationIssue("ERROR", 2, "HEADER_VAL", str(h_real_line), friendly_msg, suggestion))
+                            h_node_path = "/AppHdr"
+                            try:
+                                if best_n is not None:
+                                    h_node_path = self._get_xpath_for_element(best_n)
+                                elif tag_m:
+                                    t_full = tag_m.group(1)
+                                    t_name = t_full.split('}')[-1] if '}' in t_full else t_full
+                                    h_node_path = f"/AppHdr/{t_name}"
+                            except:
+                                pass
+
+                            issues.append(ValidationIssue("ERROR", 2, "HEADER_VAL", h_node_path, friendly_msg, suggestion, line=h_real_line))
                     except Exception as eh:
                          issues.append(ValidationIssue("WARNING", 2, "HEADER_ERR", "/", f"AppHdr Warning: {str(eh)}"))
 
         except etree.XMLSyntaxError as e:
-             issues.append(ValidationIssue("ERROR", 2, "XML_SYNTAX", str(e.lineno), f"XML Markup Error: {str(e)}"))
+             issues.append(ValidationIssue("ERROR", 2, "XML_SYNTAX", "/", f"XML Markup Error: {str(e)}", line=e.lineno))
         except Exception as e:
              issues.append(ValidationIssue("ERROR", 2, "VAL_ERR", "/", f"Internal Layer 2 Error: {str(e)}"))
 
