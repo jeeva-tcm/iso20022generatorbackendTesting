@@ -57,6 +57,14 @@ class FirebaseHistoryService:
         self.local_db_path = os.path.join(_backend_root, "validation_history_local.json")
         self.local_counters_path = os.path.join(_backend_root, "validation_counters_local.json")
 
+        # In-memory cache for local JSON database and counters
+        self._local_db_cache = None
+        self._local_counters_cache = None
+
+        # In-memory cache for Firestore stats
+        self._firebase_stats_cache = None
+        self._firebase_stats_cache_time = None
+
         try:
             cred = self._build_credentials()
             if cred is not None:
@@ -135,16 +143,21 @@ class FirebaseHistoryService:
                       f"Disabling Firestore for this session and using local JSON.")
 
     def _read_local_db(self) -> list:
+        if self._local_db_cache is not None:
+            return self._local_db_cache
         if not os.path.exists(self.local_db_path):
-            return []
+            self._local_db_cache = []
+            return self._local_db_cache
         try:
             with open(self.local_db_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                self._local_db_cache = json.load(f)
+                return self._local_db_cache
         except Exception as e:
             print(f"[LocalDB] Error reading local history: {e}")
             return []
 
     def _write_local_db(self, data: list):
+        self._local_db_cache = data
         try:
             with open(self.local_db_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -152,16 +165,21 @@ class FirebaseHistoryService:
             print(f"[LocalDB] Error writing local history: {e}")
 
     def _read_local_counters(self) -> dict:
+        if self._local_counters_cache is not None:
+            return self._local_counters_cache
         if not os.path.exists(self.local_counters_path):
-            return {}
+            self._local_counters_cache = {}
+            return self._local_counters_cache
         try:
             with open(self.local_counters_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                self._local_counters_cache = json.load(f)
+                return self._local_counters_cache
         except Exception as e:
             print(f"[LocalDB] Error reading local counters: {e}")
             return {}
 
     def _write_local_counters(self, data: dict):
+        self._local_counters_cache = data
         try:
             with open(self.local_counters_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -248,6 +266,8 @@ class FirebaseHistoryService:
         return None
 
     def save_history(self, record: dict) -> str:
+        # Invalidate stats cache since history is changing
+        self._firebase_stats_cache = None
         if not self.enabled:
             if self.local_fallback:
                 try:
@@ -327,7 +347,14 @@ class FirebaseHistoryService:
             return []
             
         try:
-            query = self.db.collection("validation_history")                           .select(["validation_id", "batch_id", "file_id", "timestamp", "message_type", "status", "total_errors", "total_warnings", "execution_time_ms", "deleted", "origin"])                           .order_by("timestamp", direction=firestore.Query.DESCENDING)
+            query = self.db.collection("validation_history") \
+                           .select(["validation_id", "batch_id", "file_id", "timestamp", "message_type", "status", "total_errors", "total_warnings", "execution_time_ms", "deleted", "origin"]) \
+                           .order_by("timestamp", direction=firestore.Query.DESCENDING)
+
+            # Limit the query size to prevent streaming the entire collection when only a subset is requested.
+            # Add 100 extra docs to account for any soft-deleted records.
+            if limit < 10000:
+                query = query.limit(limit + skip + 100)
 
             # Short timeout — don't let a broken/slow Firestore freeze the
             # /history endpoint for 5 minutes. 10s is plenty for healthy reads.
@@ -367,6 +394,13 @@ class FirebaseHistoryService:
             return []
 
     def get_stats(self) -> dict:
+        now = datetime.now(timezone.utc)
+        if self.enabled:
+            # Return cached Firestore stats if they are less than 15 seconds old
+            if self._firebase_stats_cache is not None and self._firebase_stats_cache_time is not None:
+                if (now - self._firebase_stats_cache_time).total_seconds() < 15:
+                    return self._firebase_stats_cache
+
         if not self.enabled:
             if self.local_fallback:
                 try:
@@ -408,18 +442,23 @@ class FirebaseHistoryService:
 
             quality = round((passed / total) * 100) if total > 0 else 0
             self._note_call_outcome(True)
-            return {
+            stats_result = {
                 "total_audits": total,
                 "passed_messages": passed,
                 "failed_messages": failed,
                 "validation_quality": quality
             }
+            # Cache the result
+            self._firebase_stats_cache = stats_result
+            self._firebase_stats_cache_time = now
+            return stats_result
         except Exception as e:
             self._note_call_outcome(False, e)
             print(f"Error calculating stats from Firestore: {e}")
             return {"total_audits": 0, "passed_messages": 0, "failed_messages": 0, "validation_quality": 0}
 
     def delete_record(self, validation_id: str) -> bool:
+        self._firebase_stats_cache = None
         if not self.enabled:
             if self.local_fallback:
                 try:
@@ -453,6 +492,7 @@ class FirebaseHistoryService:
             return False
 
     def delete_all(self) -> int:
+        self._firebase_stats_cache = None
         if not self.enabled:
             if self.local_fallback:
                 try:
@@ -512,6 +552,7 @@ class FirebaseHistoryService:
             print(f"Error resetting counters: {e}")
 
     def hard_delete_all(self) -> int:
+        self._firebase_stats_cache = None
         if not self.enabled:
             if self.local_fallback:
                 try:

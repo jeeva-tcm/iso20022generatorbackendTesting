@@ -1235,6 +1235,11 @@ class MT2MXConverter:
             v_logs.append(f"Applying V2 Mandatory Healing for {mt_key}")
             self._apply_v2_mandatory_healing(mx_root, v2_rules, parsed_fields, namespaces)
 
+        # CBPR+ FIX: Inject mandatory ChrgsInf for pacs.008 (MT103 → FIToFICstmrCdtTrf)
+        # CBPR+ Layer 3 rule PACS008_CHRGSINF_REQUIRED mandates at least one ChrgsInf per CdtTrfTxInf.
+        if mt_type in ("103", "103+", "103REMIT"):
+            self._heal_pacs008_chrgs_inf(mx_root, namespaces, parsed_fields, v_logs)
+
         # 7. Create Envelope and AppHdr
         # We'll build the XML with explicitly defined default namespaces for subtrees
         # to ensure L2 validation passes even without prefixes.

@@ -27,6 +27,7 @@ class IssueSchema(BaseModel):
     message: str
     fix_suggestion: str
     related_test: str
+    line: Optional[int] = None
 
 class ValidationResponse(BaseModel):
     validation_id: str

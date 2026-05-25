@@ -238,13 +238,64 @@ class Layer3Mixin:
         desc = rule.get("description", "")
 
         def _get_line(key):
-             # Try exact indexed match, then try parent path
-             l = line_map.get(key) if isinstance(line_map, dict) else None
-             if not l:
-                  # Strip index for lookup [0]
-                  clean = re.sub(r'\[\d+\]', '', key)
-                  l = line_map.get(clean) if isinstance(line_map, dict) else None
-             return str(l) if l else "/"
+             if not isinstance(line_map, dict) or not key:
+                 return "/"
+             
+             # Clean up attribute suffix if present (e.g. key@Ccy -> key)
+             key = key.split('@')[0]
+             
+             # Strip index notation to try matching clean paths
+             def clean_path(p):
+                 return re.sub(r'\[\d+\]', '', p)
+             
+             # Walk up the path parts
+             parts = key.split('.')
+             while parts:
+                 current_path = '.'.join(parts)
+                 # Try exact match first
+                 l = line_map.get(current_path)
+                 if l:
+                     return str(l)
+                 # Try clean match (without index)
+                 l = line_map.get(clean_path(current_path))
+                 if l:
+                     return str(l)
+                 # Pop the last element to climb up the parent tree
+                 parts.pop()
+             return "/"
+
+        def _get_line_num(key):
+             line_str = _get_line(key)
+             return int(line_str) if line_str.isdigit() else None
+
+        def _find_fallback_line(rule):
+            # 1. Try to extract paths from expression, condition, or rule definition
+            for field in ["expression", "condition", "selector"]:
+                val = rule.get(field)
+                if val and isinstance(val, str):
+                    paths = re.findall(r'\b(?:Document|AppHdr)(?:\.[a-zA-Z0-9_\[\]]+)+', val)
+                    for path in paths:
+                        line_str = _get_line(path)
+                        if line_str != "/":
+                            return line_str
+            
+            # 2. Try to find any transaction-level nodes in data (e.g. CdtTrfTxInf, DrctDbtTxInf, etc.)
+            tx_tags = ['CdtTrfTxInf', 'DrctDbtTxInf', 'TxInfAndSts', 'PmtInf', 'GrpHdr', 'AppHdr']
+            for tag in tx_tags:
+                matching_keys = [k for k in data.keys() if f".{tag}" in k or k == f"Document.{tag}" or k == f"AppHdr.{tag}"]
+                if matching_keys:
+                    line_str = _get_line(matching_keys[0])
+                    if line_str != "/":
+                        return line_str
+            
+            # 3. Fallback to Document or AppHdr root
+            for root_key in ["Document", "AppHdr"]:
+                if root_key in data:
+                    line_str = _get_line(root_key)
+                    if line_str != "/":
+                        return line_str
+
+            return "/"
 
         # 1. Selector Based Rules (Multiple fields)
         if selector:
@@ -289,13 +340,13 @@ class Layer3Mixin:
                                 msg = f"Field '{field_name}' contains invalid code '{value}'."
                                 fix = f"Value '{value}' is not a valid code for this field. Please check the ISO 20022 standard for permitted values."
                             
-                            report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), msg, fix))
+                            report.add_issue(ValidationIssue(severity, layer, rule_id, key, msg, fix, line=_get_line_num(key)))
                 
                 elif rule_type == "bic":
                     if not re.match(r'^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$', str(value)):
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Invalid BIC structure: '{value}'.", "BIC must be 8 or 11 characters: 4-char bank code + 2-letter country + 2-char location + optional 3-char branch (e.g., BNKGB2LXXX)."))
+                        report.add_issue(ValidationIssue(severity, layer, rule_id, key, f"{desc} Invalid BIC structure: '{value}'.", "BIC must be 8 or 11 characters: 4-char bank code + 2-letter country + 2-char location + optional 3-char branch (e.g., BNKGB2LXXX).", line=_get_line_num(key)))
                     elif self.supported_bics and value.upper() not in self.supported_bics:
-                        report.add_issue(ValidationIssue("WARNING", layer, "BIC_NOT_FOUND", _get_line(key), f"BIC '{value}' not found in official directory.", "Verify if the BIC is correct or recently decommissioned."))
+                        report.add_issue(ValidationIssue("WARNING", layer, "BIC_NOT_FOUND", key, f"BIC '{value}' not found in official directory.", "Verify if the BIC is correct or recently decommissioned.", line=_get_line_num(key)))
                 
                 elif rule_type == "currency_amount":
                     ccy_path = key + "@Ccy"
@@ -314,9 +365,10 @@ class Layer3Mixin:
                                     allowed_decimals = currencies.get(ccy)
                                 else:
                                     report.add_issue(ValidationIssue(
-                                        severity, layer, "INVALID_CURRENCY_CODE", _get_line(ccy_path),
+                                        severity, layer, "INVALID_CURRENCY_CODE", ccy_path,
                                         f"Unrecognised Currency Code '{ccy}'.",
-                                        f"The code '{ccy}' is not a valid ISO 4217 currency. Use standard codes like USD, EUR, GBP, JPY, etc."
+                                        f"The code '{ccy}' is not a valid ISO 4217 currency. Use standard codes like USD, EUR, GBP, JPY, etc.",
+                                        line=_get_line_num(ccy_path)
                                     ))
                                     continue
                         
@@ -332,18 +384,15 @@ class Layer3Mixin:
                             
                             if actual_decimals > allowed_decimals:
                                 report.add_issue(ValidationIssue(
-                                    severity, layer, "INVALID_DECIMAL_PRECISION", _get_line(key),
+                                    severity, layer, "INVALID_DECIMAL_PRECISION", key,
                                     f"Incorrect decimal precision for {ccy} amount '{val_str}'. {ccy} allows max {allowed_decimals} decimal place(s), but {actual_decimals} were provided.",
-                                    f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'10.00' if allowed_decimals == 2 else '10' if allowed_decimals == 0 else '10.000'})."
+                                    f"Adjust the fractional part: {ccy} supports {allowed_decimals} decimal place(s) (e.g., {'10.00' if allowed_decimals == 2 else '10' if allowed_decimals == 0 else '10.000'}).",
+                                    line=_get_line_num(key)
                                 ))
 
                 elif rule_type == "regex":
                     pattern_cfg = rule.get("pattern", ".*")
-                    # Patterns in rules might be strings or potentially names of algorithms
                     if isinstance(pattern_cfg, str) and pattern_cfg in codelists.get("algorithms", {}):
-                        # Use algorithms from codelists if relevant (though codelists here is different from config[algorithms])
-                        # Actually, looking at the code, codelists doesn't contain algorithms.
-                        # But let's stay robust: extract pattern if it's a dict.
                         regex_to_use = pattern_cfg
                     elif isinstance(pattern_cfg, dict):
                         regex_to_use = pattern_cfg.get("pattern", ".*")
@@ -351,7 +400,7 @@ class Layer3Mixin:
                         regex_to_use = pattern_cfg
 
                     if not re.match(str(regex_to_use), str(value)):
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), f"{desc} Value '{value}' is invalid format."))
+                        report.add_issue(ValidationIssue(severity, layer, rule_id, key, f"{desc} Value '{value}' is invalid format.", line=_get_line_num(key)))
                 
                 elif rule_type == "expression":
                     rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
@@ -359,7 +408,7 @@ class Layer3Mixin:
                     fix_suggestion = rule.get("fix", "")
                     
                     if not self._evaluate_expression(rule.get("expression", "True"), data, line_map, value, key, rule_meta, codelists, report):
-                        report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(key), error_msg, fix_suggestion))
+                        report.add_issue(ValidationIssue(severity, layer, rule_id, key, error_msg, fix_suggestion, line=_get_line_num(key)))
 
         # 2. Logic Based Rules
         else:
@@ -372,13 +421,58 @@ class Layer3Mixin:
 
             for field in rule.get("mandatory_fields", []):
                 if not self._evaluate_expression(f"exists({field})", data, line_map, codelists=codelists, report=report):
-                    report.add_issue(ValidationIssue(severity, layer, rule_id, _get_line(field), error_msg, fix_suggestion))
+                    report.add_issue(ValidationIssue(severity, layer, rule_id, field, error_msg, fix_suggestion, line=_get_line_num(field)))
 
             expr = rule.get("expression")
             if expr:
                 rule_meta = {"severity": severity, "layer": layer, "rule_id": rule_id, "desc": desc}
                 if not self._evaluate_expression(expr, data, line_map, KEY="", rule_meta=rule_meta, codelists=codelists, report=report):
-                     report.add_issue(ValidationIssue(severity, layer, rule_id, "/", error_msg, fix_suggestion))
+                     fallback_line_str = _find_fallback_line(rule)
+                     fallback_line = int(fallback_line_str) if fallback_line_str.isdigit() else None
+                     
+                     # Try to find a path to display
+                     extracted_path = "/"
+                     for field in ["expression", "condition", "selector"]:
+                         val = rule.get(field)
+                         if val and isinstance(val, str):
+                             paths = re.findall(r'\b(?:Document|AppHdr)(?:\.[a-zA-Z0-9_\[\]]+)+', val)
+                             if paths:
+                                 extracted_path = paths[0]
+                                 break
+                     
+                     if extracted_path == "/":
+                         # Fallback path extraction: look for tags in the rule's expression/condition/selector
+                         for field in ["expression", "condition", "selector"]:
+                             val = rule.get(field)
+                             if val and isinstance(val, str):
+                                 # Find all words that look like tags (e.g., camelCase or uppercase start)
+                                 words = re.findall(r'\b[A-Z][a-zA-Z0-9_]+\b', val)
+                                 found_path = False
+                                 for word in words:
+                                     # Avoid matching common Python functions or keywords
+                                     if word in ["True", "False", "None", "DATA", "any", "all", "re", "match", "search"]:
+                                         continue
+                                     # Look for a key in data that contains this word
+                                     for key in data.keys():
+                                         if f".{word}" in key or key == word or key.startswith(word + "."):
+                                             # Truncate key up to this word
+                                             parts = key.split('.')
+                                             for idx, part in enumerate(parts):
+                                                 # Strip index for matching
+                                                 part_clean = part.split('[')[0]
+                                                 if part_clean == word:
+                                                    extracted_path = '.'.join(parts[:idx+1])
+                                                    extracted_path = re.sub(r'\[\d+\]', '', extracted_path)
+                                                    found_path = True
+                                                    break
+                                             if found_path:
+                                                 break
+                                     if found_path:
+                                         break
+                             if extracted_path != "/":
+                                 break
+                     
+                     report.add_issue(ValidationIssue(severity, layer, rule_id, extracted_path, error_msg, fix_suggestion, line=fallback_line))
 
     def _evaluate_expression(self, expr: str, data: Dict[str, Any], line_map: Dict[str, int] = None, VALUE: Any = None, KEY: str = "", rule_meta: Dict[str, Any] = None, codelists: Dict[str, Any] = None, report: ValidationReport = None) -> bool:
         """
@@ -693,12 +787,16 @@ class Layer3Mixin:
 
         # IBAN basic validation (Min 15 characters as per requirement)
         if not iban_val or not isinstance(iban_val, str) or len(iban_val) < 15:
-            report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN", _gl(iban_key), "Invalid or Missing Debtor IBAN", "Ensure the IBAN is at least 15 characters long and follows the correct structure."))
+            line_str = _gl(iban_key)
+            line_num = int(line_str) if line_str.isdigit() else None
+            report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN", iban_key, "Invalid or Missing Debtor IBAN", "Ensure the IBAN is at least 15 characters long and follows the correct structure.", line=line_num))
             return True
 
         country_code = iban_val[:2].upper()
         if not country_code.isalpha():
-             report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN_CTRY", _gl(iban_key), "Invalid or Missing Debtor IBAN", "The first two characters of the IBAN must be a valid country code."))
+             line_str = _gl(iban_key)
+             line_num = int(line_str) if line_str.isdigit() else None
+             report.add_issue(ValidationIssue("ERROR", 3, "INVALID_IBAN_CTRY", iban_key, "Invalid or Missing Debtor IBAN", "The first two characters of the IBAN must be a valid country code.", line=line_num))
              return True
 
         # Map country to currency
@@ -706,15 +804,21 @@ class Layer3Mixin:
         expected_currency = iban_map.get(country_code)
         
         if not expected_currency:
-            report.add_issue(ValidationIssue("ERROR", 3, "UNSUPPORTED_IBAN_CTRY", _gl(iban_key), "Unsupported IBAN Country Code", f"The country code '{country_code}' extracted from the IBAN is not supported in the currency mapping."))
+            line_str = _gl(iban_key)
+            line_num = int(line_str) if line_str.isdigit() else None
+            report.add_issue(ValidationIssue("ERROR", 3, "UNSUPPORTED_IBAN_CTRY", iban_key, "Unsupported IBAN Country Code", f"The country code '{country_code}' extracted from the IBAN is not supported in the currency mapping.", line=line_num))
             return True
 
         # Currency must follow ISO 4217 format (3 uppercase letters) and be case-sensitive
         if currency != expected_currency:
+            curr_path = ccy_key or iban_key
+            line_str = _gl(curr_path)
+            line_num = int(line_str) if line_str.isdigit() else None
             report.add_issue(ValidationIssue(
-                "ERROR", 3, "CURR_IBAN_MISMATCH", _gl(ccy_key or iban_key),
+                "ERROR", 3, "CURR_IBAN_MISMATCH", curr_path,
                 f"Currency {currency} does not match expected currency {expected_currency} for IBAN country {country_code}",
-                f"Update the transaction currency to {expected_currency} for the account based in {country_code}."
+                f"Update the transaction currency to {expected_currency} for the account based in {country_code}.",
+                line=line_num
             ))
             return True # Suppress generic error
 

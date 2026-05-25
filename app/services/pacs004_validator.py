@@ -17,7 +17,30 @@ class Pacs004Mixin:
         
         # Helper: Get value or None
         def get_val(path): return canonical_data.get(path)
-        def get_line(path): return str(line_map.get(path, "/"))
+
+        def _get_line(key):
+             if not isinstance(line_map, dict) or not key:
+                 return None
+             key = key.split('@')[0]
+             def clean_path(p):
+                 return re.sub(r'\[\d+\]', '', p)
+             parts = key.split('.')
+             while parts:
+                 current_path = '.'.join(parts)
+                 l = line_map.get(current_path)
+                 if l:
+                     return int(l)
+                 l = line_map.get(clean_path(current_path))
+                 if l:
+                     return int(l)
+                 parts.pop()
+             return None
+
+        # Override ValidationIssue constructor to automatically resolve line numbers using line_map
+        from .models import ValidationIssue as OriginalValidationIssue
+        def ValidationIssue(severity, layer, code, path, message, fix_suggestion="", related_test=""):
+            line = _get_line(path)
+            return OriginalValidationIssue(severity, layer, code, path, message, fix_suggestion, related_test, line=line)
 
         # --------------------------------------------------
         # 1. STRUCTURAL VALIDATIONS
