@@ -1480,6 +1480,51 @@ class MT2MXConverter:
                     instd_amt.set("Ccy", intr_bk_amt_node.get("Ccy"))
                     v_logs.append("[Charges] Auto-injected InstdAmt from IntrBkSttlmAmt to satisfy CBPR+ rules.")
 
+    def _heal_pacs008_chrgs_inf(self, mx_root, namespaces: dict, parsed_fields: dict, v_logs: list):
+        """
+        CBPR+ rule PACS008_CHRGSINF_REQUIRED_CRED: if ChrgBr == CRED, at least one
+        ChrgsInf must be present. If it is missing after the normal 71F/71G mapping
+        (e.g. no 71F/71G in the original MT103), inject a zero-amount ChrgsInf so
+        the message passes Layer 3 validation.
+        """
+        xmlns = namespaces.get("xmlns", "")
+        def _tag(name):
+            return f"{{{xmlns}}}{name}" if xmlns else name
+
+        tx_node = self._find_node(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf", namespaces)
+        if tx_node is None:
+            return
+
+        chrg_br_el = tx_node.find(_tag("ChrgBr"))
+        if chrg_br_el is None or (chrg_br_el.text or "").strip().upper() != "CRED":
+            return
+
+        # Already has ChrgsInf — nothing to do
+        if tx_node.find(_tag("ChrgsInf")) is not None:
+            return
+
+        # Resolve agent BIC from InstgAgt or DbtrAgt
+        agent_bic = (
+            self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/BICFI", namespaces) or
+            self._get_element_text(mx_root, "FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/BICFI", namespaces) or
+            parsed_fields.get("_senderBic") or
+            "BANKUS33XXX"
+        )
+
+        # Resolve currency from IntrBkSttlmAmt
+        intr_bk = tx_node.find(_tag("IntrBkSttlmAmt"))
+        ccy = intr_bk.get("Ccy") if intr_bk is not None else "USD"
+
+        ci = ET.SubElement(tx_node, _tag("ChrgsInf"))
+        amt_el = ET.SubElement(ci, _tag("Amt"))
+        amt_el.set("Ccy", ccy)
+        amt_el.text = "0.00"
+        agt = ET.SubElement(ci, _tag("Agt"))
+        fi = ET.SubElement(agt, _tag("FinInstnId"))
+        bic_el = ET.SubElement(fi, _tag("BICFI"))
+        bic_el.text = agent_bic
+        v_logs.append(f"[ChrgsInf] Injected zero ChrgsInf (CRED) ccy={ccy} agent={agent_bic}")
+
     def _find_node(self, root, path: str, namespaces: dict):
         """Locate a node by slash-delimited local-name path (namespace-aware)."""
         xmlns = namespaces.get("xmlns", "")
