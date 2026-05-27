@@ -45,9 +45,18 @@ class Layer3Mixin:
             except Exception as e: 
                 print(f"Error loading global rules: {e}")
 
+        # 2. Load CBPR Common (universal cross-message rules: BAH, BICFI exclusivity, AnyBIC exclusivity)
+        cbpr_common_file = os.path.join(self.rules_path, "cbpr_common.json")
+        if os.path.exists(cbpr_common_file):
+            try:
+                with open(cbpr_common_file, "r", encoding='utf-8-sig') as f:
+                    rules.extend(json.load(f))
+            except Exception as e:
+                print(f"Error loading CBPR common rules: {e}")
+
         parts = message_type.split(".")
-        
-        # 2. Load Family Level (e.g., pacs.json)
+
+        # 3. Load Family Level (e.g., pacs.json)
         if len(parts) >= 1:
             family = parts[0]
             family_file = os.path.join(self.rules_path, f"{family}.json")
@@ -58,7 +67,7 @@ class Layer3Mixin:
                 except Exception as e: 
                     print(f"Error loading family rules: {e}")
 
-        # 3. Load Message Specific (e.g., pacs.008.json)
+        # 4. Load Message Specific (e.g., pacs.008.json)
         # Try pacs.008 first, then also load full variant files such as
         # pacs.009.001.08_ADV.json when present.
         specific_name = ".".join(parts[:2]) if len(parts) >= 2 else message_type
@@ -78,6 +87,8 @@ class Layer3Mixin:
         full_rule_names = [message_type]
         if message_type == "pacs.009.adv":
             full_rule_names.append("pacs.009.001.08_ADV")
+        if message_type == "pacs.009.cov":
+            full_rule_names.append("pacs.009.001.08_COV")
 
         for full_name in full_rule_names:
             full_specific_file = os.path.join(self.rules_path, f"{full_name}.json")
@@ -497,8 +508,10 @@ class Layer3Mixin:
             path = path.strip("\"'")
             escaped = [p.replace("[", "\\[").replace("]", "\\]") for p in path.split('.')]
             regex_path = r'(\[\d+\])?\.'.join(escaped)
+            # Count only exact occurrences of the element itself, not its descendants.
+            # A key matches if it IS the element (with optional index) but NOT a child path.
             pattern = re.compile(f"^{regex_path}(\\[\\d+\\])?$")
-            return len(set(k for k in data.keys() if pattern.match(k) or re.match(f"^{regex_path}(\\[\\d+\\])?\\.", k)))
+            return len([k for k in data.keys() if pattern.match(k)])
 
         def exists_any_paths(base_path, elements):
             base_path = base_path.strip("\"'")
@@ -724,7 +737,7 @@ class Layer3Mixin:
             
             reserved = set(["VALUE", "KEY", "DATA", "True", "False", "None", "exists", "count", "exists_any", "all_max_length", "check_address", "check_bic_match", "datetime", "len", "float", "int", "str", "re"])
             for key in sorted(data.keys(), key=len, reverse=True):
-                pattern = r'\b' + re.escape(key) + r'\b'
+                pattern = r'(?<![\'\"])\b' + re.escape(key) + r'\b(?![\'\"])'
                 if re.search(pattern, temp_expr) and key not in reserved:
                     val = data[key]
                     # Only substitute primitive types — dict/list values are NOT

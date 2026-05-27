@@ -847,80 +847,34 @@ class MT2MXConverter:
                 
                 if "mx_path_address" in rule:
                     parent_path = rule["mx_path_address"].rsplit('/', 1)[0]
-                    
+                    # CBPR+ hybrid PstlAdr = TwnNm + Ctry + AdrLine. Detail structured
+                    # fields (StrtNm, BldgNb, …) must NOT coexist with <AdrLine>.
+                    CITY_TO_CTRY = {
+                        "FRANKFURT": "DE", "BERLIN": "DE", "MUNICH": "DE",
+                        "SAN FRANCISCO": "US", "NEW YORK": "US", "CHICAGO": "US",
+                        "LONDON": "GB", "PARIS": "FR", "AMSTERDAM": "NL",
+                    }
+
                     if address_lines:
-                        # Improved Town and Postal code extraction
-                        town = ""
-                        post_code = ""
-                        
-                        # Look and extract postal code / town from address lines
-                        for line in reversed(address_lines):
-                            # Try finding zip code (e.g. 60311 or US-94103)
-                            zip_match = re.search(r'\b([A-Z]{1,2}-)?(\d{5})\b', line)
-                            if zip_match:
-                                post_code = zip_match.group(2)
-                                line = line.replace(zip_match.group(0), "").strip()
-                            
-                            # Simple city extraction (often capitalized at end of line)
-                            city_match = re.search(r'([A-Z ]{3,35})$', line)
-                            if city_match:
-                                town = city_match.group(1).strip()
-                                break
-                        
-                        # Fallback for Town Name (Mandatory in CBPR+)
-                        town_path = f"{parent_path}/TwnNm"
-                        if not self._get_element_text(mx_root, town_path, namespaces):
-                            if town:
-                                self.set_element_text(mx_root, town_path, town[:35], namespaces)
-                            elif len(address_lines) >= 1:
-                                parts = address_lines[-1].split(',')
-                                self.set_element_text(mx_root, town_path, parts[0].strip()[:35], namespaces)
-                            else:
-                                self.set_element_text(mx_root, town_path, "NOTPROVIDED", namespaces)
-                                
-                        # Postal Code
-                        if post_code:
-                            self.set_element_text(mx_root, f"{parent_path}/PstCd", post_code, namespaces)
-
-                        # Set the Address Line (Unstructured) - Join all remaining lines
-                        if rule.get("mx_path_address"):
-                            full_address = " ".join(address_lines)
-                            self.set_element_text(mx_root, rule["mx_path_address"], full_address[:140], namespaces)
-
-                        # Improved Country Code Derivation (TC-003 requirement)
-                        ctry_path = f"{parent_path}/Ctry"
-                        if not self._get_element_text(mx_root, ctry_path, namespaces):
-                            # Mapping of keywords to country codes
-                            CITY_TO_CTRY = {
-                                "FRANKFURT": "DE", "BERLIN": "DE", "MUNICH": "DE", 
-                                "SAN FRANCISCO": "US", "NEW YORK": "US", "CHICAGO": "US",
-                                "LONDON": "GB", "GB": "GB", "US": "US", "DE": "DE"
-                            }
-                            detected_ctry = ""
-                            addr_full_text = " ".join(address_lines).upper()
-                            for city, code in CITY_TO_CTRY.items():
-                                if city in addr_full_text:
-                                    detected_ctry = code
-                                    break
-                            
-                            if detected_ctry:
-                                # Fix specific invalid values mentioned by user (RT -> DE)
-                                if detected_ctry == "RT": detected_ctry = "DE" # Legacy placeholder
-                                self.set_element_text(mx_root, ctry_path, detected_ctry, namespaces)
-                            else:
-                                # Final fallback
-                                last_line = address_lines[-1].strip()
-                                potential_cc = last_line[-2:].upper() if len(last_line) >= 2 else ""
-                                if re.match(r"^[A-Z]{2}$", potential_cc):
-                                    self.set_element_text(mx_root, ctry_path, potential_cc, namespaces)
-                                else:
-                                    self.set_element_text(mx_root, ctry_path, "GB", namespaces)
+                        addr_text_upper = " ".join(address_lines).upper()
+                        detected_ctry = next((c for k, c in CITY_TO_CTRY.items() if k in addr_text_upper), "")
+                        detected_city = next((k.title() for k in CITY_TO_CTRY.keys() if k in addr_text_upper), "")
+                        # Add hybrid companions so the PstlAdr is not "AdrLine only".
+                        self.set_element_text(mx_root, f"{parent_path}/TwnNm",
+                                              detected_city or "NOTPROVIDED", namespaces)
+                        self.set_element_text(mx_root, f"{parent_path}/Ctry",
+                                              detected_ctry or "GB", namespaces)
+                        # AdrLine is repeatable (0..2). Emit each MT address line as a separate AdrLine.
+                        pstl_adr = self._get_or_create_node(mx_root, parent_path, namespaces)
+                        xmlns_local = namespaces.get("xmlns", "")
+                        adr_tag = f"{{{xmlns_local}}}AdrLine" if xmlns_local else "AdrLine"
+                        for line in address_lines[:2]:
+                            adr_el = ET.SubElement(pstl_adr, adr_tag)
+                            adr_el.text = line[:70]
                     else:
-                        # Fallback for empty address
+                        # Fallback for empty address (CBPR+ E001: TwnNm and Ctry mandatory).
                         self.set_element_text(mx_root, f"{parent_path}/Ctry", "GB", namespaces)
                         self.set_element_text(mx_root, f"{parent_path}/TwnNm", "NOTPROVIDED", namespaces)
-                        if rule.get("mx_path_address"):
-                            self.set_element_text(mx_root, rule["mx_path_address"], "NOTPROVIDED", namespaces)
 
                 if "mx_path_account" in rule and account:
                     self.set_element_text(mx_root, rule["mx_path_account"], account, namespaces)
@@ -1301,10 +1255,16 @@ class MT2MXConverter:
         
         # 7. Final Cleanup: Remove empty elements to satisfy schema (L1/L2)
         self._cleanup_xml(envelope)
-        
+
         # Final Global Healing for camt messages (NtryRef and BkTxCd are often mandatory)
         self._heal_camt_mandatory_fields(mx_root, namespaces)
         self._normalise_cbpr_datetimes_in_tree(envelope)
+
+        # Hybrid PstlAdr is preferred (TwnNm + Ctry + AdrLine). Detail structured fields
+        # (StrtNm, BldgNb, BldgNm, PstCd, Dept, SubDept, Flr, PstBx, Room, TwnLctnNm,
+        # DstrctNm, CtrySubDvsn) are stripped from any PstlAdr that also has <AdrLine>.
+        # TwnNm and Ctry are kept (hybrid mode emits all three).
+        self._enforce_hybrid_or_structured_pstladr(envelope)
         
         # Finally sort elements based on sequence rules
         self._sort_xml_recursively(mx_root, target_mx) # Re-sort after healing
@@ -1614,7 +1574,8 @@ class MT2MXConverter:
             if name_50k:
                 self.set_element_text(mx_root, f"{base}/Dbtr/Nm", name_50k, namespaces)
             if addr_lines_50k:
-                # Country / Town derivation (reuse same logic as account_name_address)
+                # CBPR+ hybrid PstlAdr = TwnNm + Ctry + AdrLine. Detail structured
+                # fields (StrtNm, BldgNb, …) must NOT coexist with <AdrLine>.
                 CITY_TO_CTRY = {
                     "FRANKFURT": "DE", "BERLIN": "DE", "MUNICH": "DE",
                     "SAN FRANCISCO": "US", "NEW YORK": "US", "CHICAGO": "US",
@@ -1622,10 +1583,18 @@ class MT2MXConverter:
                 }
                 addr_text_upper = " ".join(addr_lines_50k).upper()
                 detected_ctry = next((c for k, c in CITY_TO_CTRY.items() if k in addr_text_upper), "")
-                self.set_element_text(mx_root, f"{base}/Dbtr/PstlAdr/AdrLine",
-                                      " ".join(addr_lines_50k)[:140], namespaces)
+                detected_city = next((k.title() for k in CITY_TO_CTRY.keys() if k in addr_text_upper), "")
+                self.set_element_text(mx_root, f"{base}/Dbtr/PstlAdr/TwnNm",
+                                      detected_city or "NOTPROVIDED", namespaces)
                 self.set_element_text(mx_root, f"{base}/Dbtr/PstlAdr/Ctry",
                                       detected_ctry or "GB", namespaces)
+                # AdrLine is repeatable (0..2). _navigate_path can't index — append manually.
+                pstl_adr = self._get_or_create_node(mx_root, f"{base}/Dbtr/PstlAdr", namespaces)
+                xmlns_local = namespaces.get("xmlns", "")
+                adr_tag = f"{{{xmlns_local}}}AdrLine" if xmlns_local else "AdrLine"
+                for line in addr_lines_50k[:2]:
+                    adr_el = ET.SubElement(pstl_adr, adr_tag)
+                    adr_el.text = line[:70]
             v_logs.append(f"[MT202COV] :50K: mapped → Dbtr '{name_50k}', Acct '{account_50k}'")
 
         # ---- :59: → Creditor (name/address) + CreditorAccount ----
@@ -1647,6 +1616,7 @@ class MT2MXConverter:
             if name_59:
                 self.set_element_text(mx_root, f"{base}/Cdtr/Nm", name_59, namespaces)
             if addr_lines_59:
+                # CBPR+ hybrid PstlAdr = TwnNm + Ctry + AdrLine.
                 CITY_TO_CTRY = {
                     "FRANKFURT": "DE", "BERLIN": "DE", "MUNICH": "DE",
                     "SAN FRANCISCO": "US", "NEW YORK": "US", "CHICAGO": "US",
@@ -1654,10 +1624,17 @@ class MT2MXConverter:
                 }
                 addr_text_upper = " ".join(addr_lines_59).upper()
                 detected_ctry = next((c for k, c in CITY_TO_CTRY.items() if k in addr_text_upper), "")
-                self.set_element_text(mx_root, f"{base}/Cdtr/PstlAdr/AdrLine",
-                                      " ".join(addr_lines_59)[:140], namespaces)
+                detected_city = next((k.title() for k in CITY_TO_CTRY.keys() if k in addr_text_upper), "")
+                self.set_element_text(mx_root, f"{base}/Cdtr/PstlAdr/TwnNm",
+                                      detected_city or "NOTPROVIDED", namespaces)
                 self.set_element_text(mx_root, f"{base}/Cdtr/PstlAdr/Ctry",
                                       detected_ctry or "GB", namespaces)
+                pstl_adr = self._get_or_create_node(mx_root, f"{base}/Cdtr/PstlAdr", namespaces)
+                xmlns_local = namespaces.get("xmlns", "")
+                adr_tag = f"{{{xmlns_local}}}AdrLine" if xmlns_local else "AdrLine"
+                for line in addr_lines_59[:2]:
+                    adr_el = ET.SubElement(pstl_adr, adr_tag)
+                    adr_el.text = line[:70]
             v_logs.append(f"[MT202COV] :59: mapped → Cdtr '{name_59}', Acct '{account_59}'")
 
         # ---- :70: → RemittanceInformation/Unstructured ----
@@ -1858,7 +1835,6 @@ class MT2MXConverter:
                 if self._navigate_path(mx_root, adr_path, namespaces, create_missing=False) is None:
                     self.set_element_text(mx_root, f"{adr_path}/Ctry", "GB", namespaces)
                     self.set_element_text(mx_root, f"{adr_path}/TwnNm", "NOTPROVIDED", namespaces)
-                    self.set_element_text(mx_root, f"{adr_path}/AdrLine", "NOTPROVIDED", namespaces)
 
             if "children" in rule:
                 # ONLY process children if the parent node actually exists (it was mapped or created)
@@ -1983,6 +1959,28 @@ class MT2MXConverter:
             # If child is empty and has no attributes, remove it
             if (child.text is None or child.text.strip() == "") and len(list(child)) == 0 and len(child.attrib) == 0:
                 parent.remove(child)
+
+    # PstlAdr detail structured children that must NOT coexist with <AdrLine>.
+    # TwnNm and Ctry are intentionally absent — they ARE emitted alongside AdrLine in hybrid mode.
+    _PSTLADR_DETAIL_STRUCTURED_CHILDREN = (
+        "Dept", "SubDept", "StrtNm", "BldgNb", "BldgNm",
+        "Flr", "PstBx", "Room", "PstCd", "TwnLctnNm",
+        "DstrctNm", "CtrySubDvsn",
+    )
+
+    def _enforce_hybrid_or_structured_pstladr(self, root: ET.Element):
+        """Walk every <PstlAdr>; if it contains <AdrLine>, strip detail structured siblings
+        (StrtNm, BldgNb, BldgNm, PstCd, …). TwnNm and Ctry are kept since hybrid mode emits
+        them alongside AdrLine. Namespace-agnostic — local tag names only."""
+        for pstl_adr in root.iter():
+            if pstl_adr.tag.split("}")[-1] != "PstlAdr":
+                continue
+            has_adr_line = any(c.tag.split("}")[-1] == "AdrLine" for c in pstl_adr)
+            if not has_adr_line:
+                continue
+            for child in list(pstl_adr):
+                if child.tag.split("}")[-1] in self._PSTLADR_DETAIL_STRUCTURED_CHILDREN:
+                    pstl_adr.remove(child)
 
     def _heal_camt_mandatory_fields(self, root, namespaces):
         """Final sweep to ensure Ntry nodes are compliant with mandatory reporting rules."""
@@ -2193,7 +2191,6 @@ class MT2MXConverter:
                                 pstl_adr = ET.SubElement(subchild, pstl_adr_tag)
                                 self.set_element_text(pstl_adr, "Ctry", "US", namespaces)
                                 self.set_element_text(pstl_adr, "TwnNm", "UNKNOWN TOWN", namespaces)
-                                self.set_element_text(pstl_adr, "AdrLine", "UNKNOWN ADDRESS", namespaces)
 
         # 4. GLOBAL CBPR+ HEALING: Ensure all Pty elements with Nm have PstlAdr
         for pty in root.iter(f"{{{xmlns}}}Pty" if xmlns else "Pty"):
@@ -2210,4 +2207,3 @@ class MT2MXConverter:
                 pstl_adr = ET.SubElement(pty, pstl_adr_tag)
                 self.set_element_text(pstl_adr, "Ctry", "US", namespaces)
                 self.set_element_text(pstl_adr, "TwnNm", "UNKNOWN TOWN", namespaces)
-                self.set_element_text(pstl_adr, "AdrLine", "UNKNOWN ADDRESS", namespaces)

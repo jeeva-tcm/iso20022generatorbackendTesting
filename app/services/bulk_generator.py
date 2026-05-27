@@ -268,21 +268,18 @@ def _validate_postal_address(xml_content: str):
         if adr_line_count > 2:
             raise ValueError(f"Postal Address Validation Error: A maximum of two occurrences of Address Line are allowed. Found {adr_line_count}.")
 
-        # CBPR+: if AdrLine exists with ANY other PstlAdr element → TwnNm + Ctry mandatory.
-        # This includes Ctry alone (not just structured fields like StrtNm/BldgNb).
-        non_adr_children = [c for c in all_children if c.tag.split('}')[-1] != 'AdrLine']
-        if adr_line_count > 0 and len(non_adr_children) > 0:
+        # CBPR+ E001: If AdrLine is absent, TwnNm and Ctry are mandatory.
+        # If AdrLine is present, TwnNm and Ctry are optional.
+        if adr_line_count == 0:
             twn_nm = pstl_adr.xpath("*[local-name()='TwnNm']")
             ctry = pstl_adr.xpath("*[local-name()='Ctry']")
             if not twn_nm:
                 raise ValueError(
-                    "Postal Address Validation Error: If Address Line is present and any other "
-                    "Postal Address element(s) are present, Town Name is mandatory."
+                    "Postal Address Validation Error: If Address Line is absent, Town Name is mandatory (CBPR+ E001)."
                 )
             if not ctry:
                 raise ValueError(
-                    "Postal Address Validation Error: If Address Line is present and any other "
-                    "Postal Address element(s) are present, Country is mandatory."
+                    "Postal Address Validation Error: If Address Line is absent, Country is mandatory (CBPR+ E001)."
                 )
 
 
@@ -290,9 +287,14 @@ def _normalize_postal_addresses(xml_content: str) -> str:
     """
     Post-process any generated XML and ensure every <PstlAdr> block complies with CBPR+ rules:
       1. Maximum 2 <AdrLine> elements (extras removed).
-      2. If <AdrLine> coexists with structured fields (StrtNm, BldgNb, etc.) then
-         <TwnNm> and <Ctry> are mandatory — add them if missing.
-      3. Re-order all children to match the canonical CBPR+ schema sequence.
+      2. Hybrid mode (TwnNm + Ctry + AdrLine) is explicitly supported and valid.
+         If AdrLine coexists with DETAIL structured fields (StrtNm, BldgNb, BldgNm,
+         Flr, PstBx, Room, PstCd, Dept, SubDept, TwnLctnNm, DstrctNm, CtrySubDvsn)
+         those detail fields are removed. TwnNm and Ctry are kept alongside AdrLine.
+      3. If AdrLine is present, TwnNm and Ctry are mandatory (hybrid rule).
+      4. If AdrLine is absent, TwnNm and Ctry are mandatory (structured rule).
+      5. Re-order all children to match the canonical CBPR+ schema sequence.
+    Only re-serializes if changes were actually made (preserves namespace declarations).
     """
     from lxml import etree
     try:
@@ -300,6 +302,8 @@ def _normalize_postal_addresses(xml_content: str) -> str:
         root = etree.fromstring(xml_content.encode('utf-8'), parser)
     except Exception:
         return xml_content
+
+    changed = False
 
     SCHEMA_SEQUENCE = [
         "Dept", "SubDept", "StrtNm", "BldgNb", "BldgNm", "Flr", "PstCd",
@@ -322,22 +326,35 @@ def _normalize_postal_addresses(xml_content: str) -> str:
         # Take a snapshot of current children
         children = list(pstl_adr)
 
-        # --- Step 1: Restrict to max 2 AdrLine entries ---
-        adr_lines = [c for c in children if (c.tag.split('}')[-1] if '}' in c.tag else c.tag) == 'AdrLine']
-        if len(adr_lines) > 2:
-            for extra in adr_lines[2:]:
-                pstl_adr.remove(extra)
-            children = list(pstl_adr)  # refresh after removal
-            adr_lines = adr_lines[:2]
-
-        # --- Step 2: CBPR+ — if AdrLine + ANY other element coexist, TwnNm + Ctry mandatory ---
-        # The rule is: "if AdrLine is present with ANY other postal address element".
-        # This includes Ctry alone, not just structured fields like StrtNm/BldgNb.
         def _ltag(el):
             return el.tag.split('}')[-1] if '}' in el.tag else el.tag
 
-        non_adr_children = [c for c in children if _ltag(c) != 'AdrLine']
-        if adr_lines and non_adr_children:
+        # --- Step 1: Restrict to max 2 AdrLine entries ---
+        adr_lines = [c for c in children if _ltag(c) == 'AdrLine']
+        if len(adr_lines) > 2:
+            for extra in adr_lines[2:]:
+                pstl_adr.remove(extra)
+            changed = True
+            children = list(pstl_adr)
+            adr_lines = adr_lines[:2]
+
+        # --- Step 1b: Hybrid rule — AdrLine may coexist with TwnNm + Ctry (hybrid mode).
+        #   However DETAIL structured fields (StrtNm, BldgNb, BldgNm, Flr, PstBx, Room,
+        #   PstCd, Dept, SubDept, TwnLctnNm, DstrctNm, CtrySubDvsn) must NOT appear
+        #   alongside AdrLine. Strip those detail fields; keep TwnNm and Ctry. ---
+        DETAIL_STRUCTURED_TAGS = {'StrtNm', 'BldgNb', 'BldgNm', 'Flr', 'PstBx', 'Room',
+                                  'PstCd', 'Dept', 'SubDept', 'TwnLctnNm', 'DstrctNm', 'CtrySubDvsn'}
+        if adr_lines:
+            detail_children = [c for c in children if _ltag(c) in DETAIL_STRUCTURED_TAGS]
+            if detail_children:
+                for dc in detail_children:
+                    pstl_adr.remove(dc)
+                changed = True
+                children = list(pstl_adr)
+
+        # --- Step 2: TwnNm + Ctry mandatory in both hybrid (AdrLine present) and
+        #   pure structured (AdrLine absent) modes ---
+        if True:
             def _get(tag_name):
                 return next((c for c in children if _ltag(c) == tag_name), None)
 
@@ -345,32 +362,74 @@ def _normalize_postal_addresses(xml_content: str) -> str:
             if twn_el is None:
                 twn_el = etree.SubElement(pstl_adr, f'{ns_prefix}TwnNm')
                 twn_el.text = 'New York'
+                changed = True
             elif not twn_el.text or not twn_el.text.strip():
                 twn_el.text = 'New York'
+                changed = True
 
             ctry_el = _get('Ctry')
             if ctry_el is None:
                 ctry_el = etree.SubElement(pstl_adr, f'{ns_prefix}Ctry')
                 ctry_el.text = 'US'
+                changed = True
             elif not ctry_el.text or not ctry_el.text.strip():
                 ctry_el.text = 'US'
+                changed = True
 
-            children = list(pstl_adr)  # refresh after possible additions
+            children = list(pstl_adr)
 
         # --- Step 3: Re-order children per CBPR+ schema sequence ---
         children_sorted = sorted(
             children,
-            key=lambda c: seq_map.get(c.tag.split('}')[-1] if '}' in c.tag else c.tag, 99)
+            key=lambda c: seq_map.get(_ltag(c), 99)
         )
-
-        # Only mutate if order differs
         if [id(c) for c in children] != [id(c) for c in children_sorted]:
             for c in children:
                 pstl_adr.remove(c)
             for c in children_sorted:
                 pstl_adr.append(c)
+            changed = True
 
-    return etree.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+    if not changed:
+        return xml_content
+    result = etree.tostring(root, encoding='unicode')
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + result
+
+
+def _normalize_cbpr_r9(xml_content: str) -> str:
+    """
+    CBPR_COM_R9: If BICFI is present in FinInstnId, then Nm and PstlAdr must NOT appear.
+    Remove any Nm and PstlAdr children from FinInstnId elements that also have a BICFI.
+    """
+    from lxml import etree
+    try:
+        parser = etree.XMLParser(recover=True, no_network=True, resolve_entities=False)
+        root = etree.fromstring(xml_content.encode('utf-8'), parser)
+    except Exception:
+        return xml_content
+
+    changed = False
+    for fi_id in root.iter():
+        if not isinstance(fi_id.tag, str):
+            continue
+        local = fi_id.tag.split('}')[-1] if '}' in fi_id.tag else fi_id.tag
+        if local != 'FinInstnId':
+            continue
+        bicfi_els = [c for c in fi_id
+                     if (c.tag.split('}')[-1] if '}' in c.tag else c.tag) == 'BICFI'
+                     and c.text and c.text.strip()]
+        if not bicfi_els:
+            continue
+        for c in list(fi_id):
+            ltag = c.tag.split('}')[-1] if '}' in c.tag else c.tag
+            if ltag in ('Nm', 'PstlAdr'):
+                fi_id.remove(c)
+                changed = True
+
+    if not changed:
+        return xml_content
+    result = etree.tostring(root, encoding='unicode')
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + result
 
 
 def _validate_charges_information(xml_content: str):
@@ -499,7 +558,8 @@ def _normalize_charges_information(xml_content: str) -> str:
                             elif not bic[0].text or not bic[0].text.strip():
                                 bic[0].text = "BANKDEFFXXX"
 
-    return etree.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+    result = etree.tostring(root, encoding='unicode')
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + result
 
 
 def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
@@ -513,20 +573,14 @@ def agent_xml(tag: str, bic: str, indent: int = 4) -> str:
     return xml
 
 
-def _fi_party(tag: str, bic: str, country: str, indent: int = 4) -> str:
+def _fi_party(tag: str, bic: str, country: str = None, indent: int = 4) -> str:  # noqa: ARG001
     """
-    Build an FI-type party (e.g. Dbtr/Cdtr in pacs.009 / pacs.010) that ALWAYS
-    includes Nm + PstlAdr along with the BICFI. Strict CBPR+ profiles (notably
-    pacs.009 ADV) require both an Identification AND a Name + Address on
-    mandatory Dbtr/Cdtr blocks. ``agent_xml`` only emits Nm + PstlAdr on a 50/50
-    coin flip, which is not enough for these mandatory positions.
+    Build an FI-type party (e.g. Dbtr/Cdtr in pacs.009) with BICFI only.
+    CBPR_COM_R9: when BICFI is present, Nm and PstlAdr must NOT be present.
     """
     t = tabs(indent); t1 = tabs(indent + 1); t2 = tabs(indent + 2)
-    addr = _rng_pstl_adr(indent + 2, country)
     return (f"{t}<{tag}>\n{t1}<FinInstnId>\n"
             f"{t2}<BICFI>{xe(bic)}</BICFI>\n"
-            f"{t2}<Nm>{xe(random.choice(COMPANY_NAMES))} Bank</Nm>\n"
-            f"{addr}"
             f"{t1}</FinInstnId>\n{t}</{tag}>\n")
 
 
@@ -882,8 +936,8 @@ def _gen_pacs008(selected: set, idx: int) -> str:
     scenario = MessageScenario.random()
     ccy = scenario.currency
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_R5/CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
@@ -1064,18 +1118,16 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     debtor_bic = scenario.debtor_agent.bic
     creditor_bic = scenario.creditor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_P9_R5: BizMsgIdr must equal GrpHdr/MsgId
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
     uetr = scenario.uetr
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
-    if is_adv:
+    if is_adv or is_cov:
         sttlm_mtd = "COVE"
-    elif is_cov:
-        sttlm_mtd = random.choice(["INDA", "INGA"])
     else:
         sttlm_mtd = random.choice(SETTLEMENT_METHODS)
     amount = rng_amount(ccy)
@@ -1087,7 +1139,7 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
             sttlm_inf += f"\n\t\t\t\t\t<InstgRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(scenario.make_intermediary_agent().bic)}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstgRmbrsmntAgt>"
         if rmbrs_choice in ["instd", "both"]:
             sttlm_inf += f"\n\t\t\t\t\t<InstdRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(scenario.make_intermediary_agent().bic)}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstdRmbrsmntAgt>"
-    elif sttlm_mtd in ["INDA", "INGA"] and (is_cov or random.random() < 0.5):
+    elif sttlm_mtd in ["INDA", "INGA"] and random.random() < 0.5:
         sttlm_inf += f"\n\t\t\t\t\t<SttlmAcct>\n\t\t\t\t\t\t<Id>\n\t\t\t\t\t\t\t<IBAN>{xe(scenario.debtor.iban)}</IBAN>\n\t\t\t\t\t\t</Id>\n\t\t\t\t\t</SttlmAcct>"
 
     tx = ""
@@ -1194,6 +1246,12 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     # ── v12 namespace and root element ──
     ns = "urn:iso:std:iso:20022:tech:xsd:pacs.009.001.08"
     msg_def = "pacs.009.001.08"
+    if is_cov:
+        biz_svc = "swift.cbprplus.cov.03"
+    elif is_adv:
+        biz_svc = "swift.cbprplus.adv.03"
+    else:
+        biz_svc = "swift.cbprplus.03"
 
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <BusMsgEnvlp xmlns="urn:swift:xsd:envelope">
@@ -1204,7 +1262,7 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
 {apphdr_fi(to_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>{msg_def}</MsgDefIdr>
-\t\t<BizSvc>swift.cbprplus.02</BizSvc>
+\t\t<BizSvc>{biz_svc}</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
 \t<Document xmlns="{ns}">
@@ -1248,8 +1306,8 @@ def _gen_pacs004(selected: set, idx: int) -> str:
     debtor_party = scenario.debtor
     creditor_party = scenario.creditor
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     rtr_id = rng_id("RTR", 16)
     orig_instr_id = rng_id("ORGINSTR", 11)
     orig_e2e = rng_id("ORIE2E", 10)
@@ -1382,8 +1440,8 @@ def _gen_pacs003(selected: set, idx: int) -> str:
     debtor_party = scenario.debtor
     creditor_party = scenario.creditor
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
     tx_id = rng_id("TX", 16)
@@ -1535,8 +1593,8 @@ def _gen_pacs002(selected: set, idx: int) -> str:
     # Shared BICs: AppHdr Fr == InstgAgt, AppHdr To == InstdAgt (CBPR+ BAH rule)
     from_bic = scenario.sender_bic
     to_bic   = scenario.receiver_bic
-    biz_msg_id  = rng_id("BIZ", 16)
     msg_id      = rng_id("MSG", 16)
+    biz_msg_id  = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt      = rng_datetime()
     orig_msg_id = rng_id("ORIGMSG", 10)
     orig_e2e    = rng_id("ORIE2E", 10)
@@ -1638,8 +1696,8 @@ def _gen_pacs010(selected: set, idx: int) -> str:
     debtor_bic = scenario.debtor_agent.bic
     creditor_bic = scenario.creditor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cdt_id = rng_id("CDT", 16)
     instr_id = rng_id("INSTR", 11)
     e2e_id = rng_id("E2E", 16)
@@ -1744,8 +1802,8 @@ def _gen_camt057(selected: set, idx: int) -> str:
     debtor_party = scenario.debtor
     debtor_agent_bic = scenario.debtor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR BizMsgIdr must equal GrpHdr/MsgId
     notif_id = rng_id("NTFN", 10)
     cre_dt = rng_datetime()
     amount = rng_amount(ccy)
@@ -1768,7 +1826,7 @@ def _gen_camt057(selected: set, idx: int) -> str:
 {apphdr_fi(scenario.receiver_bic)}\t\t</To>
 \t\t<BizMsgIdr>{xe(biz_msg_id)}</BizMsgIdr>
 \t\t<MsgDefIdr>camt.057.001.06</MsgDefIdr>
-\t\t<BizSvc>swift.cbprplus.02</BizSvc>
+\t\t<BizSvc>swift.cbprplus.03</BizSvc>
 \t\t<CreDt>{cre_dt}</CreDt>
 \t</AppHdr>
 \t<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.057.001.06">
@@ -1812,8 +1870,8 @@ def _gen_camt052(selected: set, idx: int) -> str:
     account_holder = scenario.debtor
     account_servicer_bic = scenario.debtor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt = rng_datetime()
 
     rpt = ""
@@ -1900,8 +1958,8 @@ def _gen_camt053(selected: set, idx: int) -> str:
     account_holder = scenario.debtor
     account_servicer_bic = scenario.debtor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt = rng_datetime()
 
     stmt = ""
@@ -2003,8 +2061,8 @@ def _gen_camt054(selected: set, idx: int) -> str:
     account_holder = scenario.debtor
     account_servicer_bic = scenario.debtor_agent.bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt = rng_datetime()
 
     ntfctn = ""
@@ -2081,8 +2139,8 @@ def _gen_camt055(selected: set, idx: int) -> str:
     from_bic = scenario.sender_bic
     to_bic = scenario.receiver_bic
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt = rng_datetime()
     requested_execution_date = rng_date(1)
 
@@ -2170,7 +2228,7 @@ def _gen_camt056(selected: set, idx: int) -> str:
     from_bic = scenario.sender_bic
     to_bic = scenario.receiver_bic
 
-    biz_msg_id = rng_id("BIZ", 16)
+    biz_msg_id = rng_id("MSG", 16)  # camt056: standalone BizMsgIdr (no GrpHdr)
     cre_dt = rng_datetime()
 
     cxl_id = rng_id("CXLID", 10)
@@ -2275,8 +2333,8 @@ def _gen_pain001(selected: set, idx: int) -> str:
     debtor_party = scenario.debtor
     creditor_party = scenario.creditor
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     pmt_inf_id = rng_id("PMTINF", 10)
     e2e_id = rng_id("E2E", 16)
     instr_id = rng_id("INSTR", 11)
@@ -2371,8 +2429,8 @@ def _gen_pain002(selected: set, idx: int) -> str:
     from_bic = scenario.sender_bic
     to_bic = scenario.receiver_bic
     initg_party = scenario.debtor  # initiating party of the original payment
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     cre_dt = rng_datetime()
     # OrgnlCreDtTm must be at or before report CreDtTm. Use a fixed earlier time
     # on the same UTC day so timezone offsets stay consistent (CBPR+ TZ rule).
@@ -2465,8 +2523,8 @@ def _gen_pain008(selected: set, idx: int) -> str:
     debtor_party = scenario.debtor
     creditor_party = scenario.creditor
 
-    biz_msg_id = rng_id("BIZ", 16)
     msg_id = rng_id("MSG", 16)
+    biz_msg_id = msg_id  # CBPR_COM_R2: BizMsgIdr must equal GrpHdr/MsgId
     pmt_inf_id = rng_id("PMTINF", 10)
     e2e_id = rng_id("E2E", 16)
     instr_id = rng_id("INSTR", 11)
@@ -2602,73 +2660,105 @@ def generate_single_xml(
         xml = _gen_pacs008(selected, idx)
         xml = _normalize_charges_information(xml)
         _validate_charges_information(xml)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         return xml
     elif "pacs.009" in msg_lower and "cov" in msg_lower:
-        xml = _gen_pacs009(selected, idx)
+        xml = _gen_pacs009(selected, idx, is_cov=True)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "pacs.009" in msg_lower and "adv" in msg_lower:
-        return _gen_pacs009(selected, idx, is_adv=True)
+        xml = _gen_pacs009(selected, idx, is_adv=True)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "pacs.009" in msg_lower:
-        return _gen_pacs009(selected, idx)
+        xml = _gen_pacs009(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "pacs.004" in msg_lower:
         xml = _gen_pacs004(selected, idx)
         xml = _normalize_charges_information(xml)
         _validate_charges_information(xml)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "pacs.003" in msg_lower:
         xml = _gen_pacs003(selected, idx)
         xml = _normalize_charges_information(xml)
         _validate_charges_information(xml)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         return xml
     elif "pacs.002" in msg_lower:
-        return _gen_pacs002(selected, idx)
+        xml = _gen_pacs002(selected, idx)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "pacs.010" in msg_lower:
-        # Both pacs.010 variants (Interbank Direct Debit and Margin Collection / v3)
-        # share the CBPR+ pacs.010.001.03 namespace and the same generator.
-        return _gen_pacs010(selected, idx)
+        xml = _gen_pacs010(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     # CAMT generators
     elif "camt.057" in msg_lower:
         xml = _gen_camt057(selected, idx)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "camt.052" in msg_lower:
         xml = _gen_camt052(selected, idx)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "camt.053" in msg_lower:
-        return _gen_camt053(selected, idx)
+        xml = _gen_camt053(selected, idx)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "camt.054" in msg_lower:
-        return _gen_camt054(selected, idx)
+        xml = _gen_camt054(selected, idx)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "camt.055" in msg_lower:
-        return _gen_camt055(selected, idx)
+        xml = _gen_camt055(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     elif "camt.056" in msg_lower:
-        return _gen_camt056(selected, idx)
+        xml = _gen_camt056(selected, idx)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
     # PAIN generators — always normalize postal addresses so AdrLine/TwnNm/Ctry
     # coexistence and the 2-AdrLine maximum hold even when agent_xml randomly
     # injects an inner <PstlAdr>.
     elif "pain.001" in msg_lower:
         xml = _gen_pain001(selected, idx)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "pain.002" in msg_lower:
         xml = _gen_pain002(selected, idx)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     elif "pain.008" in msg_lower:
         xml = _gen_pain008(selected, idx)
         xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
         _validate_postal_address(xml)
         return xml
     else:
-        return _gen_pacs008(selected, idx)
+        xml = _gen_pacs008(selected, idx)
+        xml = _normalize_postal_addresses(xml)
+        xml = _normalize_cbpr_r9(xml)
+        return xml
 
 
 # ── Main Generator ─────────────────────────────────────────────────────────────
