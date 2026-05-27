@@ -2670,33 +2670,37 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin, CBPRJson
         return res
 
     def _finalize_report(self, report: ValidationReport, start_time: float) -> ValidationReport:
-        # 1. Deduplicate issues
+        """
+        Runs post-processing on the report:
+        1. Deduplicates issues (especially common when structural and business rules overlap).
+        2. Assigns final Pass/Fail status to layers.
+        3. Calculates total time.
+        """
         unique_issues = []
         seen_keys = set()
         
-        # High-priority manual checks often have codes that we want to keep over generic XSD errors
-        # Manual check codes: INVALID_SCHEME_CODE, SCHEME_CONFLICT, SCHEME_MISSING_CHILD, etc.
-        
         for issue in report.issues:
-            severity = issue.get("severity")
-            line = str(issue.get("path"))
-            msg = issue.get("message", "")
-            code = issue.get("code", "")
-            
-            # Key for deduplication
-            key = (severity, line, msg)
-            if key in seen_keys:
+            # 0. Skip issues belonging to a SKIPPED layer
+            layer_str = str(issue.get("layer", ""))
+            if layer_str in report.layer_status and report.layer_status[layer_str].get("status") == "SKIPPED":
                 self._decrement_counters(report, issue)
                 continue
+
+            # Create a unique signature for deduplication
+            code = issue.get("code")
+            line = issue.get("path")
+            msg = issue.get("message")
             
-            # Semantic deduplication for Scheme Name errors at the same line
-            is_schme_err = any(x in msg for x in ["SchmeNm", "<Cd>", "<Prtry>", "scheme code"])
+            key = (issue.get("severity"), line, msg)
+            
+            # Special case for fuzzy matching similar errors on same line
+            is_schme_err = any(x in msg.lower() for x in ["schmenm", "<cd>", "<prtry>", "scheme code"])
             is_dupe_err = "duplicate" in msg.lower() or "is duplicated" in msg.lower()
 
             if is_schme_err or is_dupe_err:
                 duplicate_found = False
                 for existing in unique_issues:
-                    if str(existing.get("path")) == line:
+                    if str(existing.get("path")) == str(line):
                         ex_msg = existing.get("message", "").lower()
                         
                         # Case A: Both are scheme errors
@@ -2721,9 +2725,11 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin, CBPRJson
         # 2. Check all issues and update layer statuses appropriately 
         for layer_str in ["1", "2", "3"]:
             layer_errors = [i for i in report.issues if str(i.get("layer", "")) == layer_str and i.get("severity") == "ERROR"]
-            if layer_errors and layer_str in report.layer_status:
+            if layer_str in report.layer_status and report.layer_status[layer_str]["status"] == "SKIPPED":
+                continue # Preserve SKIPPED status
+            elif layer_errors and layer_str in report.layer_status:
                 report.layer_status[layer_str]["status"] = "❌"
-            elif layer_str in report.layer_status and report.layer_status[layer_str]["status"] != "SKIPPED":
+            elif layer_str in report.layer_status:
                  report.layer_status[layer_str]["status"] = "✅"
 
         # 3. Update global report status
