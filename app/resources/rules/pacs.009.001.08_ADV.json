@@ -1,5 +1,29 @@
 [
     {
+        "rule_id": "CBPR_R8",
+        "name": "CBPR_Business_Service_Usage_ADV",
+        "description": "BizSvc must have the value 'swift.cbprplus.adv.03' for pacs.009 ADV.",
+        "selector": "AppHdr.BizSvc",
+        "type": "expression",
+        "expression": "VALUE == 'swift.cbprplus.adv.03'",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "AppHdr <BizSvc> must be 'swift.cbprplus.adv.03' for pacs.009 ADV.",
+        "fix": "Set <BizSvc>swift.cbprplus.adv.03</BizSvc> in AppHdr."
+    },
+    {
+        "rule_id": "CBPR_R8B",
+        "name": "CBPR_Message_Definition_Identifier_ADV",
+        "description": "MsgDefIdr must be 'pacs.009.001.08' for pacs.009 ADV messages.",
+        "condition": "exists(AppHdr.MsgDefIdr)",
+        "expression": "AppHdr.MsgDefIdr == 'pacs.009.001.08'",
+        "type": "expression",
+        "severity": "ERROR",
+        "layer": 3,
+        "errorMessage": "AppHdr <MsgDefIdr> must be 'pacs.009.001.08' for pacs.009 ADV messages.",
+        "fix": "Set <MsgDefIdr>pacs.009.001.08</MsgDefIdr> in AppHdr."
+    },
+    {
         "rule_id": "ADV_STTLM_MTD_COVE_ONLY",
         "description": "Settlement Method (SttlmMtd) for pacs.009 ADV must be COVE.",
         "selector": ".*\\.GrpHdr\\.SttlmInf\\.SttlmMtd$",
