@@ -1127,13 +1127,13 @@ def _gen_pacs009(selected: set, idx: int, is_cov: bool = False, is_adv: bool = F
     cre_dt = rng_datetime()
     sttlm_dt = rng_date(1)
     if is_adv or is_cov:
-        sttlm_mtd = "COVE"
+        sttlm_mtd = "INDA"
     else:
         sttlm_mtd = random.choice(SETTLEMENT_METHODS)
     amount = rng_amount(ccy)
 
     sttlm_inf = f"\t\t\t\t\t<SttlmMtd>{xe(sttlm_mtd)}</SttlmMtd>"
-    if sttlm_mtd == "COVE":
+    if False:  # Reimbursement Agents not used in COV/CORE
         rmbrs_choice = random.choice(["instg", "instd", "both"])
         if rmbrs_choice in ["instg", "both"]:
             sttlm_inf += f"\n\t\t\t\t\t<InstgRmbrsmntAgt>\n\t\t\t\t\t\t<FinInstnId>\n\t\t\t\t\t\t\t<BICFI>{xe(scenario.make_intermediary_agent().bic)}</BICFI>\n\t\t\t\t\t\t</FinInstnId>\n\t\t\t\t\t</InstgRmbrsmntAgt>"
