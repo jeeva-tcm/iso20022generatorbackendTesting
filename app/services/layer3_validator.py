@@ -104,7 +104,12 @@ class Layer3Mixin:
         codelists = self.codelists
 
         for rule in layer_rules:
+            if rule.get("type") == "bic":
+                print(f"DEBUG LAYER3: Executing BIC rule. len(data)={len(data)}")
+                issues_before = len(report.issues)
             self._execute_rule_logic(rule, data, line_map, codelists, report)
+            if rule.get("type") == "bic":
+                print(f"DEBUG LAYER3: BIC rule done. Issues added: {len(report.issues) - issues_before}")
         
         # Assessment for layer dashboard
         success = not any(

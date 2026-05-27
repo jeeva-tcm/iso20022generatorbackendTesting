@@ -151,7 +151,6 @@ class MT2MXConverter:
             # Block 2 inline subtype takes first priority
             if mt_type == "202" and b2_subtype == "COV":  return "202COV"
             if mt_type == "103" and b2_subtype == "STP":  return "103+"
-            if mt_type == "103" and b2_subtype == "REMIT": return "103 REMIT"
 
             # Fall back to Block 3 Tag 119 for older-style messages
             sub_match = re.search(r"\{3:.*?\{119:(.*?)\}", mt_message)
@@ -159,7 +158,6 @@ class MT2MXConverter:
                 sub_type = sub_match.group(1).upper()
                 if mt_type == "103":
                     if sub_type == "STP":   return "103+"
-                    if sub_type == "REMIT": return "103 REMIT"
                 elif mt_type == "202":
                     if sub_type == "COV":   return "202COV"
 
@@ -1237,7 +1235,7 @@ class MT2MXConverter:
 
         # CBPR+ FIX: Inject mandatory ChrgsInf for pacs.008 (MT103 → FIToFICstmrCdtTrf)
         # CBPR+ Layer 3 rule PACS008_CHRGSINF_REQUIRED mandates at least one ChrgsInf per CdtTrfTxInf.
-        if mt_type in ("103", "103+", "103REMIT"):
+        if mt_type in ("103", "103+"):
             self._heal_pacs008_chrgs_inf(mx_root, namespaces, parsed_fields, v_logs)
 
         # 7. Create Envelope and AppHdr
@@ -1304,6 +1302,7 @@ class MT2MXConverter:
         
         # Final Global Healing for camt messages (NtryRef and BkTxCd are often mandatory)
         self._heal_camt_mandatory_fields(mx_root, namespaces)
+        self._heal_pacs008_mandatory_fields(mx_root, namespaces)
         self._normalise_cbpr_datetimes_in_tree(envelope)
         
         # Finally sort elements based on sequence rules
@@ -2211,3 +2210,48 @@ class MT2MXConverter:
                 self.set_element_text(pstl_adr, "Ctry", "US", namespaces)
                 self.set_element_text(pstl_adr, "TwnNm", "UNKNOWN TOWN", namespaces)
                 self.set_element_text(pstl_adr, "AdrLine", "UNKNOWN ADDRESS", namespaces)
+
+    def _heal_pacs008_mandatory_fields(self, root, namespaces):
+        """
+        CBPR+ PACS008 rules require Dbtr/Nm and Cdtr/Nm.
+        If MT103 provides only 50A or 59A (BIC only without name), the Name element will be missing.
+        This healing injects NOTPROVIDED into Dbtr/Nm and Cdtr/Nm if they are missing for pacs.008.
+        """
+        xmlns = namespaces.get("xmlns", "")
+        if "pacs.008" not in xmlns:
+            return
+            
+        for tx_inf in root.iter(f"{{{xmlns}}}CdtTrfTxInf" if xmlns else "CdtTrfTxInf"):
+            # Heal Dbtr/Nm
+            dbtr = self._find_child(tx_inf, "Dbtr")
+            if dbtr is None:
+                dbtr_tag = f"{{{xmlns}}}Dbtr" if xmlns else "Dbtr"
+                dbtr = ET.SubElement(tx_inf, dbtr_tag)
+                
+            has_dbtr_anybic = (dbtr.find(f".//{{{xmlns}}}AnyBIC") is not None) if xmlns else (dbtr.find(".//AnyBIC") is not None)
+            
+            if not has_dbtr_anybic:
+                nm = self._find_child(dbtr, "Nm")
+                if nm is None or not nm.text or not nm.text.strip():
+                    if nm is None:
+                        nm_tag = f"{{{xmlns}}}Nm" if xmlns else "Nm"
+                        # Insert Nm as the first child of Dbtr (or right after Id)
+                        # For simplicity, we just append it, the final recursive sort will fix its position
+                        nm = ET.SubElement(dbtr, nm_tag)
+                    nm.text = "NOTPROVIDED"
+
+            # Heal Cdtr/Nm
+            cdtr = self._find_child(tx_inf, "Cdtr")
+            if cdtr is None:
+                cdtr_tag = f"{{{xmlns}}}Cdtr" if xmlns else "Cdtr"
+                cdtr = ET.SubElement(tx_inf, cdtr_tag)
+                
+            has_cdtr_anybic = (cdtr.find(f".//{{{xmlns}}}AnyBIC") is not None) if xmlns else (cdtr.find(".//AnyBIC") is not None)
+            
+            if not has_cdtr_anybic:
+                cdtr_nm = self._find_child(cdtr, "Nm")
+                if cdtr_nm is None or not cdtr_nm.text or not cdtr_nm.text.strip():
+                    if cdtr_nm is None:
+                        nm_tag = f"{{{xmlns}}}Nm" if xmlns else "Nm"
+                        cdtr_nm = ET.SubElement(cdtr, nm_tag)
+                    cdtr_nm.text = "NOTPROVIDED"
