@@ -47,7 +47,7 @@ class Layer3Mixin:
 
         # 2. Load CBPR Common (universal cross-message rules: BAH, BICFI exclusivity, AnyBIC exclusivity)
         cbpr_common_file = os.path.join(self.rules_path, "cbpr_common.json")
-        if os.path.exists(cbpr_common_file):
+        if os.path.exists(cbpr_common_file) and not message_type.startswith("pain"):
             try:
                 with open(cbpr_common_file, "r", encoding='utf-8-sig') as f:
                     rules.extend(json.load(f))

@@ -435,7 +435,8 @@ class ISOValidator(Layer1Mixin, Layer2Mixin, Layer3Mixin, Pacs004Mixin, CBPRJson
                     self._validate_cbpr_datetime(xml_content, report)
                     
                     # Global Rule: Name & Address Co-existence (CBPR+)
-                    self._validate_name_address_coexistence(xml_content, report)
+                    if not report.message_type.startswith("pain"):
+                        self._validate_name_address_coexistence(xml_content, report)
 
                     # Global Rule: Empty mandatory containers (e.g. <FinInstnId/>) —
                     # caught BEFORE Layer 2 so missing identifiers fail validation even
