@@ -68,10 +68,19 @@ class FirebaseHistoryService:
         try:
             cred = self._build_credentials()
             if cred is not None:
-                # Avoid re-initialization if app already initialized
-                if not firebase_admin._apps:
-                    firebase_admin.initialize_app(cred)
-                self.db = firestore.client()
+                try:
+                    if not firebase_admin._apps:
+                        firebase_admin.initialize_app(cred)
+                except Exception as e:
+                    self._circuit_broken_reason = f"initialize_app failed: {type(e).__name__}: {e}"
+                    print(f"CRITICAL: firebase_admin.initialize_app failed: {self._circuit_broken_reason}")
+                    raise
+                try:
+                    self.db = firestore.client()
+                except Exception as e:
+                    self._circuit_broken_reason = f"firestore.client failed: {type(e).__name__}: {e}"
+                    print(f"CRITICAL: firestore.client() failed: {self._circuit_broken_reason}")
+                    raise
                 self.enabled = True
                 print("Firebase Firestore initialized successfully.")
 
@@ -84,8 +93,11 @@ class FirebaseHistoryService:
                 self._run_boot_health_check()
             else:
                 print("ALERT: No Firebase credentials found. Falling back to local JSON database.")
+                self._circuit_broken_reason = "_build_credentials returned None — see build logs for the underlying decode/cert error"
                 self.enabled = False
         except Exception as e:
+            if not self._circuit_broken_reason:
+                self._circuit_broken_reason = f"init exception: {type(e).__name__}: {e}"
             print(f"CRITICAL: Error initializing Firebase: {str(e)}. Falling back to local JSON database.")
             self.enabled = False
 
