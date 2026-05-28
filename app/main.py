@@ -764,6 +764,14 @@ def firebase_status():
     decoded_project_id = None
     decoded_client_email = None
     decoded_has_private_key = False
+    decoded_keys = None
+    pk_starts_with = None
+    pk_ends_with = None
+    pk_inner_length = 0
+    pk_has_real_newlines = False
+    pk_has_escaped_newlines = False
+    cert_build_ok = False
+    cert_build_error = None
     if cleaned_b64:
         try:
             decoded_bytes = _b64.b64decode(cleaned_b64, validate=False)
@@ -780,7 +788,25 @@ def firebase_status():
             decoded_project_id = d.get("project_id") or None
             decoded_client_email = d.get("client_email") or None
             decoded_has_private_key = bool(d.get("private_key"))
+            decoded_keys = sorted(list(d.keys()))
             b64_decode_ok = True
+
+            # Inspect private_key shape
+            pk_val = d.get("private_key") or ""
+            if pk_val:
+                pk_inner_length = len(pk_val)
+                pk_starts_with = pk_val[:30]
+                pk_ends_with = pk_val[-30:]
+                pk_has_real_newlines = "\n" in pk_val
+                pk_has_escaped_newlines = "\\n" in pk_val
+
+            # Try to actually build a firebase Certificate to surface the real error
+            try:
+                from firebase_admin import credentials as _fc
+                _fc.Certificate(d)
+                cert_build_ok = True
+            except Exception as ce:
+                cert_build_error = f"{type(ce).__name__}: {ce}"
         except Exception as e:
             b64_decode_error = f"{type(e).__name__}: {e}"
 
@@ -803,6 +829,14 @@ def firebase_status():
         "decoded_project_id": decoded_project_id,
         "decoded_client_email": decoded_client_email,
         "decoded_has_private_key": decoded_has_private_key,
+        "decoded_keys": decoded_keys,
+        "pk_inner_length": pk_inner_length,
+        "pk_starts_with": pk_starts_with,
+        "pk_ends_with": pk_ends_with,
+        "pk_has_real_newlines": pk_has_real_newlines,
+        "pk_has_escaped_newlines": pk_has_escaped_newlines,
+        "cert_build_ok": cert_build_ok,
+        "cert_build_error": cert_build_error,
 
         # --- Legacy per-var approach ---
         "project_id": os.getenv("FIREBASE_PROJECT_ID", "MISSING"),
