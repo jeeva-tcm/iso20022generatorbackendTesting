@@ -187,16 +187,33 @@ class FirebaseHistoryService:
             print(f"[LocalDB] Error writing local counters: {e}")
 
     @staticmethod
+    def _clean_b64(raw: str) -> str:
+        """Strip surrounding quotes, whitespace, and any internal newlines from
+        a base64 string. Render/Vercel often add these when secrets are pasted."""
+        s = raw.strip()
+        # Strip surrounding single or double quotes
+        if len(s) >= 2 and ((s[0] == s[-1] == '"') or (s[0] == s[-1] == "'")):
+            s = s[1:-1]
+        # Remove all whitespace (spaces, tabs, newlines) — base64 has none
+        s = "".join(s.split())
+        return s
+
+    @staticmethod
     def _build_credentials():
-        b64_creds = os.getenv("FIREBASE_CREDENTIALS_BASE64", "").strip()
+        raw_b64 = os.getenv("FIREBASE_CREDENTIALS_BASE64", "")
+        b64_creds = FirebaseHistoryService._clean_b64(raw_b64)
         if b64_creds:
-            print("[Firebase] Option 0 — found FIREBASE_CREDENTIALS_BASE64, decoding...")
+            print(f"[Firebase] Option 0 — found FIREBASE_CREDENTIALS_BASE64 (raw={len(raw_b64)}, cleaned={len(b64_creds)}), decoding...")
             try:
                 import base64 as _b64
-                cred_json = _b64.b64decode(b64_creds).decode("utf-8")
+                cred_json = _b64.b64decode(b64_creds, validate=False).decode("utf-8")
                 cred_dict = json.loads(cred_json)
+                # Quick shape check before handing to Firebase SDK
+                missing = [k for k in ("project_id", "client_email", "private_key") if not cred_dict.get(k)]
+                if missing:
+                    raise ValueError(f"decoded JSON missing required fields: {missing}")
                 cred = credentials.Certificate(cred_dict)
-                print(f"[Firebase] Option 0 — credentials decoded successfully (project: {cred_dict.get('project_id')})")
+                print(f"[Firebase] Option 0 — credentials decoded successfully (project: {cred_dict.get('project_id')}, client: {cred_dict.get('client_email')})")
                 return cred
             except Exception as e:
                 print(f"[Firebase] Option 0 FAILED: {type(e).__name__}: {e}")

@@ -751,14 +751,59 @@ if os.path.exists(frontend_path):
 
 @app.get("/firebase-status")
 def firebase_status():
-    import os
+    import os, base64 as _b64, json as _json
+    from app.services.firebase_service import FirebaseHistoryService
+
     pk = os.getenv("FIREBASE_PRIVATE_KEY", "")
-    b64 = os.getenv("FIREBASE_CREDENTIALS_BASE64", "")
+    raw_b64 = os.getenv("FIREBASE_CREDENTIALS_BASE64", "")
+    cleaned_b64 = FirebaseHistoryService._clean_b64(raw_b64)
+
+    # Decode-time diagnostics for the b64 var (the actual failure point)
+    b64_decode_ok = False
+    b64_decode_error = None
+    decoded_project_id = None
+    decoded_client_email = None
+    decoded_has_private_key = False
+    if cleaned_b64:
+        try:
+            decoded_bytes = _b64.b64decode(cleaned_b64, validate=False)
+            try:
+                decoded_str = decoded_bytes.decode("utf-8")
+            except UnicodeDecodeError as ue:
+                raise ValueError(f"decoded bytes are not UTF-8: {ue}")
+            try:
+                d = _json.loads(decoded_str)
+            except Exception as je:
+                raise ValueError(f"decoded text is not valid JSON: {je}")
+            if not isinstance(d, dict):
+                raise ValueError("decoded JSON is not an object")
+            decoded_project_id = d.get("project_id") or None
+            decoded_client_email = d.get("client_email") or None
+            decoded_has_private_key = bool(d.get("private_key"))
+            b64_decode_ok = True
+        except Exception as e:
+            b64_decode_error = f"{type(e).__name__}: {e}"
+
+    stripped = raw_b64.strip() if raw_b64 else ""
     return {
         "enabled": history_service.enabled,
-        # --- New single-var approach (recommended for Render) ---
-        "b64_creds_set": bool(b64),
-        "b64_creds_length": len(b64),
+        "circuit_broken_reason": getattr(history_service, "_circuit_broken_reason", None),
+
+        # --- Single-var approach (recommended for Render) ---
+        "b64_creds_set": bool(raw_b64),
+        "b64_creds_raw_length": len(raw_b64),
+        "b64_creds_cleaned_length": len(cleaned_b64),
+        "b64_had_surrounding_quotes": bool(stripped) and (
+            (stripped.startswith('"') and stripped.endswith('"')) or
+            (stripped.startswith("'") and stripped.endswith("'"))
+        ),
+        "b64_had_internal_whitespace": any(c in stripped for c in (" ", "\n", "\r", "\t")) if stripped else False,
+        "b64_decode_ok": b64_decode_ok,
+        "b64_decode_error": b64_decode_error,
+        "decoded_project_id": decoded_project_id,
+        "decoded_client_email": decoded_client_email,
+        "decoded_has_private_key": decoded_has_private_key,
+
         # --- Legacy per-var approach ---
         "project_id": os.getenv("FIREBASE_PROJECT_ID", "MISSING"),
         "client_email": os.getenv("FIREBASE_CLIENT_EMAIL", "MISSING"),
